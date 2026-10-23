@@ -2,9 +2,11 @@
 //! great people, city-states, victory, diplomacy, and leader pop-ups.
 
 use crate::hud::Session;
-use crate::palette::{GOLD, YIELD_COLORS, rgb};
+use crate::palette::{self, GOLD, YIELD_COLORS, rgb};
 use crate::portraits::Portraits;
-use egui::{Align2, Color32, FontId, Pos2, Rect, RichText, Sense, Stroke, StrokeKind, vec2};
+use crate::ui::glyph::Glyph;
+use crate::ui::{self, TOP_BAR, theme};
+use egui::{Align2, Color32, FontId, Pos2, Rect, RichText, Sense, Stroke, StrokeKind, pos2, vec2};
 use std::collections::HashMap;
 use wayciv_core::diplomacy::DiploEvent;
 use wayciv_core::research::Tree;
@@ -20,9 +22,27 @@ pub struct Windows {
     pub great_people: bool,
     pub city_states: bool,
     pub victory: bool,
+    pub leaders: bool,
+    pub notifications: bool,
     pub legend: bool,
     pub diplomacy: Option<PlayerId>,
     pub policy_draft: Option<Vec<usize>>,
+}
+
+/// A window or panel the player can open. Only one is open at a time.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Panel {
+    Tech,
+    Civic,
+    Ai,
+    Government,
+    Religion,
+    GreatPeople,
+    CityStates,
+    Victory,
+    Leaders,
+    Notifications,
+    Diplomacy(PlayerId),
 }
 
 impl Windows {
@@ -33,83 +53,173 @@ impl Windows {
             ..Default::default()
         };
     }
+
+    pub fn any_open(&self) -> bool {
+        self.tech
+            || self.civic
+            || self.ai
+            || self.government
+            || self.religion
+            || self.great_people
+            || self.city_states
+            || self.victory
+            || self.leaders
+            || self.notifications
+            || self.diplomacy.is_some()
+    }
+
+    pub fn is_open(&self, panel: Panel) -> bool {
+        match panel {
+            Panel::Tech => self.tech,
+            Panel::Civic => self.civic,
+            Panel::Ai => self.ai,
+            Panel::Government => self.government,
+            Panel::Religion => self.religion,
+            Panel::GreatPeople => self.great_people,
+            Panel::CityStates => self.city_states,
+            Panel::Victory => self.victory,
+            Panel::Leaders => self.leaders,
+            Panel::Notifications => self.notifications,
+            Panel::Diplomacy(p) => self.diplomacy == Some(p),
+        }
+    }
+
+    /// Opens `panel` and closes every other window.
+    pub fn open(&mut self, panel: Panel) {
+        self.close_all();
+        match panel {
+            Panel::Tech => self.tech = true,
+            Panel::Civic => self.civic = true,
+            Panel::Ai => self.ai = true,
+            Panel::Government => self.government = true,
+            Panel::Religion => self.religion = true,
+            Panel::GreatPeople => self.great_people = true,
+            Panel::CityStates => self.city_states = true,
+            Panel::Victory => self.victory = true,
+            Panel::Leaders => self.leaders = true,
+            Panel::Notifications => self.notifications = true,
+            Panel::Diplomacy(p) => self.diplomacy = Some(p),
+        }
+    }
+
+    /// Closes `panel` if it is open, otherwise opens it alone.
+    pub fn toggle(&mut self, panel: Panel) {
+        if self.is_open(panel) {
+            self.close_all();
+        } else {
+            self.open(panel);
+        }
+    }
+}
+
+/// A themed window: no title bar, our own header with an icon, the title, a
+/// hotkey hint and a close button. Returns false once it has been closed.
+fn themed_window(
+    ctx: &egui::Context,
+    title: &str,
+    glyph: Glyph,
+    key: Option<&str>,
+    size: egui::Vec2,
+    add: impl FnOnce(&mut egui::Ui),
+) -> bool {
+    let screen = ctx.content_rect();
+    let size = size.min(vec2(screen.width() - 40.0, screen.height() - TOP_BAR - 40.0));
+    let pos = pos2(
+        screen.center().x - size.x / 2.0,
+        TOP_BAR + (screen.height() - TOP_BAR - size.y) / 2.0,
+    );
+    let mut open = true;
+    egui::Window::new(title)
+        .title_bar(false)
+        .frame(theme::plate_frame().inner_margin(16))
+        .default_size(size)
+        .default_pos(pos)
+        .collapsible(false)
+        .order(egui::Order::Foreground)
+        .show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                let (rect, _) = ui.allocate_exact_size(vec2(34.0, 34.0), Sense::hover());
+                theme::disc(ui.painter(), rect.center(), 16.0, palette::NAVY_RAISED, palette::GOLD_DIM);
+                ui::glyph::paint(ui.painter(), glyph, rect.center(), 9.0, GOLD);
+                ui.label(RichText::new(title).size(26.0).strong().color(GOLD));
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if theme::round_button(ui, 34.0, Glyph::Cross, palette::TEXT, None, true)
+                        .on_hover_text("Close (Esc)")
+                        .clicked()
+                    {
+                        open = false;
+                    }
+                    if let Some(k) = key {
+                        let (rect, _) = ui.allocate_exact_size(vec2(30.0, 22.0), Sense::hover());
+                        theme::keycap(ui.painter(), rect.center(), k);
+                    }
+                });
+            });
+            let y = ui.cursor().top() + 2.0;
+            ui.painter().line_segment(
+                [pos2(ui.min_rect().left(), y), pos2(ui.max_rect().right(), y)],
+                Stroke::new(1.5, palette::GOLD_DIM),
+            );
+            ui.add_space(8.0);
+            add(ui);
+        });
+    open
 }
 
 pub fn windows(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) {
     for tree in [Tree::Tech, Tree::Civic, Tree::Ai] {
-        let mut open = match tree {
+        let is_open = match tree {
             Tree::Tech => s.windows.tech,
             Tree::Civic => s.windows.civic,
             Tree::Ai => s.windows.ai,
         };
-        if open {
-            let title = match tree {
-                Tree::Tech => "Technology Tree",
-                Tree::Civic => "Civics Tree",
-                Tree::Ai => "Artificial Intelligence Tree",
-            };
-            let mut picked = false;
-            egui::Window::new(title)
-                .open(&mut open)
-                .default_size([1100.0, 620.0])
-                .show(ctx, |ui| picked = research_tree(s, ui, tree));
-            // Choosing something closes the tree.
-            open &= !picked;
-            match tree {
-                Tree::Tech => s.windows.tech &= open,
-                Tree::Civic => s.windows.civic &= open,
-                Tree::Ai => s.windows.ai &= open,
-            }
+        if !is_open {
+            continue;
+        }
+        let (title, glyph, key) = match tree {
+            Tree::Tech => ("Technology Tree", Glyph::Science, "S"),
+            Tree::Civic => ("Civics Tree", Glyph::Culture, "C"),
+            Tree::Ai => ("Artificial Intelligence Tree", Glyph::Chip, "A"),
+        };
+        let mut picked = false;
+        let open = themed_window(ctx, title, glyph, Some(key), vec2(1180.0, 660.0), |ui| {
+            picked = research_tree(s, ui, tree)
+        });
+        // Choosing something closes the tree.
+        let open = open && !picked;
+        match tree {
+            Tree::Tech => s.windows.tech &= open,
+            Tree::Civic => s.windows.civic &= open,
+            Tree::Ai => s.windows.ai &= open,
         }
     }
-    let mut open = s.windows.government;
-    if open {
-        egui::Window::new("Government")
-            .open(&mut open)
-            .default_size([760.0, 560.0])
-            .show(ctx, |ui| government(s, ui));
+    if s.windows.government {
+        let open = themed_window(ctx, "Government", Glyph::Temple, Some("G"), vec2(800.0, 600.0), |ui| government(s, ui));
         s.windows.government &= open;
     }
-    let mut open = s.windows.religion;
-    if open {
-        egui::Window::new("Religion")
-            .open(&mut open)
-            .default_size([620.0, 520.0])
-            .show(ctx, |ui| religion(s, ui));
+    if s.windows.religion {
+        let open = themed_window(ctx, "Religion", Glyph::Faith, Some("R"), vec2(680.0, 560.0), |ui| religion(s, ui));
         s.windows.religion &= open;
     }
-    let mut open = s.windows.great_people;
-    if open {
-        egui::Window::new("Great People")
-            .open(&mut open)
-            .default_size([620.0, 420.0])
-            .show(ctx, |ui| great_people(s, ui));
+    if s.windows.great_people {
+        let open = themed_window(ctx, "Great People", Glyph::Star, Some("P"), vec2(760.0, 420.0), |ui| great_people(s, ui));
         s.windows.great_people &= open;
     }
-    let mut open = s.windows.city_states;
-    if open {
-        egui::Window::new("City-States")
-            .open(&mut open)
-            .default_size([620.0, 420.0])
-            .show(ctx, |ui| city_states(s, ui));
+    if s.windows.city_states {
+        let open = themed_window(ctx, "City-States", Glyph::City, Some("E"), vec2(760.0, 440.0), |ui| city_states(s, ui));
         s.windows.city_states &= open;
     }
-    let mut open = s.windows.victory;
-    if open {
-        egui::Window::new("Victory Progress")
-            .open(&mut open)
-            .default_size([620.0, 420.0])
-            .show(ctx, |ui| victory(s, ui));
+    if s.windows.victory {
+        let open = themed_window(ctx, "Victory Progress", Glyph::Cup, Some("V"), vec2(680.0, 460.0), |ui| victory(s, ui));
         s.windows.victory &= open;
     }
+    if s.windows.leaders {
+        let open = themed_window(ctx, "Leaders", Glyph::Crown, Some("L"), vec2(700.0, 540.0), |ui| ui::leaders::panel(s, portraits, ui));
+        s.windows.leaders &= open;
+    }
     if let Some(other) = s.windows.diplomacy {
-        let mut open = true;
         let name = s.game.players[other].name.clone();
-        egui::Window::new(name)
-            .open(&mut open)
-            .default_size([760.0, 520.0])
-            .collapsible(false)
-            .show(ctx, |ui| diplomacy(s, portraits, ui, other));
+        let open = themed_window(ctx, &name, Glyph::Crown, None, vec2(860.0, 560.0), |ui| diplomacy(s, portraits, ui, other));
         if !open {
             s.windows.diplomacy = None;
         }
