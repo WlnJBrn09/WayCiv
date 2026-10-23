@@ -29,10 +29,20 @@ impl Icons {
         if let Some(cached) = self.cache.get(&key) {
             return cached.clone();
         }
-        let path = self
-            .dir
-            .join(kind)
-            .join(format!("{}.png", id.to_lowercase()));
+        let name = format!("{}.png", id.to_lowercase());
+        let mut path = self.dir.join(kind).join(&name);
+        // Until painted icons exist, fall back to the rendered map art's
+        // resource badges and unit portraits.
+        let fallback = match kind {
+            "resource" => Some(self.dir.join("../resources/icons").join(&name)),
+            "unit" => Some(self.dir.join("../units/portraits").join(&name)),
+            _ => None,
+        };
+        if !path.exists()
+            && let Some(f) = fallback
+        {
+            path = f;
+        }
         let texture = image::open(path).ok().map(|img| {
             let img = img.to_rgba8();
             let size = [img.width() as usize, img.height() as usize];
