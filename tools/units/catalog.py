@@ -6,10 +6,12 @@ from lib import *
 from figures import *
 from mounts import *
 from vehicles import *
+import naval
+import air
 
 # (ortho width in world units, anchor: how far down the frame the ground point is)
-SIZE = dict(fig=(2.4, 0.80), mount=(3.4, 0.74), big=(4.2, 0.72), huge=(5.2, 0.74), tall=(5.6, 0.86), ship=(6.0, 0.62),
-            air=(4.4, 0.5), small=(2.0, 0.78))
+SIZE = dict(fig=(2.4, 0.80), mount=(3.4, 0.74), big=(4.2, 0.72), huge=(5.2, 0.74), tall=(5.6, 0.86), ship=(6.2, 0.66), bigship=(8.0, 0.66),
+            air=(4.6, 0.5), airbig=(6.6, 0.5), small=(2.0, 0.78))
 YAW = -38
 
 S = lambda **kw: kw                     # shorthand for a spec
@@ -178,6 +180,19 @@ def veh(uid, fn, size="big", **kw):
     V_[uid] = (fn, size, kw)
 
 
+for _u, _f, _s in (
+    ("GALLEY", naval.galley, "ship"), ("NORWEGIAN_LONGSHIP", naval.longship, "ship"), ("QUADRIREME", naval.quadrireme, "ship"),
+    ("BYZANTINE_DROMON", naval.dromon, "ship"), ("CARAVEL", naval.caravel, "ship"), ("PORTUGUESE_NAU", naval.nau, "ship"),
+    ("FRIGATE", naval.frigate, "ship"), ("PRIVATEER", naval.privateer, "ship"), ("ENGLISH_SEADOG", naval.sea_dog, "ship"),
+    ("INDONESIAN_JONG", naval.jong, "ship"), ("IRONCLAD", naval.ironclad, "ship"), ("BATTLESHIP", naval.battleship, "bigship"),
+    ("BRAZILIAN_MINAS_GERAES", naval.minas_geraes, "bigship"), ("DESTROYER", naval.destroyer, "ship"),
+    ("MISSILE_CRUISER", naval.missile_cruiser, "bigship"), ("AIRCRAFT_CARRIER", naval.aircraft_carrier, "bigship"),
+    ("SUBMARINE", naval.submarine, "ship"), ("GERMAN_UBOAT", naval.uboat, "ship"), ("NUCLEAR_SUBMARINE", naval.nuclear_sub, "ship"),
+):
+    veh("UNIT_" + _u, (lambda f=_f: f()), _s)
+for _u, _f in (("BIPLANE", air.biplane), ("FIGHTER", air.fighter), ("AMERICAN_P51", air.p51), ("BOMBER", air.bomber),
+               ("JET_FIGHTER", air.jet_fighter), ("JET_BOMBER", air.jet_bomber)):
+    veh("UNIT_" + _u, (lambda f=_f: f()), "airbig" if _u in ("BOMBER", "JET_BOMBER") else "air", pitch=14)
 veh("UNIT_SETTLER", wagon, "big")
 veh("UNIT_TRADER", camel, "big")
 veh("UNIT_CATAPULT", catapult, "big")
@@ -194,7 +209,7 @@ veh("UNIT_AT_CREW", at_gun, "big")
 veh("UNIT_TANK", tank, "big")
 veh("UNIT_MODERN_ARMOR", modern_armor, "big")
 veh("UNIT_MECHANIZED_INFANTRY", ifv, "big")
-veh("UNIT_HELICOPTER", helicopter, "big", lift=0.0)
+veh("UNIT_HELICOPTER", helicopter, "huge")
 veh("UNIT_OBSERVATION_BALLOON", balloon, "tall")
 veh("UNIT_ANDURIL_STRIKE_DRONE", strike_drones, "big")
 veh("UNIT_SUMERIAN_WAR_CART", lambda: chariot(dict(horses=1, horse=dict(coat="#8a7a60", mane="#3a2a20"), crew=[(dict(body="tunic", top="#8a5a3a", helmet="conical", hat_c="bronze", items=[("spear", {"side": FAR, "length": 2.0}), ("shield", {"side": NEAR, "kind": "round", "r": 0.26})]), -0.65, 0, 0.8)])), "big")
@@ -213,6 +228,27 @@ veh("UNIT_VIETNAMESE_VOI_CHIEN", lambda: elephant(dict(crew=[
     mahout=dict(body="tunic", top="#4a8a4a", helmet="conical", hat_c="#c8a050", skin="tan", items=[("staff", {"side": FAR})]))), "huge")
 
 
+def domrey():
+    elephant(dict(howdah=False, blanket="team", mahout=dict(body="tunic", top="#4a8a4a", helmet="conical", hat_c="#c8a050", skin="tan",
+                                                           items=[("staff", {"side": FAR})])))
+    box((-0.1, 0, 2.3), (1.1, 0.95, 0.1), "dkwood", bevel=0.03)
+    for sy in (-1, 1):
+        box((-0.1, sy * 0.48, 2.45), (1.1, 0.05, 0.22), "ltwood", bevel=0.02)
+    # ballista: stock, bow arms, bolt
+    beam((-0.4, 0, 2.55), (0.8, 0, 2.7), 0.12, 0.12, "ltwood")
+    limb((0.5, -0.65, 2.7), (0.5, 0.65, 2.7), 0.05, "dkwood", seg=6)
+    limb((0.5, -0.65, 2.7), (0.2, 0.0, 2.7), 0.01, "white", seg=4)
+    limb((0.5, 0.65, 2.7), (0.2, 0.0, 2.7), 0.01, "white", seg=4)
+    limb((0.2, 0, 2.72), (1.3, 0, 2.85), 0.035, "ltwood", seg=5)
+    limb((1.3, 0, 2.85), (1.5, 0, 2.88), 0.07, metal("steel"), r1=0.0, seg=5)
+    box((0.1, 0, 2.55), (0.3, 0.22, 0.2), "team", bevel=0.03)
+    with xf((-0.55, 0.2, 2.35), (0, 0, 0), 0.65):
+        human(dict(body="tunic", top="team", team=("top",), helmet="conical", hat_c="bronze", skin="tan", items=[("spear", {"side": FAR, "length": 1.8})]))
+
+
+veh("UNIT_KHMER_DOMREY", domrey, "huge")
+
+
 def build_human(uid):
     if uid == "UNIT_MACHINE_GUN":
         with xf((-0.2, 0, 0), (0, 0, 0), 0.9):
@@ -228,7 +264,7 @@ def spec_for(uid):
     if uid in V_:
         k = V_[uid][1]
         o, a = SIZE[k]
-        return dict(ortho=o, anchor=a, yaw=YAW, lift=V_[uid][2].get("lift", 0.0))
+        return dict(ortho=o, anchor=a, yaw=YAW, lift=V_[uid][2].get("lift", 0.0), pitch=V_[uid][2].get("pitch", 0))
     if uid in H:
         k = "fig"
     elif uid in M:
@@ -249,3 +285,19 @@ def build(uid):
         horse(dict(kw, rider=rider))
     else:
         raise KeyError(uid)
+
+
+def kind_for(uid):
+    """Portrait backdrop: sea, air or land."""
+    if uid in V_:
+        sz = V_[uid][1]
+        if sz in ("ship", "bigship"):
+            return "sea"
+        if sz in ("air", "airbig") or uid in ("UNIT_HELICOPTER", "UNIT_OBSERVATION_BALLOON", "UNIT_ANDURIL_STRIKE_DRONE"):
+            return "air"
+    return "land"
+
+
+def all_ids():
+    ids = list(H) + list(M) + list(V_)
+    return [u for u in dict.fromkeys(ids) if u != "UNIT_FIELD_CANNON_CREW"]

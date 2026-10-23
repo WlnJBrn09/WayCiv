@@ -302,7 +302,7 @@ def artillery(o=None):
 
 
 def helicopter(o=None):
-    with xf((0, 0, 0.9)):
+    with xf((0, 0, 0.9), (0, 0, 0), 0.78):
         sph((0.1, 0, 0.5), 0.62, "#5a6050", scale=(1.25, 0.62, 0.7), seg=12, rings=7, name="body")
         sph((0.62, 0, 0.55), 0.4, "glass", scale=(1.0, 0.9, 0.85), seg=10, rings=6, name="canopy")
         limb((-0.5, 0, 0.58), (-2.1, 0, 0.8), 0.22, "#5a6050", r1=0.07, seg=8, name="boom")

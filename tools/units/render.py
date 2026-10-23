@@ -31,6 +31,8 @@ def main():
         else:
             ids.append(argv[i]); i += 1
     os.makedirs(out, exist_ok=True)
+    if ids == ["ALL"]:
+        ids = catalog.all_ids()
     for uid in ids:
         t0 = time.time()
         lib.reset()
@@ -42,6 +44,8 @@ def main():
         lib.render_to(os.path.join(out, uid.lower() + ".png"))
         lib.apply_mask_materials()
         lib.render_to(os.path.join(out, uid.lower() + "_mask.png"))
+        with open(os.path.join(out, uid.lower() + ".meta"), "w") as f:
+            f.write("%s\t%.3f\t%.3f\t%s\n" % (uid.lower(), spec["ortho"], spec["anchor"], catalog.kind_for(uid)))
         print("UNIT %s %.1fs" % (uid, time.time() - t0), flush=True)
 
 
