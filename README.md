@@ -30,8 +30,27 @@ cargo run --release -p wayciv
 6. Win by Science (space projects), Culture (tourism), Domination (all original
    capitals), Religion, or Score at the turn limit.
 
-Controls: left-click selects, right-click moves or attacks, drag or WASD/arrows
-scrolls, the mouse wheel zooms. `Space` skips a unit, `F` fortifies, `Esc` cancels.
+Controls: left-click selects, right-click moves or attacks, drag or the arrow
+keys scroll, the mouse wheel zooms. The minimap (bottom right) recenters the view.
+
+| Key | Action | Key | Action |
+|---|---|---|---|
+| `N` | Notifications | `L` | Leaders and relationships |
+| `S` | Research (tech tree) | `C` | Civics tree |
+| `R` | Religion | `A` | AI tree (once unlocked) |
+| `G` | Government | `P` | Great people |
+| `E` | City-states | `V` | Victory progress |
+| `K` | Map key | `Enter` | Next turn, or the next thing that needs a decision |
+| `.` | Next unit | `Space` | Skip unit |
+| `F` | Fortify | `Z` | Sleep |
+| `B` | Found city | `Esc` | Cancel, then close windows, then deselect |
+
+Pressing a window's key again closes it. Notifications stay off screen until
+you press `N`; new ones appear briefly as toasts at the right edge.
+
+The layout follows Civ VI on the Nintendo Switch: research and civic trackers
+top left, leaders top right, the unit or city panel at the bottom left and
+right, and the big Next Turn button with the minimap at the bottom right.
 
 ## The map
 
@@ -144,11 +163,35 @@ cargo run --release -p wayciv-core --example icon_list > tools/icons/icons.tsv
 tools/icons/generate.sh tools/icons/icons.tsv 4   # skips icons that exist
 ```
 
-Anything without an icon falls back to its name or initials.
+Anything without an icon falls back to rendered art (below) or a symbol.
+
+## Map art
+
+Everything on the map is original art rendered from scripts, so it can be
+rebuilt or changed:
+
+| Art | Assets | Built by |
+|---|---|---|
+| Terrain: biome textures, hills and mountains, features, natural wonders | `assets/terrain/` | `python tools/terrain/build.py` (numpy, scipy, Pillow) |
+| Units: 3D models with team-color masks, plus portraits | `assets/units/` | `tools/units/build_all.sh <python>` (Blender, Pillow, numpy) |
+| Districts, wonders, and city centers (by era, size, and walls) | `assets/buildings/` | `tools/buildings/build.sh` (Blender) |
+| Resources, improvements, roads, barbarian camps | `assets/resources/` | `tools/resources/build.sh` (Blender) |
+
+The Blender scripts run headless (`blender -b`) and render low-poly models
+from a 3/4 view. The code that draws each kind lives in
+`crates/wayciv/src/render/`; when an image is missing it falls back to simple
+vector drawings.
 
 ## Pacing
 
-WayCiv's own rules keep a 300-turn game moving through all eras:
+Pick a game length on the setup screen: 100, 250, 500, 750, or 1000 turns, or
+Infinite. Shorter games run faster: research, production, growth, border
+growth, great people, and faith costs all scale with the length, so every
+length reaches the late eras near its last turn. 500 turns matches Civ VI's
+standard speed. Infinite games have no turn limit and run at 500-turn speed.
+The calendar stretches to fit.
+
+The base rules (for a 300-turn pace) keep the game moving through all eras:
 - Research costs are 60% of Civ VI's.
 - City centers add +2 Food and +2 Production.
 - Each citizen adds Science and Culture that grows with the era, plus 1 Gold per
