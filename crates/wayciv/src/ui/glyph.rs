@@ -224,9 +224,9 @@ pub fn paint(painter: &Painter, g: Glyph, c: Pos2, r: f32, color: Color32) {
         Glyph::City => {
             let base = egui::Rect::from_min_max(p(-0.8, -0.2), p(0.8, 0.85));
             painter.rect_filled(base, 0.0, color);
-            for x in [-0.8, -0.27, 0.27] {
+            for x in [-0.8, -0.2, 0.4] {
                 painter.rect_filled(
-                    egui::Rect::from_min_size(p(x, -0.7), vec2(0.53, 0.5) * r),
+                    egui::Rect::from_min_size(p(x, -0.75), vec2(0.4, 0.6) * r),
                     0.0,
                     color,
                 );

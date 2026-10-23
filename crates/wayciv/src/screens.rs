@@ -498,7 +498,6 @@ fn government(s: &mut Session, ui: &mut egui::Ui) {
     let me = s.me();
     let content = s.game.rules.content.clone_lists();
     let current = s.game.players[me].government;
-    ui.label(RichText::new("Government").heading().color(GOLD));
     let available = s.game.available_governments(me);
     if available.is_empty() {
         ui.label("Research the Code of Laws civic to adopt your first government (Chiefdom).");
