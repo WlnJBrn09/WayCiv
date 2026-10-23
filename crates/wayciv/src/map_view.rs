@@ -113,6 +113,7 @@ fn draw(
     for &(pos, c) in &tiles {
         render::terrain::draw_tile(&mut art.terrain, painter, &ctx(pos, c));
     }
+    render::terrain::finish(&mut art.terrain, painter);
 
     // 2. Rivers, then roads.
     for &(pos, c) in &tiles {

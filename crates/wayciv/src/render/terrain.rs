@@ -629,22 +629,32 @@ pub fn draw_tile(art: &mut TerrainArt, painter: &egui::Painter, t: &TileCtx) {
     }
 }
 
-/// Layer 2: hands the frame's batches to the painter (rivers are already
-/// in them, under the relief, so they never cut across mountains).
+/// After the last `draw_tile` of a frame: hands the frame's batches to the
+/// painter. Rivers are already in them, under the relief, so they never cut
+/// across mountains. Returns false when there was nothing batched.
+pub fn finish(art: &mut TerrainArt, painter: &egui::Painter) -> bool {
+    let Some(frame) = art.frame.take() else { return false };
+    let Frame {
+        idx,
+        bufs,
+        label_idx,
+        labels,
+        ..
+    } = frame;
+    for (i, buf) in idx.into_iter().zip(bufs) {
+        painter.set(i, buf.finish());
+    }
+    painter.set(label_idx, Shape::Vec(labels));
+    true
+}
+
+/// Layer 2: rivers. With textures they are drawn into the terrain batches
+/// (see `finish`); only the flat fallback draws them here.
 pub fn draw_river(art: &mut TerrainArt, painter: &egui::Painter, t: &TileCtx) {
-    if let Some(frame) = art.frame.take() {
-        let Frame {
-            idx,
-            bufs,
-            label_idx,
-            labels,
-            ..
-        } = frame;
-        for (i, buf) in idx.into_iter().zip(bufs) {
-            painter.set(i, buf.finish());
-        }
-        painter.set(label_idx, Shape::Vec(labels));
-    } else if !art.ensure() {
+    if finish(art, painter) {
+        return;
+    }
+    if !art.ensure() {
         flat::draw_river(painter, t);
     }
 }
