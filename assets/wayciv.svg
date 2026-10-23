@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#22324a"/>
+      <stop offset="1" stop-color="#121a28"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="48" fill="url(#bg)"/>
+  <!-- Three hexes: grassland, desert, coast, outlined in gold like a border. -->
+  <g stroke="#e6be5a" stroke-width="7" stroke-linejoin="round">
+    <polygon points="128,40 168,63 168,109 128,132 88,109 88,63" fill="#56963a"/>
+    <polygon points="86,113 126,136 126,182 86,205 46,182 46,136" fill="#e2c87c"/>
+    <polygon points="170,113 210,136 210,182 170,205 130,182 130,136" fill="#3470b2"/>
+  </g>
+  <!-- A city: a white star on the grassland hex. -->
+  <polygon points="128,62 135,80 154,80 139,92 145,110 128,99 111,110 117,92 102,80 121,80" fill="#ffffff"/>
+</svg>

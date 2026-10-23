@@ -1,0 +1,9 @@
+[package]
+license.workspace = true
+name = "civ6-data"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+roxmltree = "0.21.1"
+rusqlite = { version = "0.40.2", features = ["bundled", "functions"] }

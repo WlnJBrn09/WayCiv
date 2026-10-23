@@ -1,0 +1,9 @@
+[package]
+license.workspace = true
+name = "wayciv-core"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+
+[dependencies]
+civ6-data = { version = "0.1.0", path = "../civ6-data" }

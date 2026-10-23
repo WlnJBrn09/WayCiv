@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=WayCiv
+GenericName=Strategy Game
+Comment=A Civilization VI-style 4X strategy game, using your installed Civilization VI's leaders and content
+Exec=@BIN@
+Icon=wayciv
+Terminal=false
+StartupNotify=true
+StartupWMClass=wayciv
+Categories=Game;StrategyGame;
+Keywords=civ;civilization;4x;strategy;hex;turn-based;game;

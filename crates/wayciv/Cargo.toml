@@ -1,0 +1,13 @@
+[package]
+license.workspace = true
+name = "wayciv"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+
+[dependencies]
+civ6-data = { version = "0.1.0", path = "../civ6-data" }
+eframe = "0.37.0"
+egui = "0.37"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+wayciv-core = { version = "0.1.0", path = "../wayciv-core" }

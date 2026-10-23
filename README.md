@@ -1,0 +1,176 @@
+# WayCiv
+
+A Civilization VI-style 4X game written in Rust, with egui. WayCiv follows
+Civ VI's turn flow and uses its leaders, civilizations, units, buildings,
+districts, wonders, technologies, civics, governments, policies, beliefs, and
+great people. The rules are WayCiv's own, simpler versions.
+
+WayCiv reads that content from **your installed copy of Civilization VI**
+(Steam, Linux) at startup. Nothing from the game is stored in this repository.
+If the game isn't in the default Steam library, set `CIV6_DIR` to its install
+folder.
+
+```bash
+cargo run --release -p wayciv
+```
+
+## How a game flows
+
+1. **Create Game**: pick a leader from the portrait grid. Their leader ability,
+   civ ability, and agenda are shown. Choose the map (Earth or Random), map size,
+   rivals, city-states, and seed.
+2. **Turn 1**: found your capital with the Settler (`B`, or the Found City button).
+3. Each turn, as in Civ VI, the End Turn button shows what's blocking it: "Choose
+   Research", "Choose Civic", "Choose Production", "Unit Needs Orders", "Choose
+   Pantheon". Clicking it takes you to the blocker. `Enter` presses it.
+4. AI civilizations and city-states take their turns. Then cities grow and build,
+   and science, culture, faith, and gold accumulate.
+5. Meeting leaders, wars, denouncements, and friendship offers open a leader
+   screen with their portrait and their own lines from Civ VI.
+6. Win by Science (space projects), Culture (tourism), Domination (all original
+   capitals), Religion, or Score at the turn limit.
+
+Controls: left-click selects, right-click moves or attacks, drag or WASD/arrows
+scrolls, the mouse wheel zooms. `Space` skips a unit, `F` fortifies, `Esc` cancels.
+
+## The map
+
+- **Earth** (the default) is the real world: continents, mountain ranges,
+  rivers, and biomes come from NOAA's ETOPO1 elevation and ocean depth and
+  WorldClim 2.1 temperature and rainfall (`tools/earth/build_earth.py`). Rivers
+  follow real drainage. Every leader starts at their historical capital
+  (Reagan at Washington, Victoria at London, Qin at Xi'an...), city-states sit
+  at their real cities, and natural wonders are where they are on Earth (Everest,
+  Kilimanjaro, the Great Barrier Reef...). Sizes: Small 104x72, Standard
+  128x88, Giant 160x110 (the default).
+- **Random** generates a fractal world with the same biomes.
+- Hex outlines are always drawn.
+- Biomes: grassland, plains, desert, tundra, snow, coast, sea, and deep sea,
+  with forest, taiga, rainforest, marsh, floodplains, desert floodplains, oasis,
+  dunes, glacier, and sea ice on top, plus hills, mountains, cliffs, rivers, and
+  natural wonders. Taiga is like forest and grows in the cold north. Dunes cost
+  an extra move. Glaciers (Greenland, Antarctica) are impassable. Cliffs line
+  steep coasts and give +3 defense. Deep sea is open ocean, crossed with Cartography.
+- Units and resources are drawn with their icons when you zoom in.
+- Each civilization's territory is tinted with its color and outlined with a thick
+  border in its primary and secondary colors. Cities have banners in the owner's colors.
+- "Map key" (bottom left) shows the legend. Hovering a tile shows its biome,
+  features, resource, yields, and owner.
+
+## What's simplified
+
+- **Combat** uses Civ VI's damage formula and wall rules, which were recovered
+  from the game's binary in `~/Projects/civ6-decompile`. Promotions are simplified
+  to levels (+3 strength each).
+- **Policies, beliefs, and leader abilities** apply Civ VI's most common effects
+  straight from the game data. Examples: production bonuses for unit classes and
+  eras, city and building yields, and district and building production. Other
+  effects show their description with a "(description only)" tag. Reagan's
+  ability is implemented directly.
+- **Great people** use one simplified effect per class, plus WayCiv's modern
+  great people: Elon Musk (minor boosts to AI, rockets, and solar), Gwynne
+  Shotwell (a big boost to a space race project), Palmer Luckey (a flight of
+  Anduril Strike Drones), and Ilya Sutskever (a big AI breakthrough) as
+  engineers and scientists; Yanni and NF as musicians; and Michael Crichton,
+  Iain M. Banks, and Douglas Adams as writers.
+- **Religion** uses pantheons, founding at a Holy Site with a Great Prophet,
+  missionaries, and passive pressure. There is no theological combat.
+- **City-states** give envoy and suzerain bonuses by category. There are no
+  quests, and no one can declare war on a city-state.
+- **Loyalty**: every city within 9 tiles pulls on a city, harder when bigger and
+  closer. Your cities hold it; foreign cities pull it away. Capitals (+5),
+  garrisons (+2), Monuments (+1), and happy citizens add loyalty; occupation (-3)
+  and unhappiness take it away. A city at 0 loyalty joins the civilization
+  pulling on it hardest. The city panel shows the breakdown, and banners show a
+  loyalty bar when it drops.
+- **Civilians** (settlers, builders, traders, great people...) have no health.
+  One attack from a combat unit kills them.
+- **Artificial Intelligence** (a new Information Era tech after
+  Telecommunications) unlocks **Datacenter** districts and the **AI tree**, a
+  third research tree researched with Compute instead of Science. Datacenters
+  make Compute: +6 each, +2 per adjacent district, +3 next to a river or the
+  coast, more with a GPU Cluster or Solar Farm. The tree gives large bonuses:
+  Science from Machine Learning, Deep Learning, Large Language Models, AI
+  Research Agents (free Eurekas), Automated Science (cheaper space race), and
+  Superintelligence; combat strength from Computer Vision; Production from
+  Robotic Automation; and Anduril Strike Drones from Autonomous Systems.
+- **Anduril Strike Drones** come off the line three at a time. They fly over
+  rough terrain (every land tile costs one move), ignore zones of control, and
+  strike from 3 tiles away.
+- **Buying**: right-click anything in a city's production list to buy it with
+  Gold. The current build keeps going.
+- **Trade**: Traders (unlocked by Foreign Trade) start routes from your cities to
+  cities within 15 tiles. Domestic routes bring Food and Production. International
+  routes bring Gold, more for destinations with more districts. Routes last 30 turns,
+  then the Trader comes home. Capacity comes from Civ VI's own modifiers (Foreign
+  Trade, Commercial Hubs, Harbors, Colossus, Merchant Republic...). Each route lays
+  a road, and roads make any land tile cost one move.
+- **Aircraft** are built at and based on Aerodromes (4 slots). They strike anything
+  within their operation range and rebase between Aerodromes. Anti-air units next
+  to the target and enemy fighters covering it fire back. Losing a city loses the
+  aircraft based there. In WayCiv, the Aerodrome doesn't count toward the
+  district limit.
+- **Barbarians** spawn guarded camps in unclaimed fog, at least 5 tiles from any
+  city. Camps send out era-appropriate raiders that pillage, kill civilians, and
+  attack weak targets. They never take cities. Clearing a camp pays 50 Gold.
+- Not included: espionage, theological combat, and city-state quests.
+
+## WayCiv's changes to the roster
+
+**Ronald Reagan** leads America in place of Teddy Roosevelt. **Gandhi is not
+included**, so India isn't in the game.
+
+- **Peace Through Strength** (leader ability)
+  - **Defense buildup**: +15% Production toward military units. +5 Combat
+    Strength for units fighting inside your territory.
+  - **Reaganomics**: +1 Gold in every city for each Economic policy slotted.
+    Commercial Hubs give +2 Production.
+  - **The Great Communicator**: +2 Culture in the Capital. Declaring Friendship
+    grants an Envoy and 50 Gold.
+- **Agenda: Cold Warrior.** Likes civilizations running Democracy. Dislikes
+  civilizations running Communism or Fascism.
+
+## Leader portraits and icons
+
+The portraits in `assets/leaders/` are original paintings generated with
+Codex image generation, one per leader. A leader without a portrait shows a
+monogram in their civilization's colors.
+
+The icons in `assets/icons/` (resources, units, techs, civics, AI tree items,
+beliefs, and the trees themselves) are generated the same way:
+
+```bash
+cargo run --release -p wayciv-core --example icon_list > tools/icons/icons.tsv
+tools/icons/generate.sh tools/icons/icons.tsv 4   # skips icons that exist
+```
+
+Anything without an icon falls back to its name or initials.
+
+## Pacing
+
+WayCiv's own rules keep a 300-turn game moving through all eras:
+- Research costs are 60% of Civ VI's.
+- City centers add +2 Food and +2 Production.
+- Each citizen adds Science and Culture that grows with the era, plus 1 Gold per
+  2 citizens.
+- Amenity shortfalls are milder than in Civ VI.
+
+## Crates
+
+| Crate | Purpose |
+| --- | --- |
+| `civ6-data` | Builds Civ VI's gameplay database from the install, the same way the game does. Reads text and colors. |
+| `wayciv-core` | The game: map generation, cities, units, combat, research, religion, diplomacy, AI, victories. No UI. |
+| `wayciv` | The egui app. |
+
+```bash
+cargo test                                                  # engine + UI flow tests
+cargo run --release -p wayciv-core --example autoplay -- 300 7   # all-AI game
+```
+
+## License
+
+WayCiv's code and assets are under the [MIT License](LICENSE). Civilization VI
+and its content belong to Firaxis Games and 2K; none of it is in this
+repository, and WayCiv needs your own installed copy to run. The Earth map is
+derived from NOAA ETOPO1 (public domain) and WorldClim 2.1 climate data.

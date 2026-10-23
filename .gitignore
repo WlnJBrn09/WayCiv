@@ -1,0 +1,7 @@
+/target
+# Draft portraits and Codex logs from generating the art.
+/assets/leaders/samples/
+/assets/leaders/logs/
+# Generated from your Civ VI install (contains the game's text); rebuild with
+#   cargo run --release -p wayciv-core --example icon_list > tools/icons/icons.tsv
+/tools/icons/icons.tsv
