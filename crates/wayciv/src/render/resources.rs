@@ -357,6 +357,15 @@ pub fn draw_improvement(art: &mut ResourceArt, painter: &egui::Painter, t: &Tile
         return;
     }
 
+    if camp {
+        // A faint red warning ring so camps read at a glance.
+        painter.add(hex(
+            c,
+            z * 0.9,
+            Color32::from_rgba_unmultiplied(170, 30, 28, 36),
+            Stroke::new((z * 0.04).max(1.0), Color32::from_rgba_unmultiplied(200, 40, 34, 150)),
+        ));
+    }
     let tint = if pillaged {
         Color32::from_rgb(150, 138, 130)
     } else {
