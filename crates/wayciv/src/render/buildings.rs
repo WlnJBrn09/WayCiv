@@ -269,7 +269,7 @@ pub fn draw_city(
             generic
         };
         if art.has(&ctx, &name) {
-            let walls = (city.wall_hp > 0).then(|| format!("walls_{}", era.saturating_sub(1).min(2)));
+            let walls = (city.wall_hp > 0).then(|| format!("walls_{}", era.min(2)));
             if let Some(w) = &walls {
                 art.paint(painter, &format!("{w}_back"), c, z, None);
             }
