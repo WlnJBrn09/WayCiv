@@ -144,7 +144,8 @@ def crater(seed=102):
     outer = np.clip(1 - d, 0, 1) ** 0.8 * 0.1
     H = rim + outer
     H = np.where(d < 0.44, 0.07, H)
-    H += (grid_noise(seed + 2, 2.6) - 0.5) * 0.02
+    H += (grid_noise(seed + 2, 2.6) - 0.5) * 0.02 * (H > 0.02)
+    H = np.clip(H, 0, None)
     rock = ramp(grid_noise(seed + 3, 2.0), [(0, hexc("7a6c60")), (1, hexc("b8a894"))])
     green = ramp(grid_noise(seed + 4, 2.0), [(0, hexc("3e7a38")), (1, hexc("6a9c48"))])
     alb = mix(rock, green, (1 - smoothstep(0.1, 0.32, H)) * 0.9)
@@ -187,7 +188,7 @@ def dead_sea(seed=103):
 
 def everest(seed=104):
     peaks = [(0.0, 0.0, 0.95, 1.5), (-0.55, 0.2, 0.55, 0.85), (0.52, 0.16, 0.6, 0.95)]
-    H, E = relief.mountain_height(seed, peaks, jag=1.1)
+    H, E = relief.mountain_height(seed, peaks, jag=0.8)
     alb = relief.mountain_albedo("TUNDRA", H, E, seed, snow_override=(0.22, 1.0))
     alpha = smoothstep(0.012, 0.07, H)
     cell = scene(H, alb, alpha, ky=0.62, kh=1.0, ambient=0.58, shadow_len=100, hscale=1.3)
@@ -273,7 +274,7 @@ def pantanal(seed=107):
             h = np.where(dd < 0.02, r.uniform(0.08, 0.16) * (1 - dd / 0.02), 0)
             m = h > H
             H = np.where(m, h, H)
-            alb = np.where(m[..., None], hexc("8cae48") * (0.85 + 0.3 * (h / 0.16)), alb)
+            alb = np.where(m[..., None], hexc("8cae48") * (0.85 + 0.3 * (h / 0.16))[..., None], alb)
     for (x, y) in scatter(seed + 6, 3, 0.55, 0.5, 0.45):
         add_tree(H, alb, x, y, r.uniform(0.15, 0.19), r.uniform(0.28, 0.34), "dome", hexc("2e8c46"), r)
     # birds: pink and white
@@ -550,7 +551,7 @@ def giants(seed=116):
     hexd = np.maximum(ex, ex * 0.5 + ey * 0.866)
     mask = (1 - smoothstep(0.78, 0.9, np.sqrt((GX / 0.78) ** 2 + (GY / 0.55) ** 2)))
     # height profile: highest at the back (north), stepping to sea level
-    front = (GY + 0.55) / 1.1
+    front = np.clip((GY + 0.55) / 1.1, 0, 1)
     prof = np.clip(0.42 * (1 - front) ** 1.1 + (hh - 0.5) * 0.08, 0.0, None)
     steps = np.floor(prof / 0.045) * 0.045
     Hh = steps * mask

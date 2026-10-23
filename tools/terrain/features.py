@@ -9,12 +9,12 @@ from texlib import *
 FEAT_OFF = -0.12     # sprite centre offset (z units) used by the game
 
 
-def hexmask(R, ky, soft=0.15, wob=None):
+def hexmask(R, ky, soft=0.15, wob=None, wob_amp=0.35):
     x = GX
     y = GY * ky
     d = np.maximum.reduce([np.abs(x), np.abs(x * 0.5 + y * 0.866), np.abs(x * 0.5 - y * 0.866)]) / (0.866 * R)
     if wob is not None:
-        d = d * (1 + (wob - 0.5) * 0.35)
+        d = d * (1 + (wob - 0.5) * wob_amp)
     return 1 - smoothstep(1 - soft, 1.0, d)
 
 
@@ -174,37 +174,39 @@ def dunes(variant, seed):
     warp = blurn(grid_noise(seed + 2, 3.0), 10)
     warp2 = blurn(grid_noise(seed + 3, 2.0), 6)
     ang = [0.55, -0.45, 1.0][variant]
-    ph = (GX * np.cos(ang) + GY * np.sin(ang)) * 2 * np.pi * 1.55 + (warp - 0.5) * 16 + (warp2 - 0.5) * 3.0
+    ph = (GX * np.cos(ang) + GY * np.sin(ang)) * 2 * np.pi * 1.25 + (warp - 0.5) * 5.0 + (warp2 - 0.5) * 1.5
     s = np.sin(ph)
-    H = (0.12 * (s + 0.4 * np.sin(2 * ph + 1.0)) + 0.12) * mask
+    H = (0.055 * (s + 0.35 * np.sin(2 * ph + 1.0)) + 0.07) * mask * smoothstep(0.0, 0.6, mask)
+    H = blurn(H, 2.0)
     H *= 0.7 + 0.6 * blurn(grid_noise(seed + 4, 2.4), 5)
     alb = ramp(grid_noise(seed + 5, 2.4), [(0, hexc("e0bd78")), (0.5, hexc("ecd198")), (1, hexc("f6e4b6"))])
     # crests lighter
     crest = smoothstep(0.7, 1.0, s)
     alb = alb * (1 + 0.1 * crest[..., None])
-    lit = shade(H, alb, shadow_len=40, shadow_strength=0.5, ambient=0.5, sun=1.05, hscale=1.5, ao=0.2)
-    alpha = np.maximum(mask * 0.9, 0)
+    lit = shade(H, alb, shadow_len=40, shadow_strength=0.45, ambient=0.52, sun=1.0, hscale=2.2, ao=0.1)
+    alpha = mask * 0.9
     img = render_height(H, lit, alpha, cy_feat(), ky=ky, kh=1.0)
     return finish(img)
 
 
 def glacier(variant, seed):
     ky = 0.9
-    mask = hexmask(0.82, ky, 0.3, grid_noise(seed + 1, 2.6))
-    ids, d1, d2 = voronoi(GRID, seed + 2, 16 + 3 * variant)
+    mask = hexmask(0.8, ky, 0.45, blurn(grid_noise(seed + 1, 2.6), 6), wob_amp=1.1)
+    ids, d1, d2 = voronoi(GRID, seed + 2, 12 + 4 * variant)
+    base = blurn(grid_noise(seed + 5, 3.0), 7)
+    # broken ice: most seams are shallow, a few are deep blue crevasses
     r = np.random.default_rng(seed)
-    hts = r.uniform(0.05, 0.19, 64)
-    base = hts[ids]
-    edge = smoothstep(0, 9, d2 - d1)
-    H = base * (0.55 + 0.45 * edge) * mask
-    H += (grid_noise(seed + 3, 2.2) - 0.5) * 0.03 * mask
-    cr = smoothstep(7, 0, d2 - d1)
-    alb = ramp(grid_noise(seed + 4, 2.4), [(0, hexc("cfe6f6")), (0.6, hexc("e8f4fc")), (1, hexc("ffffff"))])
-    alb = mix(alb, hexc("7fb4dc"), cr * 0.75)
-    alb = mix(alb, hexc("a9d0ec"), (1 - hts[ids] / 0.19) * 0.25) * 0.93
-    lit = shade(H, alb, shadow_len=36, shadow_strength=0.5, ambient=0.56, sun=1.0, hscale=1.5, ao=0.3)
-    alpha = mask
-    img = render_height(H, lit, alpha, cy_feat(), ky=ky, kh=1.0)
+    deep = r.uniform(0, 1, 64)[ids] < 0.35
+    seam = smoothstep(7, 0, d2 - d1)
+    H = (0.05 + 0.1 * base) * mask
+    H = H - seam * 0.03 * mask
+    H = blurn(H, 1.5)
+    alb = ramp(grid_noise(seed + 4, 2.4), [(0, hexc("e2f0fa")), (0.6, hexc("f4faff")), (1, hexc("ffffff"))])
+    alb = mix(alb, hexc("b4d8f0"), smoothstep(0.55, 0.2, base) * 0.45)
+    alb = mix(alb, hexc("5aa0d4"), seam * deep * 0.8)
+    alb = mix(alb, hexc("9cc8e8"), seam * (~deep) * 0.5)
+    lit = shade(H, alb, shadow_len=36, shadow_strength=0.35, ambient=0.6, sun=0.9, hscale=3.0, ao=0.1)
+    img = render_height(H, np.clip(lit, 0, 1.05), mask, cy_feat(), ky=ky, kh=1.0)
     return finish(img)
 
 

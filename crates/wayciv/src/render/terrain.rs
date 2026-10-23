@@ -307,8 +307,9 @@ const GROUND: usize = 0;
 const FRINGE: usize = 1;
 /// Flat sprites (floodplains, marsh) that rivers run over.
 const DECALS: usize = 2;
-const RIVER: usize = 3;
-const SPRITES: usize = 4;
+const SPRITES: usize = 3;
+/// Rivers run over relief and features so they stay visible through forests.
+const RIVER: usize = 4;
 const LAYERS: usize = 5;
 
 struct Frame {
@@ -416,7 +417,7 @@ impl Frame {
     }
 
     /// A textured quad covering sprite `cell` over `rect`.
-    fn sprite(&mut self, layer: usize, cell: usize, rect: Rect) {
+    fn sprite(&mut self, layer: usize, cell: usize, rect: Rect, flip: bool) {
         let (cx, cy) = ((cell % self.scols) as f32, (cell / self.scols) as f32);
         let (u0, u1) = (
             cx * CELL as f32 / self.sw,
@@ -426,6 +427,7 @@ impl Frame {
             cy * CELL as f32 / self.sh,
             (cy + 1.0) * CELL as f32 / self.sh,
         );
+        let (u0, u1) = if flip { (u1, u0) } else { (u0, u1) };
         let m = self.bufs[layer].mesh(4);
         m.add_rect_with_uv(
             rect,
@@ -575,8 +577,8 @@ fn begin_frame(
             Buf::new(gtex),
             Buf::new(gtex),
             Buf::new(stex),
-            Buf::new(gtex),
             Buf::new(stex),
+            Buf::new(gtex),
         ],
         gw: ground.w as f32,
         gh: ground.h as f32,
@@ -767,10 +769,10 @@ fn tile(
     if has.relief && wonder.is_none() && biome <= 4 {
         if info.mountain {
             let rect = Frame::sprite_rect(c, z, MTN_OFF, MTN_SCALE, 0.0);
-            f.sprite(SPRITES, 15 + bidx * 3 + variant, rect);
+            f.sprite(SPRITES, 15 + bidx * 3 + variant, rect, false);
         } else if info.hills {
             let rect = Frame::sprite_rect(c, z, HILL_OFF, 1.0, 0.0);
-            f.sprite(SPRITES, bidx * 3 + variant, rect);
+            f.sprite(SPRITES, bidx * 3 + variant, rect, false);
         }
     }
     if let Some(feat) = feat {
@@ -787,12 +789,23 @@ fn tile(
             } else {
                 SPRITES
             };
-            f.sprite(layer, SPRITE_FEATURES + first + (h >> 4) as usize % count, rect);
+            let flip = (h >> 20) & 1 == 1
+                && matches!(
+                    feat,
+                    Feat::Marsh
+                        | Feat::FloodDesert
+                        | Feat::FloodGrass
+                        | Feat::FloodPlains
+                        | Feat::Dunes
+                        | Feat::Glacier
+                        | Feat::Ice
+                );
+            f.sprite(layer, SPRITE_FEATURES + first + (h >> 4) as usize % count, rect, flip);
         }
         if let Feat::Wonder(i) = feat {
             if has.wonders {
                 let rect = Frame::sprite_rect(c, z, WONDER_OFF, 1.0, 0.0);
-                f.sprite(SPRITES, SPRITE_WONDERS + i, rect);
+                f.sprite(SPRITES, SPRITE_WONDERS + i, rect, false);
             } else {
                 // No wonder art: a golden marker over the flat tile.
                 let mut shapes = Vec::new();
@@ -899,7 +912,7 @@ fn river(f: &mut Frame, racc: &RiverAcc, _pts: &[Pos2], t: &TileCtx, _h: u32) {
     let (game, z, c, pos) = (t.game, t.z, t.c, t.pos);
     let tile = t.tile();
     let grid = game.map.grid;
-    let half_of = |acc: u16| (z * (0.035 + 0.02 * (acc as f32).sqrt())).min(z * 0.13);
+    let half_of = |acc: u16| (z * (0.06 + 0.03 * (acc as f32).sqrt())).min(z * 0.2);
     let my = half_of(racc.at(game, pos));
     let rules = &game.rules;
 
@@ -943,7 +956,7 @@ fn river(f: &mut Frame, racc: &RiverAcc, _pts: &[Pos2], t: &TileCtx, _h: u32) {
                 .is_some_and(|n| game.map.is_water(rules, n));
             if incoming.is_empty() {
                 let start = c + (m_out - c) * -0.12;
-                let (p, w) = bez(start, c + (m_out - c) * 0.45, m_out, my * 0.45, my, steps);
+                let (p, w) = bez(start, c + (m_out - c) * 0.45, m_out, my * 0.7, my, steps);
                 curves.push((p, w, 1.0, to_water));
             } else {
                 for (d, acc) in incoming {
