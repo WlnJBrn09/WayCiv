@@ -38,26 +38,26 @@ def field_plots(b, plots, crop_cols, seed=1):
         cm = mat("crop" + col, c(col), 0.7, col2=c(col), scale=20, bump=0.3)
         # soil bed
         b.box(soil, (cx, cy, 0.005), (w, h, 0.012), yaw=ang)
-        nrows = max(2, int(h / 0.075))
+        nrows = max(2, int(h / 0.105))
         for i in range(nrows):
             ly = -h / 2 + (i + 0.5) * h / nrows
             px, py = cx - ly * sa, cy + ly * ca
             # a raised ridge row of crop
-            b.box(cm, (px, py, 0.03), (w * 0.94, 0.045, 0.045), yaw=ang)
+            b.box(cm, (px, py, 0.03), (w * 0.94, 0.06, 0.05), yaw=ang)
             # tufts along the row
-            nt = max(2, int(w / 0.07))
+            nt = max(2, int(w / 0.1))
             for k in range(nt):
                 lx = -w / 2 + (k + 0.5) * w / nt
-                b.blob(cm, (px + lx * ca, py + lx * sa, 0.06), (0.03, 0.025, 0.04), seg=6)
+                b.blob(cm, (px + lx * ca, py + lx * sa, 0.06), (0.045, 0.035, 0.05), seg=6)
 
 
 @model("imp_farm")
 def farm(b):
     plots = [(-0.38, 0.38, 0.5, 0.42, 0.0, 0), (0.28, 0.45, 0.56, 0.38, 0.0, 1), (-0.5, -0.05, 0.4, 0.55, 1.5708, 1),
              (0.05, 0.02, 0.5, 0.5, 0.0, 2), (0.52, -0.1, 0.38, 0.55, 1.5708, 0), (-0.28, -0.52, 0.55, 0.38, 0.0, 2), (0.3, -0.55, 0.5, 0.34, 0.0, 1)]
-    soil = mat("tilled", c("#6a4c30"), 1.0, col2=c("#523a24"), scale=12, bump=0.2)
+    soil = mat("tilled", c("#7a5c3a"), 1.0, col2=c("#664a2e"), scale=12, bump=0.2)
     b.poly(soil, hex_pts(0.97), z=0.0, h=0.008)
-    field_plots(b, plots, ["#6fb040", "#d8b848", "#9ac040"])
+    field_plots(b, plots, ["#78ae4a", "#cdb460", "#9ab450"])
     return {"top_down": True, "ortho": 2.0, "fit": False, "no_catcher": True, "mask": 0.93, "samples": 32}
 
 
@@ -99,17 +99,17 @@ def pasture(b):
 
 @model("imp_mine")
 def mine(b):
-    rm = rock_mat("#8a8074", "#5a5248")
-    b.rock(rm, (0.0, 0.18, 0.2), (0.55, 0.36, 0.38), 1, rough=0.2)
+    rm = rock_mat("#8c7a66", "#5e4e40")
+    b.rock(rm, (0.0, 0.34, 0.2), (0.46, 0.3, 0.34), 1, rough=0.16)
     b.rock(rm, (-0.4, 0.0, 0.1), (0.2, 0.17, 0.16), 2)
     wd = wood_mat("#8a5a2c", "#5a3a18")
     dk = mat("darkhole", c("#0a0806"), 1.0)
     # shaft: dark opening framed by timbers
-    b.box(dk, (0.0, -0.1, 0.13), (0.26, 0.08, 0.25))
-    for x in (-0.15, 0.15):
-        b.box(wd, (x, -0.15, 0.15), (0.05, 0.06, 0.3))
-    b.box(wd, (0.0, -0.15, 0.31), (0.38, 0.07, 0.05))
-    b.box(wd, (0.0, -0.16, 0.38), (0.3, 0.06, 0.04))
+    b.box(dk, (0.0, 0.04, 0.15), (0.32, 0.1, 0.3))
+    for x in (-0.18, 0.18):
+        b.box(wd, (x, -0.1, 0.16), (0.06, 0.07, 0.32))
+    b.box(wd, (0.0, -0.1, 0.33), (0.44, 0.08, 0.06))
+    b.box(wd, (0.0, -0.1, 0.4), (0.34, 0.07, 0.04))
     # rails and cart
     ir = mat("irondk", c("#4a4a50"), 0.4, metal=0.8)
     for x in (-0.06, 0.06):

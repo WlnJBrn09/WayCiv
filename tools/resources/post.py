@@ -41,6 +41,7 @@ def klass(name):
 
 def premul_resize(im, size):
     a = np.asarray(im.convert("RGBA")).astype(np.float32) / 255.0
+    a[..., 3] = np.clip((a[..., 3] - 0.06) / 0.94, 0, 1)  # drop denoiser noise
     a[..., :3] *= a[..., 3:4]
     pm = Image.fromarray((a * 255).astype(np.uint8), "RGBA")
     pm = pm.resize((size, size), Image.LANCZOS) if isinstance(size, int) else pm.resize(size, Image.LANCZOS)
