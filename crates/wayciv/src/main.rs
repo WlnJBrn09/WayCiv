@@ -8,6 +8,7 @@ mod portraits;
 mod render;
 mod screens;
 mod setup_screen;
+mod ui;
 
 use std::sync::{Arc, mpsc};
 use wayciv_core::{Game, Rules};
@@ -18,7 +19,7 @@ fn main() -> eframe::Result {
             .with_title("WayCiv")
             .with_app_id("wayciv")
             .with_inner_size([1500.0, 920.0])
-            .with_min_inner_size([1000.0, 640.0]),
+            .with_min_inner_size([1100.0, 680.0]),
         ..Default::default()
     };
     eframe::run_native("WayCiv", options, Box::new(|cc| Ok(Box::new(App::new(cc)))))
@@ -66,6 +67,10 @@ impl App {
     /// `WAYCIV_LEADER` the leader, `WAYCIV_TURNS` lets the AI play your civ
     /// for that many turns, `WAYCIV_OPEN` opens a screen, `WAYCIV_REVEAL`
     /// reveals the whole map, and `WAYCIV_CENTER=x,y` centers the view.
+    /// `WAYCIV_OPEN` is one of city, tech, civic, ai, religion, government,
+    /// victory, great_people, city_states, leaders, notifications, legend,
+    /// diplomacy or popup. `WAYCIV_TOASTS=1` replays the last few
+    /// notifications as new ones (toasts and the unread badge).
     fn autostart(&mut self, rules: &Arc<Rules>) {
         let env = |k: &str| std::env::var(k).ok();
         let settings = wayciv_core::Settings {
@@ -119,18 +124,29 @@ impl App {
                     s.select_city(Some(city.0));
                 }
             }
+            use screens::Panel;
+            if env("WAYCIV_TOASTS").is_some() {
+                s.notifications.replay(&s.game, 5);
+            }
             match env("WAYCIV_OPEN").as_deref() {
-                Some("tech") => s.windows.tech = true,
-                Some("civic") => s.windows.civic = true,
-                Some("ai") => s.windows.ai = true,
-                Some("government") => s.windows.government = true,
-                Some("religion") => s.windows.religion = true,
-                Some("victory") => s.windows.victory = true,
+                Some("tech") => s.windows.open(Panel::Tech),
+                Some("civic") => s.windows.open(Panel::Civic),
+                Some("ai") => s.windows.open(Panel::Ai),
+                Some("government") => s.windows.open(Panel::Government),
+                Some("religion") => s.windows.open(Panel::Religion),
+                Some("victory") => s.windows.open(Panel::Victory),
+                Some("great_people") => s.windows.open(Panel::GreatPeople),
+                Some("city_states") => s.windows.open(Panel::CityStates),
+                Some("leaders") => s.windows.open(Panel::Leaders),
+                Some("notifications") => s.windows.open(Panel::Notifications),
                 Some("legend") => s.windows.legend = true,
                 Some("diplomacy") => {
                     let me = s.game.human();
-                    s.windows.diplomacy = (0..s.game.players.len())
-                        .find(|&o| o != me && s.game.players[o].is_major());
+                    if let Some(o) =
+                        (0..s.game.players.len()).find(|&o| o != me && s.game.players[o].is_major())
+                    {
+                        s.windows.open(Panel::Diplomacy(o));
+                    }
                 }
                 Some("popup") => {
                     let me = s.game.human();

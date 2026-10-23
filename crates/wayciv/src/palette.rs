@@ -109,16 +109,72 @@ pub const YIELD_COLORS: [Color32; 6] = [
     Color32::from_rgb(230, 230, 230),
 ];
 
-pub const PANEL: Color32 = Color32::from_rgb(24, 30, 40);
-pub const PANEL_LIGHT: Color32 = Color32::from_rgb(38, 46, 60);
-pub const GOLD: Color32 = Color32::from_rgb(230, 190, 90);
+pub const PANEL: Color32 = Color32::from_rgb(14, 22, 36);
+pub const GOLD: Color32 = Color32::from_rgb(232, 194, 100);
+/// Trim on panels and rings: a darker gold.
+pub const GOLD_DIM: Color32 = Color32::from_rgb(150, 120, 58);
+/// Deep navy behind HUD plates.
+pub const NAVY: Color32 = Color32::from_rgb(10, 18, 32);
+/// Raised navy: buttons and rows.
+pub const NAVY_RAISED: Color32 = Color32::from_rgb(24, 40, 62);
+pub const NAVY_HOVER: Color32 = Color32::from_rgb(34, 62, 88);
+pub const TEAL: Color32 = Color32::from_rgb(64, 174, 184);
+pub const TEAL_DIM: Color32 = Color32::from_rgb(30, 88, 100);
+pub const TEXT: Color32 = Color32::from_rgb(234, 238, 242);
+pub const TEXT_DIM: Color32 = Color32::from_rgb(158, 172, 186);
+pub const GOOD: Color32 = Color32::from_rgb(112, 212, 112);
+pub const BAD: Color32 = Color32::from_rgb(242, 94, 84);
 /// The AI tree and Compute.
 pub const COMPUTE: Color32 = Color32::from_rgb(70, 225, 235);
 
+/// Civ VI-on-Switch look: dark navy and teal panels with gold trim, rounded
+/// corners, and large readable text.
 pub fn style(ctx: &egui::Context) {
+    use egui::{CornerRadius, FontFamily, FontId, Stroke, TextStyle};
     let mut visuals = egui::Visuals::dark();
     visuals.panel_fill = PANEL;
-    visuals.window_fill = Color32::from_rgb(28, 34, 46);
-    visuals.selection.bg_fill = Color32::from_rgb(70, 110, 170);
-    ctx.set_visuals(visuals);
+    visuals.window_fill = Color32::from_rgb(14, 24, 40);
+    visuals.extreme_bg_color = NAVY;
+    visuals.faint_bg_color = Color32::from_rgb(20, 32, 50);
+    visuals.selection.bg_fill = Color32::from_rgb(40, 110, 130);
+    visuals.selection.stroke = Stroke::new(1.0, GOLD);
+    visuals.window_corner_radius = CornerRadius::same(14);
+    visuals.menu_corner_radius = CornerRadius::same(10);
+    visuals.window_stroke = Stroke::new(2.0, GOLD_DIM);
+    visuals.hyperlink_color = TEAL;
+    let round = CornerRadius::same(8);
+    for w in [
+        &mut visuals.widgets.noninteractive,
+        &mut visuals.widgets.inactive,
+        &mut visuals.widgets.hovered,
+        &mut visuals.widgets.active,
+        &mut visuals.widgets.open,
+    ] {
+        w.corner_radius = round;
+    }
+    visuals.widgets.noninteractive.bg_stroke = Stroke::new(1.0, Color32::from_rgb(44, 62, 84));
+    visuals.widgets.noninteractive.fg_stroke = Stroke::new(1.0, TEXT);
+    visuals.widgets.inactive.bg_fill = NAVY_RAISED;
+    visuals.widgets.inactive.weak_bg_fill = NAVY_RAISED;
+    visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, GOLD_DIM);
+    visuals.widgets.inactive.fg_stroke = Stroke::new(1.0, TEXT);
+    visuals.widgets.hovered.bg_fill = NAVY_HOVER;
+    visuals.widgets.hovered.weak_bg_fill = NAVY_HOVER;
+    visuals.widgets.hovered.bg_stroke = Stroke::new(1.5, GOLD);
+    visuals.widgets.hovered.fg_stroke = Stroke::new(1.5, Color32::WHITE);
+    visuals.widgets.active.bg_fill = TEAL_DIM;
+    visuals.widgets.active.weak_bg_fill = TEAL_DIM;
+    visuals.widgets.active.bg_stroke = Stroke::new(1.5, GOLD);
+    ctx.set_visuals(visuals.clone());
+    ctx.set_visuals_of(egui::Theme::Dark, visuals);
+    ctx.all_styles_mut(|style| {
+        let f = |size: f32| FontId::new(size, FontFamily::Proportional);
+        style.text_styles.insert(TextStyle::Body, f(15.0));
+        style.text_styles.insert(TextStyle::Button, f(15.0));
+        style.text_styles.insert(TextStyle::Small, f(12.5));
+        style.text_styles.insert(TextStyle::Heading, f(24.0));
+        style.spacing.button_padding = egui::vec2(12.0, 6.0);
+        style.spacing.item_spacing = egui::vec2(8.0, 6.0);
+        style.spacing.interact_size.y = 28.0;
+    });
 }
