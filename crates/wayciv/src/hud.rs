@@ -287,6 +287,7 @@ impl Session {
     }
 }
 
+// TODO(merge): use game.calendar_year (negative means BC) instead of this.
 pub fn year(turn: u32) -> String {
     // Civ VI standard-speed calendar, simplified.
     let mut y: i32 = -4000;

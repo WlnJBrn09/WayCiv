@@ -182,7 +182,7 @@ pub fn windows(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) 
             Tree::Ai => ("Artificial Intelligence Tree", Glyph::Chip, "A"),
         };
         let mut picked = false;
-        let open = themed_window(ctx, title, glyph, Some(key), vec2(1180.0, 660.0), |ui| {
+        let open = themed_window(ctx, title, glyph, Some(key), vec2(1700.0, 1000.0), |ui| {
             picked = research_tree(s, ui, tree)
         });
         // Choosing something closes the tree.
@@ -317,32 +317,41 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
     let min_row = positions.values().map(|p| p.1).min().unwrap_or(0);
     let max_col = positions.values().map(|p| p.0).max().unwrap_or(0);
     let max_row = positions.values().map(|p| p.1).max().unwrap_or(0);
-    let (w, h, gx, gy) = (230.0, 58.0, 270.0, 72.0);
+    let (w, h, gx, gy) = (248.0, 64.0, 296.0, 78.0);
     let current = s.game.current_research(me, tree);
     let accent = match tree {
         Tree::Tech => YIELD_COLORS[3],
         Tree::Civic => YIELD_COLORS[4],
         Tree::Ai => crate::palette::COMPUTE,
     };
-    let (icon_kind, tree_icon) = match tree {
-        Tree::Tech => ("tech", "TREE_TECH"),
-        Tree::Civic => ("civic", "TREE_CIVIC"),
-        Tree::Ai => ("ai", "TREE_AI"),
+    let (icon_kind, fallback) = match tree {
+        Tree::Tech => ("tech", Glyph::Science),
+        Tree::Civic => ("civic", Glyph::Culture),
+        Tree::Ai => ("ai", Glyph::Chip),
     };
     ui.horizontal(|ui| {
-        s.icons.show(ui, "tree", tree_icon, 36.0);
-        ui.vertical(|ui| {
-            ui.label("Click an available item to research it. Gold: current. Bright: available. Green: known.");
-            if tree == Tree::Ai {
-                let compute = s.game.compute(me);
-                if !s.game.ai_tree_unlocked(me) {
-                    ui.label(RichText::new("Research Artificial Intelligence to open this tree.").color(GOLD));
-                } else {
-                    ui.label(RichText::new(format!("Compute +{compute:.0}/turn. Datacenters produce Compute: +6 each, +2 per adjacent district, +3 next to a river or the coast.")).color(crate::palette::COMPUTE));
-                }
-            }
-        });
+        ui.label(
+            RichText::new("Click an available item to research it.")
+                .color(palette::TEXT),
+        );
+        for (name, color) in [
+            ("current", GOLD),
+            ("available", accent),
+            ("known", palette::GOOD),
+        ] {
+            let (rect, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
+            ui.painter().rect_filled(rect, 4.0, color.gamma_multiply(0.8));
+            ui.label(RichText::new(name).color(palette::TEXT_DIM).size(13.5));
+        }
     });
+    if tree == Tree::Ai {
+        let compute = s.game.compute(me);
+        if !s.game.ai_tree_unlocked(me) {
+            ui.label(RichText::new("Research Artificial Intelligence to open this tree.").color(GOLD));
+        } else {
+            ui.label(RichText::new(format!("Compute +{compute:.0}/turn. Datacenters produce Compute: +6 each, +2 per adjacent district, +3 next to a river or the coast.")).color(crate::palette::COMPUTE));
+        }
+    }
     egui::ScrollArea::both().show(ui, |ui| {
         let size = vec2(
             gx * (max_col + 1) as f32 + 20.0,
@@ -365,15 +374,15 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                     let from = a.right_center();
                     let to = b.left_center();
                     let mid = Pos2::new((from.x + to.x) / 2.0, from.y);
-                    painter.line_segment([from, mid], Stroke::new(1.5, Color32::from_gray(90)));
-                    painter.line_segment(
-                        [mid, Pos2::new(mid.x, to.y)],
-                        Stroke::new(1.5, Color32::from_gray(90)),
-                    );
-                    painter.line_segment(
-                        [Pos2::new(mid.x, to.y), to],
-                        Stroke::new(1.5, Color32::from_gray(90)),
-                    );
+                    let line = if s.game.known(me, tree, j) {
+                        Stroke::new(2.0, palette::GOLD_DIM)
+                    } else {
+                        Stroke::new(1.5, Color32::from_rgb(54, 66, 84))
+                    };
+                    painter.add(egui::Shape::line(
+                        vec![from, mid, Pos2::new(mid.x, to.y), to],
+                        line,
+                    ));
                 }
             }
         }
@@ -386,77 +395,76 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                 Tree::Civic => s.game.players[me].civic_boosted[i],
                 Tree::Ai => false,
             };
-            let fill = if Some(i) == current {
-                Color32::from_rgb(110, 85, 30)
+            let is_current = Some(i) == current;
+            let (fill, edge, text) = if is_current {
+                (Color32::from_rgb(70, 54, 20), GOLD, Color32::WHITE)
             } else if known {
-                Color32::from_rgb(40, 80, 50)
+                (Color32::from_rgb(20, 58, 50), palette::GOOD.gamma_multiply(0.55), Color32::from_gray(225))
             } else if available {
-                Color32::from_rgb(40, 60, 95)
+                (Color32::from_rgb(26, 48, 80), accent, Color32::WHITE)
             } else {
-                Color32::from_rgb(35, 38, 46)
+                (Color32::from_rgb(15, 22, 34), Color32::from_rgb(46, 58, 76), Color32::from_gray(130))
             };
             let response = ui.interact(rect, ui.scope_id().with(("node", i)), Sense::click());
-            painter.rect_filled(rect, 6.0, fill);
+            let hovered = response.hovered() && (available || known);
+            painter.rect_filled(rect, 14.0, if hovered { fill.gamma_multiply(1.35) } else { fill });
             painter.rect_stroke(
                 rect,
-                6.0,
-                Stroke::new(
-                    if response.hovered() { 2.0 } else { 1.0 },
-                    if Some(i) == current {
-                        GOLD
-                    } else {
-                        accent.gamma_multiply(0.6)
-                    },
-                ),
+                14.0,
+                Stroke::new(if hovered || is_current { 2.5 } else { 1.5 }, edge),
                 StrokeKind::Inside,
             );
-            let icon = Rect::from_min_size(rect.min + vec2(5.0, 5.0), vec2(h - 10.0, h - 10.0));
-            let text_x = if s.icons.paint(&painter, icon_kind, &item.id, icon) {
-                h
-            } else {
-                8.0
-            };
+            let ic = rect.left_center() + vec2(h / 2.0, 0.0);
+            painter.circle_filled(ic, h / 2.0 - 7.0, Color32::from_rgb(10, 18, 30));
+            if !s.icons.paint(
+                &painter,
+                icon_kind,
+                &item.id,
+                Rect::from_center_size(ic, vec2(h - 18.0, h - 18.0)),
+            ) {
+                ui::glyph::paint(&painter, fallback, ic, 13.0, if known || available { accent } else { Color32::from_gray(100) });
+            }
+            painter.circle_stroke(ic, h / 2.0 - 7.0, Stroke::new(1.5, edge));
+            let text_x = h + 4.0;
+            let name = ui::trackers::fit(&painter, &item.name, 15.5, w - text_x - 10.0);
             painter.text(
-                rect.min + vec2(text_x, 6.0),
-                Align2::LEFT_TOP,
-                &item.name,
-                FontId::proportional(15.0),
-                Color32::WHITE,
+                rect.min + vec2(text_x, 17.0),
+                Align2::LEFT_CENTER,
+                name,
+                FontId::proportional(15.5),
+                text,
             );
             let cost = s.game.research_cost(tree, i);
-            let status = if known {
-                "Known".into()
+            let (status, status_color) = if known {
+                ("Known".to_string(), palette::GOOD)
+            } else if available || is_current {
+                (format!("{cost}   {}", s.research_turns(tree, i)), accent)
             } else {
-                format!("{cost} ({})", s.research_turns(tree, i))
+                (format!("{cost}"), Color32::from_gray(120))
             };
             painter.text(
-                rect.min + vec2(text_x, 26.0),
-                Align2::LEFT_TOP,
+                rect.min + vec2(text_x, 37.0),
+                Align2::LEFT_CENTER,
                 status,
-                FontId::proportional(12.0),
-                Color32::from_gray(190),
+                FontId::proportional(13.5),
+                status_color,
             );
-            if item.boost.is_some() {
-                let mark = if boosted { "Boosted!" } else { "Boost: hover" };
+            if item.boost.is_some() && !known {
                 painter.text(
-                    rect.min + vec2(text_x, 41.0),
-                    Align2::LEFT_TOP,
-                    mark,
-                    FontId::proportional(11.0),
-                    if boosted {
-                        GOLD
-                    } else {
-                        Color32::from_gray(140)
-                    },
+                    rect.min + vec2(text_x, 53.0),
+                    Align2::LEFT_CENTER,
+                    if boosted { "Boosted!" } else { "Boost: hover" },
+                    FontId::proportional(11.5),
+                    if boosted { GOLD } else { Color32::from_gray(120) },
                 );
             }
             let progress = s.game.progress(me, tree, i);
             if !known && progress > 0 {
                 let bar = Rect::from_min_size(
-                    rect.left_bottom() + vec2(0.0, -4.0),
-                    vec2(w * (progress as f32 / cost.max(1) as f32).min(1.0), 4.0),
+                    rect.left_bottom() + vec2(16.0, -7.0),
+                    vec2((w - 32.0) * (progress as f32 / cost.max(1) as f32).min(1.0), 3.5),
                 );
-                painter.rect_filled(bar, 1.0, accent);
+                painter.rect_filled(bar, 2.0, accent);
             }
             let mut tip = item.name.clone();
             if tree == Tree::Ai {
@@ -812,39 +820,36 @@ fn diplomacy(s: &mut Session, portraits: &mut Portraits, ui: &mut egui::Ui, othe
     let me = s.me();
     let o = s.game.players[other].clone();
     let leader = s.game.rules.content.leaders[o.leader].clone();
+    let rel = ui::leaders::relationship(s, other);
     ui.horizontal(|ui| {
-        let (rect, _) = ui.allocate_exact_size(vec2(360.0, 360.0), Sense::hover());
-        portraits.paint(ui, rect, &leader.id, &leader.name, (o.primary, o.secondary));
+        let (rect, _) = ui.allocate_exact_size(vec2(300.0, 300.0), Sense::hover());
+        let painter = ui.painter().clone();
+        theme::portrait_disc(&painter, portraits, rect.center(), 140.0, &leader.id, &leader.name, (o.primary, o.secondary));
+        painter.circle_stroke(rect.center(), 143.0, Stroke::new(5.0, rel.status_color));
+        painter.circle_stroke(rect.center(), 148.0, Stroke::new(1.5, palette::GOLD_DIM));
         ui.vertical(|ui| {
-            ui.heading(RichText::new(&leader.name).color(GOLD).size(26.0));
-            ui.label(RichText::new(&o.civ_name).size(18.0));
-            ui.add_space(6.0);
+            ui.set_width(420.0);
+            ui.label(RichText::new(&leader.name).color(GOLD).size(30.0).strong());
+            ui.label(RichText::new(&o.civ_name).size(19.0));
+            ui.add_space(4.0);
+            ui.horizontal(|ui| {
+                theme::tag(ui, rel.status, rel.status_color);
+                theme::tag(ui, rel.mood, rel.mood_color);
+            });
+            ui.add_space(4.0);
             ui.label(
                 RichText::new(format!(
                     "\"{}\"",
                     s.game.dialogue(other, DiploEvent::Greeting)
                 ))
                 .italics()
-                .size(15.0),
+                .size(15.5),
             );
-            ui.add_space(6.0);
-            let r = &s.game.players[me].relations[other];
-            let status = if r.at_war {
-                "At war"
-            } else if r.friendship {
-                "Declared friends"
-            } else {
-                "At peace"
-            };
-            let opinion = s.game.opinion(other, me);
-            let mood = match opinion {
-                o if o >= 25 => "Friendly",
-                o if o >= -10 => "Neutral",
-                _ => "Unfriendly",
-            };
-            ui.label(format!("{status}. Their attitude: {mood}."));
+            ui.add_space(4.0);
+            ui.label(RichText::new(&rel.detail).color(palette::TEXT_DIM));
             if let Some((name, desc)) = &leader.agenda {
-                ui.label(RichText::new(format!("Agenda: {name}")).strong());
+                ui.add_space(4.0);
+                ui.label(RichText::new(format!("Agenda: {name}")).strong().color(GOLD));
                 ui.label(desc);
             }
             for t in &leader.traits {
@@ -918,12 +923,15 @@ fn leader_popup(
     let leader = s.game.rules.content.leaders[o.leader].clone();
     let line = s.game.dialogue(other, event);
     let mut close = false;
-    egui::Modal::new(egui::Id::unique("leader_popup")).show(ctx, |ui| {
-        ui.set_width(820.0);
+    egui::Modal::new(egui::Id::unique("leader_popup")).frame(theme::plate_frame().inner_margin(20)).show(ctx, |ui| {
+        ui.set_width(860.0);
         ui.horizontal(|ui| {
-            let (rect, _) = ui.allocate_exact_size(vec2(420.0, 420.0), Sense::hover());
-            portraits.paint(ui, rect, &leader.id, &leader.name, (o.primary, o.secondary));
+            let (rect, _) = ui.allocate_exact_size(vec2(380.0, 380.0), Sense::hover());
+            let painter = ui.painter().clone();
+            theme::portrait_disc(&painter, portraits, rect.center(), 180.0, &leader.id, &leader.name, (o.primary, o.secondary));
+            painter.circle_stroke(rect.center(), 184.0, Stroke::new(5.0, palette::GOLD));
             ui.vertical(|ui| {
+                ui.set_width(420.0);
                 ui.heading(RichText::new(&leader.name).color(GOLD).size(28.0));
                 ui.label(RichText::new(&o.civ_name).size(18.0));
                 ui.add_space(12.0);

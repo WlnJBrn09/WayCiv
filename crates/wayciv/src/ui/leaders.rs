@@ -205,7 +205,7 @@ fn row(s: &mut Session, portraits: &mut Portraits, ui: &mut Ui, other: PlayerId)
     theme::text_bold(&painter, chip.center(), Align2::CENTER_CENTER, rel.status, 14.0, TEXT);
 
     // Opinion bar: -100 .. 100.
-    let bx = x + 270.0;
+    let bx = rect.right() - 12.0 - 104.0 - 24.0 - 190.0;
     let bar = Rect::from_min_size(pos2(bx, rect.top() + 52.0), vec2(190.0, 10.0));
     painter.rect_filled(bar, 5.0, Color32::from_white_alpha(24));
     let mid = bar.center().x;

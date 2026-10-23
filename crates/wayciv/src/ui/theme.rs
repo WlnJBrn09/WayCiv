@@ -289,3 +289,15 @@ pub fn yield_glyph(i: usize) -> Glyph {
         Glyph::Faith,
     ][i]
 }
+
+/// A small colored label such as "At war".
+pub fn tag(ui: &mut Ui, label: &str, color: Color32) {
+    let galley = ui
+        .painter()
+        .layout_no_wrap(label.to_string(), FontId::proportional(15.0), TEXT);
+    let (rect, _) = ui.allocate_exact_size(vec2(galley.size().x + 24.0, 26.0), Sense::hover());
+    let painter = ui.painter();
+    painter.rect_filled(rect, 13.0, color.gamma_multiply(0.3));
+    painter.rect_stroke(rect, 13.0, Stroke::new(1.5, color), StrokeKind::Inside);
+    painter.galley(rect.center() - galley.size() / 2.0, galley, TEXT);
+}
