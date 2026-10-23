@@ -4,6 +4,7 @@
 #   ~/.local/bin/wayciv
 #   ~/.local/share/wayciv/assets/leaders/*.png   (leader portraits)
 #   ~/.local/share/wayciv/assets/icons/          (unit, resource, tree icons)
+#   ~/.local/share/wayciv/assets/{terrain,units,buildings,resources}/ (map art)
 #   ~/.local/share/applications/wayciv.desktop
 #   ~/.local/share/icons/hicolor/scalable/apps/wayciv.svg
 # WayCiv reads its leaders, units and techs from your Civilization VI install
@@ -30,10 +31,15 @@ install -Dm755 target/release/wayciv "$bin"
 mkdir -p "$data/assets/leaders"
 rm -f "$data/assets/leaders/"*.png
 install -m644 assets/leaders/leader_*.png "$data/assets/leaders/"
-# Icons (resources, units, trees...): replaced as a whole.
-rm -rf "$data/assets/icons"
-mkdir -p "$data/assets/icons"
-cp -r assets/icons/. "$data/assets/icons/"
+# Art (icons, terrain, units, buildings, resources): each folder is
+# replaced as a whole.
+for dir in icons terrain units buildings resources; do
+  rm -rf "$data/assets/$dir"
+  if [[ -d assets/$dir ]]; then
+    mkdir -p "$data/assets/$dir"
+    cp -r "assets/$dir/." "$data/assets/$dir/"
+  fi
+done
 install -Dm644 assets/wayciv.svg "$icon"
 # The session PATH may not include ~/.local/bin, so the entry uses the full path.
 mkdir -p "$(dirname "$desktop")"
