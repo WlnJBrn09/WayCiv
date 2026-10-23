@@ -88,6 +88,7 @@ impl App {
             },
             opponents: 9,
             city_states: 12,
+            length: env("WAYCIV_LENGTH").and_then(|l| wayciv_core::GameLength::parse(&l)).unwrap_or_default(),
             ..Default::default()
         };
         let mut game = wayciv_core::new_game(rules.clone(), settings);

@@ -174,8 +174,7 @@ fn bar(s: &mut Session, ui: &mut Ui) {
         .get(game.era_of(me))
         .map(|e| e.name.clone())
         .unwrap_or_default();
-    // TODO(merge): use game.calendar_year(turn) (negative means BC) instead of hud::year.
-    let year = crate::hud::year(game.turn);
+    let year = crate::hud::year(game);
     let turn_font = FontId::proportional(20.0);
     let turn_galley =
         painter.layout_no_wrap(format!("Turn {}", game.turn), turn_font, GOLD);

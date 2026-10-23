@@ -287,26 +287,11 @@ impl Session {
     }
 }
 
-// TODO(merge): use game.calendar_year (negative means BC) instead of this.
-pub fn year(turn: u32) -> String {
-    // Civ VI standard-speed calendar, simplified.
-    let mut y: i32 = -4000;
-    for t in 1..turn {
-        y += match t {
-            0..=75 => 40,
-            76..=135 => 25,
-            136..=195 => 20,
-            196..=255 => 10,
-            256..=315 => 5,
-            316..=375 => 2,
-            _ => 1,
-        };
-    }
-    if y < 0 {
-        format!("{} BC", -y)
-    } else {
-        format!("{y} AD")
-    }
+/// The calendar year of the current turn, e.g. "1600 BC" (stretched to fit
+/// the game's length).
+pub fn year(game: &Game) -> String {
+    let y = game.calendar_year(game.turn);
+    if y < 0 { format!("{} BC", -y) } else { format!("{y} AD") }
 }
 
 pub fn tile_tooltip(s: &Session, pos: Pos) -> String {
