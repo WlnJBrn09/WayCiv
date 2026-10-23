@@ -454,9 +454,9 @@ def ha_long(seed=113):
         Ht = r.uniform(0.3, 0.7)
         d = np.sqrt(((GX - x) / R) ** 2 + ((GY - y) / (R * 0.85)) ** 2) * (1 + (blurn(grid_noise(seed + int(x * 90) + 5, 2.8), 3) - 0.5) * 0.3)
         body = (1 - smoothstep(0.82, 1.0, d))
-        h = body * Ht * (0.9 + 0.2 * np.clip(1 - d, 0, 1))
-        top = np.clip((h - 0.8 * Ht) / (0.2 * Ht), 0, 1)
-        lime = ramp(grid_noise(seed + 9, 1.6), [(0, hexc("b0a894")), (1, hexc("e0d8c0"))]) * (0.85 + 0.2 * (0.5 + 0.5 * np.sin(GX * 60 + x * 5)))[..., None]
+        h = body * Ht * (0.78 + 0.32 * np.clip(1 - d, 0, 1) ** 0.6)
+        top = np.clip((h - 0.72 * Ht) / (0.2 * Ht), 0, 1)
+        lime = ramp(grid_noise(seed + 9, 1.6), [(0, hexc("cfc6ae")), (1, hexc("f2ead6"))]) * (0.85 + 0.2 * (0.5 + 0.5 * np.sin(GX * 60 + x * 5)))[..., None]
         col = lime * (1 - top[..., None]) + hexc("3a8a46") * top[..., None]
         # waterline stain
         col = col * (1 - 0.3 * (1 - smoothstep(0.0, 0.08, h))[..., None] * (h > 0.005)[..., None])
@@ -467,7 +467,7 @@ def ha_long(seed=113):
         alpha = np.maximum(alpha, smoothstep(0.01, 0.05, h))
     alb = np.where((alpha < 0.05)[..., None], np.broadcast_to(hexc("ffffff"), alb.shape), alb)
     alpha = np.maximum(alpha, foam * 0.5)
-    return scene(H, alb, alpha, ky=ky, kh=1.0, shadow_len=60)
+    return scene(H, alb, alpha, ky=ky, kh=1.0, shadow_len=60, ambient=0.66, sun=0.95, hscale=1.0)
 
 
 def eyja(seed=114):

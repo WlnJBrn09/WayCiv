@@ -53,6 +53,8 @@ const FEAT_OFF: f32 = -0.12;
 const WONDER_OFF: f32 = -0.3;
 /// Mountains are drawn a little smaller so ranges don't become a picket fence.
 const MTN_SCALE: f32 = 0.86;
+/// Natural wonders are drawn larger than ordinary relief.
+const WONDER_SCALE: f32 = 1.2;
 /// Sprite sheet cell numbers: relief first, then features, then wonders.
 const SPRITE_FEATURES: usize = 32;
 const SPRITE_WONDERS: usize = 64;
@@ -316,6 +318,9 @@ struct Frame {
     pass: u64,
     idx: [egui::layers::ShapeIdx; LAYERS],
     bufs: [Buf; LAYERS],
+    /// Wonder names, above everything else this module draws.
+    label_idx: egui::layers::ShapeIdx,
+    labels: Vec<Shape>,
     /// Level-0 sizes of the atlases (for UVs).
     gw: f32,
     gh: f32,
@@ -570,9 +575,12 @@ fn begin_frame(
         }
     }
     let idx = std::array::from_fn(|_| painter.add(Shape::Noop));
+    let label_idx = painter.add(Shape::Noop);
     Frame {
         pass: ctx.cumulative_pass_nr(),
         idx,
+        label_idx,
+        labels: Vec::new(),
         bufs: [
             Buf::new(gtex),
             Buf::new(gtex),
@@ -625,10 +633,17 @@ pub fn draw_tile(art: &mut TerrainArt, painter: &egui::Painter, t: &TileCtx) {
 /// in them, under the relief, so they never cut across mountains).
 pub fn draw_river(art: &mut TerrainArt, painter: &egui::Painter, t: &TileCtx) {
     if let Some(frame) = art.frame.take() {
-        let Frame { idx, bufs, .. } = frame;
+        let Frame {
+            idx,
+            bufs,
+            label_idx,
+            labels,
+            ..
+        } = frame;
         for (i, buf) in idx.into_iter().zip(bufs) {
             painter.set(i, buf.finish());
         }
+        painter.set(label_idx, Shape::Vec(labels));
     } else if !art.ensure() {
         flat::draw_river(painter, t);
     }
@@ -736,9 +751,9 @@ fn tile(
                 rot: 0,
                 flip: false,
             };
-            let foam = [(0.0, 0.8), (0.05, 0.5), (0.14, 0.0)];
+            let foam = [(0.0, 0.9), (0.05, 0.6), (0.15, 0.0)];
             edge_strip(f, FRINGE, &pts, &edge, nrm, z, white, &foam, [1.0; 3], 0.45, h, d);
-            let wide = [(0.0, 0.0), (0.1, 0.22), (0.24, 0.0)];
+            let wide = [(0.0, 0.0), (0.12, 0.3), (0.28, 0.0)];
             edge_strip(f, FRINGE, &pts, &edge, nrm, z, white, &wide, [0.85, 1.0, 1.0], 0.3, h, d);
             if tile.cliffs {
                 let rock = Cell {
@@ -804,7 +819,7 @@ fn tile(
         }
         if let Feat::Wonder(i) = feat {
             if has.wonders {
-                let rect = Frame::sprite_rect(c, z, WONDER_OFF, 1.0, 0.0);
+                let rect = Frame::sprite_rect(c, z, WONDER_OFF, WONDER_SCALE, 0.0);
                 f.sprite(SPRITES, SPRITE_WONDERS + i, rect, false);
             } else {
                 // No wonder art: a golden marker over the flat tile.
@@ -827,12 +842,12 @@ fn tile(
                     painter.layout_no_wrap(name.to_string(), font, Color32::from_rgb(255, 230, 140));
                 let size = text.size();
                 let top_left = Align2::CENTER_TOP.align_size_within_rect(size, Rect::from_min_size(at, Vec2::ZERO)).min;
-                f.bufs[SPRITES].push_shape(Shape::galley(
+                f.labels.push(Shape::galley(
                     top_left + vec2(1.0, 1.0),
                     shadow,
                     Color32::BLACK,
                 ));
-                f.bufs[SPRITES].push_shape(Shape::galley(top_left, text, Color32::WHITE));
+                f.labels.push(Shape::galley(top_left, text, Color32::WHITE));
             }
         }
     }
@@ -918,6 +933,7 @@ fn river(f: &mut Frame, racc: &RiverAcc, _pts: &[Pos2], t: &TileCtx, _h: u32) {
 
     // Curves as (points, half widths, alpha scale at the end).
     let mut curves: Vec<(Vec<Pos2>, Vec<f32>, f32, bool)> = Vec::new();
+    let mut incoming_none = false;
     let bez = |p0: Pos2, p1: Pos2, p2: Pos2, w0: f32, w1: f32, steps: usize| {
         let mut pts = Vec::with_capacity(steps + 1);
         let mut ws = Vec::with_capacity(steps + 1);
@@ -954,9 +970,10 @@ fn river(f: &mut Frame, racc: &RiverAcc, _pts: &[Pos2], t: &TileCtx, _h: u32) {
             let to_water = t
                 .neighbor(out)
                 .is_some_and(|n| game.map.is_water(rules, n));
+            incoming_none = incoming.is_empty();
             if incoming.is_empty() {
                 let start = c + (m_out - c) * -0.12;
-                let (p, w) = bez(start, c + (m_out - c) * 0.45, m_out, my * 0.7, my, steps);
+                let (p, w) = bez(start, c + (m_out - c) * 0.45, m_out, my * 0.75, my, steps);
                 curves.push((p, w, 1.0, to_water));
             } else {
                 for (d, acc) in incoming {
@@ -996,6 +1013,7 @@ fn river(f: &mut Frame, racc: &RiverAcc, _pts: &[Pos2], t: &TileCtx, _h: u32) {
     let _ = grid;
 
     let white = f.cell_center_uv(GROUND_WHITE);
+    let cap_color = [0.62, 0.82, 0.94];
     let bank = [0.40, 0.34, 0.22];
     let edge_c = [0.17, 0.42, 0.68];
     let mid_c = [0.30, 0.60, 0.84];
@@ -1012,6 +1030,22 @@ fn river(f: &mut Frame, racc: &RiverAcc, _pts: &[Pos2], t: &TileCtx, _h: u32) {
         }
         let cols = pts.len();
         let last = cols - 1;
+        // Round the free ends (sources and dead ends) so short streams
+        // do not end in needles.
+        let end_open = !flare
+            && match tile.river_dir.map(|d| d as usize) {
+                Some(out) => !t.neighbor(out).is_some_and(|nb| {
+                    game.map.tile(nb).river || game.map.is_water(rules, nb)
+                }),
+                None => false,
+            };
+        let source = incoming_none && !flare;
+        if source {
+            river_cap(f, pts[0], ws[0], white, cap_color);
+        }
+        if end_open {
+            river_cap(f, pts[last], ws[last], white, cap_color);
+        }
         // Seven vertices across: bank fade, bank, water edge, centre line.
         let across: [(f32, [f32; 3], f32); 7] = [
             (-1.35, bank, 0.0),
@@ -1068,6 +1102,44 @@ fn river(f: &mut Frame, racc: &RiverAcc, _pts: &[Pos2], t: &TileCtx, _h: u32) {
         push_grid(m, &grid_v, cols, 7);
     }
     let _ = DIRS;
+}
+
+/// A rounded end for a river: a disc fading out like the river's banks.
+fn river_cap(f: &mut Frame, p: Pos2, w: f32, uv: Pos2, core: [f32; 3]) {
+    let edge_c = [0.17, 0.42, 0.68];
+    let bank = [0.40, 0.34, 0.22];
+    const N: usize = 10;
+    let rings: [(f32, [f32; 3], f32); 3] = [(0.72, edge_c, 1.0), (1.0, bank, 0.7), (1.35, bank, 0.0)];
+    let mut verts = Vec::with_capacity(1 + 3 * (N + 1));
+    verts.push(Vertex {
+        pos: p,
+        uv,
+        color: pm(core, 1.0),
+    });
+    for &(r, col, a) in &rings {
+        for k in 0..=N {
+            let ang = TAU * k as f32 / N as f32;
+            verts.push(Vertex {
+                pos: p + vec2(ang.cos(), ang.sin()) * (w * r),
+                uv,
+                color: pm(col, a),
+            });
+        }
+    }
+    let m = f.bufs[RIVER].mesh(verts.len());
+    let base = m.vertices.len() as u32;
+    m.vertices.extend(verts);
+    for k in 0..N as u32 {
+        m.indices.extend_from_slice(&[base, base + 1 + k, base + 2 + k]);
+    }
+    for ring in 0..2u32 {
+        let a = base + 1 + ring * (N as u32 + 1);
+        let b = a + N as u32 + 1;
+        for k in 0..N as u32 {
+            m.indices
+                .extend_from_slice(&[a + k, a + k + 1, b + k, a + k + 1, b + k + 1, b + k]);
+        }
+    }
 }
 
 // ---- Legend ---------------------------------------------------------------

@@ -170,22 +170,20 @@ def floodplain(kind, variant, seed):
 
 def dunes(variant, seed):
     ky = 0.85
-    mask = hexmask(0.86, ky, 0.35, grid_noise(seed + 1, 2.6))
-    warp = blurn(grid_noise(seed + 2, 3.0), 10)
-    warp2 = blurn(grid_noise(seed + 3, 2.0), 6)
-    ang = [0.55, -0.45, 1.0][variant]
-    ph = (GX * np.cos(ang) + GY * np.sin(ang)) * 2 * np.pi * 1.25 + (warp - 0.5) * 5.0 + (warp2 - 0.5) * 1.5
-    s = np.sin(ph)
-    H = (0.055 * (s + 0.35 * np.sin(2 * ph + 1.0)) + 0.07) * mask * smoothstep(0.0, 0.6, mask)
-    H = blurn(H, 2.0)
-    H *= 0.7 + 0.6 * blurn(grid_noise(seed + 4, 2.4), 5)
-    alb = ramp(grid_noise(seed + 5, 2.4), [(0, hexc("e0bd78")), (0.5, hexc("ecd198")), (1, hexc("f6e4b6"))])
-    # crests lighter
-    crest = smoothstep(0.7, 1.0, s)
-    alb = alb * (1 + 0.1 * crest[..., None])
-    lit = shade(H, alb, shadow_len=40, shadow_strength=0.45, ambient=0.52, sun=1.0, hscale=2.2, ao=0.1)
-    alpha = mask * 0.9
-    img = render_height(H, lit, alpha, cy_feat(), ky=ky, kh=1.0)
+    mask = hexmask(0.9, ky, 0.55, blurn(grid_noise(seed + 1, 2.6), 6), wob_amp=0.6)
+    warp = blurn(grid_noise(seed + 2, 3.0), 12)
+    # parallel crescent ridges; same heading on every tile so neighbours line up
+    ang = 0.62
+    ph = (GX * np.cos(ang) + GY * np.sin(ang)) * 2 * np.pi * 1.35 + (warp - 0.5) * 3.5 + variant * 2.1
+    saw = (ph / (2 * np.pi)) % 1.0
+    ridge = np.where(saw < 0.7, saw / 0.7, (1 - saw) / 0.3)  # gentle windward, steep lee
+    ridge = blurn(ridge, 3)
+    H = (0.03 + 0.055 * ridge) * mask
+    alb = ramp(grid_noise(seed + 5, 2.4), [(0, hexc("e2c07c")), (0.5, hexc("eed39a")), (1, hexc("f6e6b8"))])
+    alb = alb * (0.94 + 0.1 * ridge[..., None])
+    lit = shade(H, alb, shadow_len=40, shadow_strength=0.25, ambient=0.58, sun=0.9, hscale=1.6, ao=0.0)
+    alpha = mask * 0.88
+    img = render_height(H, np.clip(lit, 0, 1.05), alpha, cy_feat(), ky=ky, kh=1.0)
     return finish(img)
 
 
