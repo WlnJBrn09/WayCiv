@@ -140,10 +140,10 @@ def crater(seed=102):
     d = np.sqrt((GX / 0.78) ** 2 + (GY / 0.6) ** 2)
     nn = blurn(grid_noise(seed, 2.8), 3)
     d = d * (1 + (nn - 0.5) * 0.3)
-    rim = np.exp(-((d - 0.72) / 0.26) ** 2) * 0.62 * (0.8 + 0.4 * blurn(ridged(GRID, seed + 1, 2.8), 2.0))
+    rim = np.exp(-((d - 0.76) / 0.24) ** 2) * 0.4 * (0.8 + 0.4 * blurn(ridged(GRID, seed + 1, 2.8), 2.0))
     outer = np.clip(1 - d, 0, 1) ** 0.8 * 0.1
     H = rim + outer
-    H = np.where(d < 0.44, 0.07, H)
+    H = np.where(d < 0.5, 0.05, H)
     H += (grid_noise(seed + 2, 2.6) - 0.5) * 0.02 * (H > 0.02)
     H = np.clip(H, 0, None)
     rock = ramp(grid_noise(seed + 3, 2.0), [(0, hexc("7a6c60")), (1, hexc("b8a894"))])
@@ -152,8 +152,8 @@ def crater(seed=102):
     snow = smoothstep(0.42, 0.55, H + (nn - 0.5) * 0.12)
     alb = mix(alb, np.broadcast_to(hexc("f4f8ff"), alb.shape), snow * 0.8)
     # the lake
-    lake = 1 - smoothstep(0.40, 0.46, d)
-    wcol = ramp(np.clip(1 - d / 0.44, 0, 1), [(0, hexc("123c9a")), (0.5, hexc("1c60c0")), (1, hexc("3c90d4"))])
+    lake = 1 - smoothstep(0.46, 0.52, d)
+    wcol = ramp(np.clip(1 - d / 0.5, 0, 1), [(0, hexc("123c9a")), (0.5, hexc("1c60c0")), (1, hexc("3c90d4"))])
     alb = alb * (1 - lake[..., None]) + wcol * lake[..., None]
     # Wizard Island
     isl = cone(0.12, 0.02, 0.15, 0.2, 1.1)
