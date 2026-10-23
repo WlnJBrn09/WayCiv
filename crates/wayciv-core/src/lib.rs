@@ -14,6 +14,7 @@ pub mod effects;
 pub mod great_people;
 pub mod hex;
 pub mod intelligence;
+pub mod length;
 pub mod loyalty;
 pub mod map;
 pub mod movement;
@@ -28,6 +29,7 @@ pub mod turn;
 pub mod victory;
 
 pub use hex::{Grid, Pos};
+pub use length::GameLength;
 pub use map::{CityId, MapSize, MapType, PlayerId};
 pub use rules::Rules;
 pub use setup::new_game;

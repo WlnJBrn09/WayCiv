@@ -4,12 +4,13 @@ use crate::App;
 use crate::palette;
 use egui::{Color32, RichText, Sense, vec2};
 use std::sync::Arc;
-use wayciv_core::{MapSize, MapType, Rules, Settings};
+use wayciv_core::{GameLength, MapSize, MapType, Rules, Settings};
 
 pub struct Setup {
     pub leader: usize,
     pub map_type: MapType,
     pub size: MapSize,
+    pub length: GameLength,
     pub opponents: usize,
     pub city_states: usize,
     pub seed: u64,
@@ -32,6 +33,7 @@ impl Setup {
             leader,
             map_type: MapType::Earth,
             size: MapSize::Large,
+            length: GameLength::default(),
             opponents: 9,
             city_states: 12,
             seed,
@@ -106,6 +108,19 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 .show_ui(ui, |ui| {
                     for size in [MapSize::Small, MapSize::Standard, MapSize::Large] {
                         ui.selectable_value(&mut setup.size, size, size_name(size));
+                    }
+                });
+            ui.end_row();
+            ui.label("Game length");
+            egui::ComboBox::from_id_salt("length")
+                .selected_text(setup.length.name())
+                .show_ui(ui, |ui| {
+                    for length in GameLength::ALL {
+                        let hint = match length.turns() {
+                            Some(t) => format!("The game ends after turn {t}. Research, production, and growth are paced to match."),
+                            None => "No turn limit. Paced like a 500-turn game.".to_string(),
+                        };
+                        ui.selectable_value(&mut setup.length, length, length.name()).on_hover_text(hint);
                     }
                 });
             ui.end_row();
@@ -208,6 +223,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             human_leader: content.leaders[setup.leader].id.clone(),
             opponents: setup.opponents,
             city_states: setup.city_states,
+            length: setup.length,
             ..Settings::default()
         };
         let game = wayciv_core::new_game(rules.clone(), settings);

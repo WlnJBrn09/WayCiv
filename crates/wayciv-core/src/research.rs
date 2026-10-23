@@ -78,8 +78,8 @@ impl Game {
     /// space race despite the systems WayCiv simplifies.
     pub fn research_cost(&self, tree: Tree, i: usize) -> i32 {
         match tree {
-            Tree::Ai => self.tree_items(tree)[i].cost,
-            _ => self.tree_items(tree)[i].cost * 3 / 5,
+            Tree::Ai => self.scaled(self.tree_items(tree)[i].cost),
+            _ => self.scaled(self.tree_items(tree)[i].cost * 3 / 5),
         }
     }
 

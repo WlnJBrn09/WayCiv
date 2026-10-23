@@ -431,7 +431,7 @@ impl Game {
                 surplus = 0.0;
             }
         }
-        let threshold = Self::growth_threshold(city.population);
+        let threshold = self.scaled(Self::growth_threshold(city.population));
         let turns_to_grow = (surplus > 0.0)
             .then(|| ((threshold - city.food) as f32 / surplus).ceil().max(1.0) as i32);
         y[FOOD] = surplus + food_consumed;
@@ -467,7 +467,7 @@ impl Game {
 
     pub fn production_cost(&self, player: PlayerId, item: &Production) -> i32 {
         let content = &self.rules.content;
-        match item {
+        let base = match item {
             Production::Unit(i) => content.units[*i].cost,
             Production::Building(i) | Production::Wonder(i, _) => content.buildings[*i].cost,
             Production::District(i, _) => {
@@ -477,7 +477,8 @@ impl Game {
             Production::Project(i) => (content.projects[*i].cost as f32
                 * self.project_cost_multiplier(player))
             .round() as i32,
-        }
+        };
+        self.scaled(base)
     }
 
     /// Production per turn in `city` toward `item`, including bonuses.
@@ -1094,6 +1095,7 @@ impl Game {
         let report = self.city_report(id);
         let surplus = report.yields[FOOD] - report.food_consumed;
         let border_rate = report.yields[CULTURE];
+        let speed = self.speed();
         {
             let c = self.cities.get_mut(&id).unwrap();
             c.food += surplus.round() as i32;
@@ -1103,7 +1105,7 @@ impl Game {
             } else if c.food < 0 {
                 if c.population > 1 {
                     c.population -= 1;
-                    c.food = Self::growth_threshold(c.population) / 2;
+                    c.food = (Self::growth_threshold(c.population) as f32 * speed / 2.0) as i32;
                 } else {
                     c.food = 0;
                 }
@@ -1128,7 +1130,7 @@ impl Game {
 
     fn expand_borders(&mut self, id: CityId) {
         let owned = self.city_tiles(id).len() as f32;
-        let cost = (10.0 + (6.0 * (owned - 6.0).max(0.0)).powf(1.3)) as i32;
+        let cost = self.scaled((10.0 + (6.0 * (owned - 6.0).max(0.0)).powf(1.3)) as i32);
         if self.cities[&id].border_culture < cost {
             return;
         }

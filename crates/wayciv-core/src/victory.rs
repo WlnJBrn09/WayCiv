@@ -75,12 +75,18 @@ impl Game {
             ),
             (
                 "Score".into(),
-                format!(
-                    "{} points; turn {} of {}",
-                    self.score(player),
-                    self.turn,
-                    self.settings.turn_limit
-                ),
+                match self.turn_limit() {
+                    Some(limit) => format!(
+                        "{} points; turn {} of {limit}",
+                        self.score(player),
+                        self.turn
+                    ),
+                    None => format!(
+                        "{} points; turn {} (no turn limit)",
+                        self.score(player),
+                        self.turn
+                    ),
+                },
             ),
         ]
     }
@@ -142,7 +148,7 @@ impl Game {
                 return self.declare_winner(p, Victory::Religious);
             }
         }
-        if self.turn > self.settings.turn_limit
+        if self.turn_limit().is_some_and(|limit| self.turn > limit)
             && let Some(best) = majors
                 .iter()
                 .copied()

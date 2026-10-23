@@ -68,7 +68,7 @@ impl Game {
             .map(|e| e.great_person_base_cost)
             .unwrap_or(60)
             .max(30);
-        base + recruited * base / 3
+        self.scaled(base + recruited * base / 3)
     }
 
     /// Accumulates points; recruits when a player reaches the cost.

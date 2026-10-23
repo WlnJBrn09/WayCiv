@@ -127,7 +127,11 @@ impl Game {
         }
         let compute = self.compute(player);
         self.advance(player, Tree::Ai, compute);
-        if self.has_ai_tech(player, AI_RESEARCH_AGENTS) && self.turn.is_multiple_of(5) {
+        if self.has_ai_tech(player, AI_RESEARCH_AGENTS)
+            && self
+                .turn
+                .is_multiple_of(((5.0 * self.speed()).round() as u32).max(1))
+        {
             let p = &self.players[player];
             let target = (0..self.rules.content.techs.len())
                 .filter(|&i| !p.techs[i] && !p.tech_boosted[i])

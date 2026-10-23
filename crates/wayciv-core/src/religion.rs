@@ -130,7 +130,7 @@ impl Game {
 
     /// Faith price of a religious unit in a city (needs a founded religion).
     pub fn faith_cost(&self, unit: usize) -> i32 {
-        (self.rules.content.units[unit].cost.max(50) as f32 * 1.5) as i32
+        self.scaled((self.rules.content.units[unit].cost.max(50) as f32 * 1.5) as i32)
     }
 
     pub fn faith_units(&self, city: CityId) -> Vec<usize> {

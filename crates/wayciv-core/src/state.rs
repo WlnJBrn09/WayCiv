@@ -241,7 +241,7 @@ pub struct Settings {
     pub human_leader: String,
     pub opponents: usize,
     pub city_states: usize,
-    pub turn_limit: u32,
+    pub length: crate::length::GameLength,
 }
 
 impl Default for Settings {
@@ -253,7 +253,7 @@ impl Default for Settings {
             human_leader: crate::rules::REAGAN.to_string(),
             opponents: 5,
             city_states: 6,
-            turn_limit: 300,
+            length: crate::length::GameLength::default(),
         }
     }
 }

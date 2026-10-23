@@ -1,5 +1,6 @@
 //! Plays an all-AI game headlessly and prints a summary every 25 turns.
 //!     cargo run --release -p wayciv-core --example autoplay -- [turns] [seed]
+//! Env: SIZE=0|1|2, OPPONENTS, CITY_STATES, LENGTH=100|250|500|750|1000|infinite.
 use wayciv_core::{Settings, load_rules, new_game};
 
 fn main() -> civ6_data::Result<()> {
@@ -20,6 +21,10 @@ fn main() -> civ6_data::Result<()> {
         size,
         opponents: env("OPPONENTS").unwrap_or(9),
         city_states: env("CITY_STATES").unwrap_or(12),
+        length: std::env::var("LENGTH")
+            .ok()
+            .and_then(|l| wayciv_core::GameLength::parse(&l))
+            .unwrap_or_default(),
         ..Settings::default()
     };
     let mut game = new_game(rules, settings);
