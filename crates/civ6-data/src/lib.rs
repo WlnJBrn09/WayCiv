@@ -18,7 +18,6 @@ use rusqlite::{Connection, params_from_iter};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 /// A gameplay database under construction.
@@ -34,12 +33,20 @@ impl GameplayDatabase {
         let connection = Connection::open_in_memory()?;
         // Foreign keys are checked once after loading (`validate`), not per row.
         connection.pragma_update(None, "foreign_keys", false)?;
-        connection.create_scalar_function("Make_Hash", 1, FunctionFlags::SQLITE_DETERMINISTIC, |ctx| {
-            let name: String = ctx.get(0)?;
-            // Stored as a signed 32-bit integer.
-            Ok(i64::from(hash::make_hash(&name) as i32))
-        })?;
-        Ok(Self { connection, log: Vec::new() })
+        connection.create_scalar_function(
+            "Make_Hash",
+            1,
+            FunctionFlags::SQLITE_DETERMINISTIC,
+            |ctx| {
+                let name: String = ctx.get(0)?;
+                // Stored as a signed 32-bit integer.
+                Ok(i64::from(hash::make_hash(&name) as i32))
+            },
+        )?;
+        Ok(Self {
+            connection,
+            log: Vec::new(),
+        })
     }
 
     pub fn connection(&self) -> &Connection {
@@ -49,7 +56,8 @@ impl GameplayDatabase {
     pub fn execute_sql_file(&mut self, path: &Path) -> Result<()> {
         let text = fs::read_to_string(path)?;
         // Some shipped SQL files start with a UTF-8 byte-order mark.
-        self.connection.execute_batch(text.trim_start_matches('\u{feff}'))?;
+        self.connection
+            .execute_batch(text.trim_start_matches('\u{feff}'))?;
         Ok(())
     }
 
@@ -57,7 +65,10 @@ impl GameplayDatabase {
     pub fn load_xml_file(&mut self, path: &Path) -> Result<()> {
         let text = fs::read_to_string(path)?;
         let document = roxmltree::Document::parse(text.trim_start_matches('\u{feff}'))?;
-        let file = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let file = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
         let root = document.root_element();
         if !matches!(root.tag_name().name(), "GameInfo" | "GameData" | "Database") {
             self.log.push(format!("{file}: Input XML does not contain database entry tags. GameData, GameInfo or Database"));
@@ -90,7 +101,10 @@ impl GameplayDatabase {
         let mut keys = Vec::new();
         for column in table.children().filter(|c| c.has_tag_name("Column")) {
             let column_name = column.attribute("name").unwrap_or_default();
-            let mut definition = format!("'{column_name}' {}", column.attribute("type").unwrap_or("text"));
+            let mut definition = format!(
+                "'{column_name}' {}",
+                column.attribute("type").unwrap_or("text")
+            );
             if column.attribute("notnull") == Some("true") {
                 definition.push_str("  not null");
             }
@@ -111,8 +125,9 @@ impl GameplayDatabase {
         }
         let sql = format!("CREATE TABLE {name} ({})", columns.join(", "));
         if let Err(error) = self.connection.execute(&sql, []) {
-            self.log
-                .push(format!("ERROR: {error}\nIn XMLSerializer while building table {name} from file {file}."));
+            self.log.push(format!(
+                "ERROR: {error}\nIn XMLSerializer while building table {name} from file {file}."
+            ));
         }
     }
 
@@ -135,23 +150,41 @@ impl GameplayDatabase {
                     columns.join(", "),
                     vec!["?"; values.len()].join(", ")
                 );
-                self.connection.execute(&sql, params_from_iter(values.iter().map(|(_, v)| v)))?;
+                self.connection
+                    .execute(&sql, params_from_iter(values.iter().map(|(_, v)| v)))?;
             }
             "Update" => {
-                let set = operation.children().find(|c| c.has_tag_name("Set")).map(fields).unwrap_or_default();
-                let filter = operation.children().find(|c| c.has_tag_name("Where")).map(fields).unwrap_or_default();
+                let set = operation
+                    .children()
+                    .find(|c| c.has_tag_name("Set"))
+                    .map(fields)
+                    .unwrap_or_default();
+                let filter = operation
+                    .children()
+                    .find(|c| c.has_tag_name("Where"))
+                    .map(fields)
+                    .unwrap_or_default();
                 if set.is_empty() {
                     return Ok(());
                 }
-                let assignments: Vec<_> = set.iter().map(|(c, _)| format!("{} = ?", quote(c))).collect();
-                let sql = format!("UPDATE {table} SET {}{}", assignments.join(", "), where_clause(&filter));
+                let assignments: Vec<_> = set
+                    .iter()
+                    .map(|(c, _)| format!("{} = ?", quote(c)))
+                    .collect();
+                let sql = format!(
+                    "UPDATE {table} SET {}{}",
+                    assignments.join(", "),
+                    where_clause(&filter)
+                );
                 let parameters = set.iter().chain(filter.iter()).map(|(_, v)| v);
-                self.connection.execute(&sql, params_from_iter(parameters))?;
+                self.connection
+                    .execute(&sql, params_from_iter(parameters))?;
             }
             "Delete" => {
                 let filter = fields(operation);
                 let sql = format!("DELETE FROM {table}{}", where_clause(&filter));
-                self.connection.execute(&sql, params_from_iter(filter.iter().map(|(_, v)| v)))?;
+                self.connection
+                    .execute(&sql, params_from_iter(filter.iter().map(|(_, v)| v)))?;
             }
             _ => {}
         }
@@ -163,7 +196,13 @@ impl GameplayDatabase {
     pub fn validate(&self) -> Result<Vec<(String, i64, String)>> {
         let mut statement = self.connection.prepare("PRAGMA foreign_key_check")?;
         let violations = statement
-            .query_map([], |r| Ok((r.get(0)?, r.get::<_, Option<i64>>(1)?.unwrap_or(-1), r.get(2)?)))?
+            .query_map([], |r| {
+                Ok((
+                    r.get(0)?,
+                    r.get::<_, Option<i64>>(1)?.unwrap_or(-1),
+                    r.get(2)?,
+                ))
+            })?
             .collect::<rusqlite::Result<_>>()?;
         Ok(violations)
     }
@@ -173,7 +212,8 @@ impl GameplayDatabase {
         if path.exists() {
             fs::remove_file(path)?;
         }
-        self.connection.execute("VACUUM INTO ?1", [path.to_string_lossy()])?;
+        self.connection
+            .execute("VACUUM INTO ?1", [path.to_string_lossy()])?;
         Ok(())
     }
 }
@@ -206,7 +246,9 @@ fn xml_value(raw: &str) -> XmlValue {
     let text = raw.trim();
     let numeric = !text.is_empty()
         && text.bytes().any(|b| b.is_ascii_digit())
-        && text.bytes().all(|b| b.is_ascii_digit() || matches!(b, b'.' | b'-' | b'+' | b'e' | b'E'));
+        && text
+            .bytes()
+            .all(|b| b.is_ascii_digit() || matches!(b, b'.' | b'-' | b'+' | b'e' | b'E'));
     if text.is_empty() {
         XmlValue::Null
     } else if text.eq_ignore_ascii_case("true") {
@@ -224,9 +266,15 @@ fn xml_value(raw: &str) -> XmlValue {
 
 /// Column/value pairs from attributes and `<Column>value</Column>` children.
 fn fields(node: roxmltree::Node) -> Vec<(String, XmlValue)> {
-    let mut fields: Vec<_> = node.attributes().map(|a| (a.name().to_string(), xml_value(a.value()))).collect();
+    let mut fields: Vec<_> = node
+        .attributes()
+        .map(|a| (a.name().to_string(), xml_value(a.value())))
+        .collect();
     for child in node.children().filter(roxmltree::Node::is_element) {
-        fields.push((child.tag_name().name().to_string(), xml_value(child.text().unwrap_or_default())));
+        fields.push((
+            child.tag_name().name().to_string(),
+            xml_value(child.text().unwrap_or_default()),
+        ));
     }
     fields
 }
@@ -235,7 +283,10 @@ fn where_clause(filter: &[(String, XmlValue)]) -> String {
     if filter.is_empty() {
         return String::new();
     }
-    let conditions: Vec<_> = filter.iter().map(|(c, _)| format!("{} = ?", quote(c))).collect();
+    let conditions: Vec<_> = filter
+        .iter()
+        .map(|(c, _)| format!("{} = ?", quote(c)))
+        .collect();
     format!(" WHERE {}", conditions.join(" AND "))
 }
 
@@ -244,7 +295,11 @@ fn quote(identifier: &str) -> String {
 }
 
 fn sql_literal(value: &str) -> String {
-    if value.parse::<f64>().is_ok() { value.to_string() } else { format!("'{}'", value.replace('\'', "''")) }
+    if value.parse::<f64>().is_ok() {
+        value.to_string()
+    } else {
+        format!("'{}'", value.replace('\'', "''"))
+    }
 }
 
 /// Files in `dir` with extension `ext`, in the engine's load order
@@ -302,10 +357,19 @@ mod tests {
 
     fn stored(raw: &str) -> rusqlite::types::Value {
         let connection = Connection::open_in_memory().unwrap();
-        connection.execute("CREATE TABLE t (text_column TEXT, integer_column INTEGER)", []).unwrap();
+        connection
+            .execute(
+                "CREATE TABLE t (text_column TEXT, integer_column INTEGER)",
+                [],
+            )
+            .unwrap();
         let value = xml_value(raw);
-        connection.execute("INSERT INTO t VALUES (?1, ?1)", [&value]).unwrap();
-        connection.query_row("SELECT text_column FROM t", [], |r| r.get(0)).unwrap()
+        connection
+            .execute("INSERT INTO t VALUES (?1, ?1)", [&value])
+            .unwrap();
+        connection
+            .query_row("SELECT text_column FROM t", [], |r| r.get(0))
+            .unwrap()
     }
 
     #[test]
@@ -319,16 +383,25 @@ mod tests {
         assert_eq!(stored("-3"), Text("-3".into()));
         assert_eq!(stored(""), Null);
         assert_eq!(stored("   "), Null);
-        assert_eq!(stored("raid or invasion. "), Text("raid or invasion.".into()));
+        assert_eq!(
+            stored("raid or invasion. "),
+            Text("raid or invasion.".into())
+        );
         assert_eq!(stored("UNIT_WARRIOR"), Text("UNIT_WARRIOR".into()));
-        assert_eq!(stored("inf"), Text("inf".into()), "only digit-bearing text is numeric");
+        assert_eq!(
+            stored("inf"),
+            Text("inf".into()),
+            "only digit-bearing text is numeric"
+        );
     }
 
     #[test]
     fn make_hash_is_signed_32_bit() {
         let database = GameplayDatabase::new().unwrap();
-        let hash: i64 =
-            database.connection().query_row("SELECT Make_Hash('UNIT_SETTLER')", [], |r| r.get(0)).unwrap();
+        let hash: i64 = database
+            .connection()
+            .query_row("SELECT Make_Hash('UNIT_SETTLER')", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(hash, -798_712_536);
     }
 
@@ -348,8 +421,12 @@ mod tests {
         .unwrap();
         let mut database = GameplayDatabase::new().unwrap();
         database.load_xml_file(&file).unwrap();
-        let sql: String =
-            database.connection().query_row("SELECT sql FROM sqlite_master WHERE name = 'T'", [], |r| r.get(0)).unwrap();
+        let sql: String = database
+            .connection()
+            .query_row("SELECT sql FROM sqlite_master WHERE name = 'T'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
         assert_eq!(
             sql,
             "CREATE TABLE T ('Type' text  not null unique , 'Sort' integer default 0 , 'Tooltip' text , PRIMARY KEY (Type))"

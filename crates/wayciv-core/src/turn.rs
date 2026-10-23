@@ -35,9 +35,16 @@ impl Game {
             for i in 0..6 {
                 income.yields[i] += y[i];
             }
-            income.maintenance += c.buildings.iter().map(|&b| content.buildings[b].maintenance).sum::<i32>();
+            income.maintenance += c
+                .buildings
+                .iter()
+                .map(|&b| content.buildings[b].maintenance)
+                .sum::<i32>();
         }
-        let units: i32 = self.player_units(player).map(|u| self.unit_type(u).maintenance).sum();
+        let units: i32 = self
+            .player_units(player)
+            .map(|u| self.unit_type(u).maintenance)
+            .sum();
         income.maintenance += units;
         income.net_gold = income.yields[GOLD].round() as i32 - income.maintenance;
         income.tourism = self.tourism(player);
@@ -45,24 +52,41 @@ impl Game {
     }
 
     pub fn tourism(&self, player: PlayerId) -> i32 {
-        let wonders = self.player_cities(player).flat_map(|c| &c.buildings).filter(|&&b| self.rules.content.buildings[b].wonder).count() as i32;
-        let flight = if self.players[player].has_tech(&self.rules, "TECH_FLIGHT") { 2 } else { 1 };
+        let wonders = self
+            .player_cities(player)
+            .flat_map(|c| &c.buildings)
+            .filter(|&&b| self.rules.content.buildings[b].wonder)
+            .count() as i32;
+        let flight = if self.players[player].has_tech(&self.rules, "TECH_FLIGHT") {
+            2
+        } else {
+            1
+        };
         (self.players[player].great_works * 3 + wonders * 2) * flight
     }
 
     pub fn blockers(&self, player: PlayerId) -> Vec<Blocker> {
         let p = &self.players[player];
         let mut blockers = Vec::new();
-        if p.research.is_none() && (0..p.techs.len()).any(|i| self.researchable(player, Tree::Tech, i)) {
+        if p.research.is_none()
+            && (0..p.techs.len()).any(|i| self.researchable(player, Tree::Tech, i))
+        {
             blockers.push(Blocker::ChooseResearch);
         }
-        if p.civic.is_none() && (0..p.civics.len()).any(|i| self.researchable(player, Tree::Civic, i)) {
+        if p.civic.is_none()
+            && (0..p.civics.len()).any(|i| self.researchable(player, Tree::Civic, i))
+        {
             blockers.push(Blocker::ChooseCivic);
         }
-        if p.ai_research.is_none() && self.compute(player) > 0.0 && (0..p.ai_techs.len()).any(|i| self.researchable(player, Tree::Ai, i)) {
+        if p.ai_research.is_none()
+            && self.compute(player) > 0.0
+            && (0..p.ai_techs.len()).any(|i| self.researchable(player, Tree::Ai, i))
+        {
             blockers.push(Blocker::ChooseAiResearch);
         }
-        if self.can_choose_pantheon(player) && !self.beliefs_of_class("BELIEF_CLASS_PANTHEON").is_empty() {
+        if self.can_choose_pantheon(player)
+            && !self.beliefs_of_class("BELIEF_CLASS_PANTHEON").is_empty()
+        {
             blockers.push(Blocker::ChoosePantheon);
         }
         for c in self.player_cities(player) {
@@ -94,7 +118,9 @@ impl Game {
         if self.winner.is_some() {
             return;
         }
-        let players: Vec<PlayerId> = (0..self.players.len()).filter(|&p| self.players[p].alive && !self.players[p].human).collect();
+        let players: Vec<PlayerId> = (0..self.players.len())
+            .filter(|&p| self.players[p].alive && !self.players[p].human)
+            .collect();
         for p in players {
             self.ai_turn(p);
         }
@@ -115,7 +141,11 @@ impl Game {
         }
         // The human's queued moves continue at the start of their turn.
         let human = self.human();
-        let moving: Vec<UnitId> = self.player_units(human).filter(|u| !u.path.is_empty()).map(|u| u.id).collect();
+        let moving: Vec<UnitId> = self
+            .player_units(human)
+            .filter(|u| !u.path.is_empty())
+            .map(|u| u.id)
+            .collect();
         for id in moving {
             self.continue_path(id);
         }
@@ -146,10 +176,18 @@ impl Game {
         if p.gold < 0 {
             p.gold = 0;
             // Bankrupt: disband the weakest military unit.
-            let weakest = self.player_units(player).filter(|u| self.is_military(u)).min_by_key(|u| self.unit_type(u).combat).map(|u| u.id);
+            let weakest = self
+                .player_units(player)
+                .filter(|u| self.is_military(u))
+                .min_by_key(|u| self.unit_type(u).combat)
+                .map(|u| u.id);
             if let Some(id) = weakest {
                 self.units.remove(&id);
-                self.notify(player, "A unit was disbanded: you can't pay its upkeep.", None);
+                self.notify(
+                    player,
+                    "A unit was disbanded: you can't pay its upkeep.",
+                    None,
+                );
             }
         }
         self.process_great_people(player);
@@ -162,13 +200,25 @@ impl Game {
         for id in ids {
             let (pos, full_moves, untouched) = {
                 let u = &self.units[&id];
-                (u.pos, self.unit_type(u).moves, u.moves == self.unit_type(u).moves && !u.attacked)
+                (
+                    u.pos,
+                    self.unit_type(u).moves,
+                    u.moves == self.unit_type(u).moves && !u.attacked,
+                )
             };
             let in_city = self.city_at(pos).is_some_and(|c| c.owner == player);
             let friendly = self.map.tile(pos).owner == Some(player);
             let u = self.units.get_mut(&id).unwrap();
             if untouched && u.hp < 100 {
-                u.hp = (u.hp + if in_city { 20 } else if friendly { 15 } else { 10 }).min(100);
+                u.hp = (u.hp
+                    + if in_city {
+                        20
+                    } else if friendly {
+                        15
+                    } else {
+                        10
+                    })
+                .min(100);
             }
             if u.fortified {
                 u.fortify_turns += 1;
@@ -186,10 +236,23 @@ impl Game {
         let p = &self.players[player];
         let pop: i32 = self.player_cities(player).map(|c| c.population).sum();
         let cities = self.player_cities(player).count() as i32;
-        let wonders = self.player_cities(player).flat_map(|c| &c.buildings).filter(|&&b| self.rules.content.buildings[b].wonder).count() as i32;
+        let wonders = self
+            .player_cities(player)
+            .flat_map(|c| &c.buildings)
+            .filter(|&&b| self.rules.content.buildings[b].wonder)
+            .count() as i32;
         let techs = p.techs.iter().filter(|&&t| t).count() as i32;
         let civics = p.civics.iter().filter(|&&t| t).count() as i32;
-        let great_people = self.player_units(player).filter(|u| u.great_person.is_some()).count() as i32 + p.great_works;
-        pop + cities * 5 + wonders * 15 + techs * 2 + civics * 2 + great_people * 5 + i32::from(p.religion.is_some()) * 10
+        let great_people = self
+            .player_units(player)
+            .filter(|u| u.great_person.is_some())
+            .count() as i32
+            + p.great_works;
+        pop + cities * 5
+            + wonders * 15
+            + techs * 2
+            + civics * 2
+            + great_people * 5
+            + i32::from(p.religion.is_some()) * 10
     }
 }

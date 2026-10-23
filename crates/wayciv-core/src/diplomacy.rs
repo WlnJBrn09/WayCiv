@@ -44,18 +44,42 @@ impl DiploEvent {
 /// Ronald Reagan's lines (WayCiv's own; Civ VI has none for him).
 fn reagan_line(event: DiploEvent) -> &'static str {
     match event {
-        DiploEvent::FirstMeet => "Well, hello there. I'm Ronald Reagan, and I lead the United States of America. We believe in freedom, and we believe the best is yet to come.",
-        DiploEvent::Greeting => "It's morning in America, my friend. What can we do for each other today?",
-        DiploEvent::DeclareWarFromAi => "We've tried to keep the peace, but peace comes through strength. You leave us no choice.",
-        DiploEvent::DeclareWarFromHuman => "So it's come to this. History will remember who chose war.",
-        DiploEvent::DenounceFromAi => "I'm calling it what it is: your conduct is a threat to free people everywhere.",
-        DiploEvent::DenounceFromHuman => "Words are cheap. We'll judge you by your deeds, and so will the world.",
-        DiploEvent::AcceptFriendFromHuman => "Trust, but verify. Still, I'm glad to call you a friend.",
-        DiploEvent::RejectFriendFromHuman => "Not just yet. Friendship has to be earned, and we're not there.",
-        DiploEvent::DeclareFriendFromAi => "Free nations ought to stand together. What do you say we make it official?",
-        DiploEvent::MakePeaceAccept => "Peace it is. Let's put this behind us and get back to building.",
-        DiploEvent::MakePeaceRefuse => "Peace? Not on those terms. We'll talk again when you mean it.",
-        DiploEvent::MakePeaceFromAi => "We've proven our resolve. I'm prepared to sit down and talk peace.",
+        DiploEvent::FirstMeet => {
+            "Well, hello there. I'm Ronald Reagan, and I lead the United States of America. We believe in freedom, and we believe the best is yet to come."
+        }
+        DiploEvent::Greeting => {
+            "It's morning in America, my friend. What can we do for each other today?"
+        }
+        DiploEvent::DeclareWarFromAi => {
+            "We've tried to keep the peace, but peace comes through strength. You leave us no choice."
+        }
+        DiploEvent::DeclareWarFromHuman => {
+            "So it's come to this. History will remember who chose war."
+        }
+        DiploEvent::DenounceFromAi => {
+            "I'm calling it what it is: your conduct is a threat to free people everywhere."
+        }
+        DiploEvent::DenounceFromHuman => {
+            "Words are cheap. We'll judge you by your deeds, and so will the world."
+        }
+        DiploEvent::AcceptFriendFromHuman => {
+            "Trust, but verify. Still, I'm glad to call you a friend."
+        }
+        DiploEvent::RejectFriendFromHuman => {
+            "Not just yet. Friendship has to be earned, and we're not there."
+        }
+        DiploEvent::DeclareFriendFromAi => {
+            "Free nations ought to stand together. What do you say we make it official?"
+        }
+        DiploEvent::MakePeaceAccept => {
+            "Peace it is. Let's put this behind us and get back to building."
+        }
+        DiploEvent::MakePeaceRefuse => {
+            "Peace? Not on those terms. We'll talk again when you mean it."
+        }
+        DiploEvent::MakePeaceFromAi => {
+            "We've proven our resolve. I'm prepared to sit down and talk peace."
+        }
         DiploEvent::Defeat => "We gave it everything we had. America will rise again.",
     }
 }
@@ -75,7 +99,10 @@ impl Game {
             }
         }
         match event {
-            DiploEvent::Greeting | DiploEvent::FirstMeet => format!("Greetings. I am {} of {}.", leader.name, self.players[player].civ_name),
+            DiploEvent::Greeting | DiploEvent::FirstMeet => format!(
+                "Greetings. I am {} of {}.",
+                leader.name, self.players[player].civ_name
+            ),
             DiploEvent::DeclareWarFromAi => "Our patience has run out. Prepare for war!".into(),
             DiploEvent::MakePeaceAccept => "Very well. Let there be peace.".into(),
             DiploEvent::MakePeaceRefuse => "We are not ready for peace.".into(),
@@ -111,10 +138,18 @@ impl Game {
                 self.players[p].relations[a].opinion -= 10;
             }
         }
-        let (an, bn) = (self.players[a].civ_name.clone(), self.players[b].civ_name.clone());
+        let (an, bn) = (
+            self.players[a].civ_name.clone(),
+            self.players[b].civ_name.clone(),
+        );
         for p in 0..self.players.len() {
-            if self.players[p].is_major() && (p == a || p == b || self.players[p].relations[a].met) {
-                let text = if p == b { format!("{an} has declared war on you!") } else { format!("{an} declared war on {bn}.") };
+            if self.players[p].is_major() && (p == a || p == b || self.players[p].relations[a].met)
+            {
+                let text = if p == b {
+                    format!("{an} has declared war on you!")
+                } else {
+                    format!("{an} declared war on {bn}.")
+                };
                 self.notify(p, text, None);
             }
         }
@@ -138,14 +173,26 @@ impl Game {
             r.at_war = false;
             r.since = turn;
         }
-        let (an, bn) = (self.players[a].civ_name.clone(), self.players[b].civ_name.clone());
+        let (an, bn) = (
+            self.players[a].civ_name.clone(),
+            self.players[b].civ_name.clone(),
+        );
         self.notify(a, format!("Peace with {bn}."), None);
         self.notify(b, format!("Peace with {an}."), None);
     }
 
     /// Military strength used by AI diplomacy and war decisions.
     pub fn military_strength(&self, player: PlayerId) -> i32 {
-        self.player_units(player).filter(|u| self.is_military(u)).map(|u| self.unit_type(u).combat.max(self.unit_type(u).ranged_combat) * u.hp / 100).sum()
+        self.player_units(player)
+            .filter(|u| self.is_military(u))
+            .map(|u| {
+                self.unit_type(u)
+                    .combat
+                    .max(self.unit_type(u).ranged_combat)
+                    * u.hp
+                    / 100
+            })
+            .sum()
     }
 
     /// AI opinion of another player, from its relations and agenda.
@@ -166,32 +213,44 @@ impl Game {
             o += 10;
         }
         // Neighbors close by grate on each other.
-        let near = self.player_cities(of).any(|a| self.player_cities(about).any(|b| self.map.grid.distance(a.pos, b.pos) <= 8));
+        let near = self.player_cities(of).any(|a| {
+            self.player_cities(about)
+                .any(|b| self.map.grid.distance(a.pos, b.pos) <= 8)
+        });
         if near {
             o -= 10;
         }
         // Reagan's agenda: Cold Warrior.
         if self.rules.content.leaders[me.leader].id == REAGAN
-            && let Some(g) = self.players[about].government {
-                match self.rules.content.governments[g].id.as_str() {
-                    "GOVERNMENT_DEMOCRACY" => o += 20,
-                    "GOVERNMENT_COMMUNISM" | "GOVERNMENT_FASCISM" => o -= 20,
-                    _ => {}
-                }
+            && let Some(g) = self.players[about].government
+        {
+            match self.rules.content.governments[g].id.as_str() {
+                "GOVERNMENT_DEMOCRACY" => o += 20,
+                "GOVERNMENT_COMMUNISM" | "GOVERNMENT_FASCISM" => o -= 20,
+                _ => {}
             }
+        }
         o.clamp(-100, 100)
     }
 
     /// Asks `to` (AI) to declare friendship with `from`. Returns acceptance.
     pub fn propose_friendship(&mut self, from: PlayerId, to: PlayerId) -> bool {
-        let accept = !self.players[from].at_war_with(to) && (self.players[to].human || self.opinion(to, from) >= 10);
+        let accept = !self.players[from].at_war_with(to)
+            && (self.players[to].human || self.opinion(to, from) >= 10);
         if accept {
             self.players[from].relations[to].friendship = true;
             self.players[to].relations[from].friendship = true;
             for (who, other) in [(from, to), (to, from)] {
                 if self.rules.content.leaders[self.players[who].leader].id == REAGAN {
                     self.players[who].gold += 50;
-                    if let Some(cs) = self.players.iter().find(|p| p.is_city_state() && p.alive && self.players[who].relations[p.id].met).map(|p| p.id) {
+                    if let Some(cs) = self
+                        .players
+                        .iter()
+                        .find(|p| {
+                            p.is_city_state() && p.alive && self.players[who].relations[p.id].met
+                        })
+                        .map(|p| p.id)
+                    {
                         *self.players[who].envoys.entry(cs).or_insert(0) += 1;
                     }
                 }

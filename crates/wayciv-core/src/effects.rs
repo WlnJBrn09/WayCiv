@@ -27,10 +27,18 @@ impl UnitProductionBonus {
         if self.military_only && unit.combat == 0 && unit.ranged_combat == 0 && unit.bombard == 0 {
             return false;
         }
-        if self.promotion_class.as_ref().is_some_and(|c| unit.promotion_class.as_ref() != Some(c)) {
+        if self
+            .promotion_class
+            .as_ref()
+            .is_some_and(|c| unit.promotion_class.as_ref() != Some(c))
+        {
             return false;
         }
-        if self.unit.as_ref().is_some_and(|u| *u != unit.id && unit.replaces.as_ref() != Some(u)) {
+        if self
+            .unit
+            .as_ref()
+            .is_some_and(|u| *u != unit.id && unit.replaces.as_ref() != Some(u))
+        {
             return false;
         }
         if self.domain.as_ref().is_some_and(|d| *d != unit.domain) {
@@ -41,7 +49,11 @@ impl UnitProductionBonus {
                 .prereq_tech
                 .as_ref()
                 .and_then(|t| rules.content.techs.iter().find(|x| &x.id == t))
-                .or_else(|| unit.prereq_civic.as_ref().and_then(|c| rules.content.civics.iter().find(|x| &x.id == c)))
+                .or_else(|| {
+                    unit.prereq_civic
+                        .as_ref()
+                        .and_then(|c| rules.content.civics.iter().find(|x| &x.id == c))
+                })
                 .map(|r| r.era.as_str())
                 .unwrap_or("ERA_ANCIENT");
             if unit_era != era {
@@ -140,34 +152,48 @@ impl Bonuses {
         let yield_i = arg("YieldType").and_then(yield_index);
         let capital = modifier.collection.contains("CAPITAL");
         match modifier.effect.as_str() {
-            "EFFECT_ADJUST_UNIT_TAG_ERA_PRODUCTION" => self.unit_production.push(UnitProductionBonus {
-                promotion_class: arg("UnitPromotionClass").map(str::to_owned),
-                era: arg("EraType").map(str::to_owned),
-                percent: amount,
-                ..Default::default()
-            }),
+            "EFFECT_ADJUST_UNIT_TAG_ERA_PRODUCTION" => {
+                self.unit_production.push(UnitProductionBonus {
+                    promotion_class: arg("UnitPromotionClass").map(str::to_owned),
+                    era: arg("EraType").map(str::to_owned),
+                    percent: amount,
+                    ..Default::default()
+                })
+            }
             "EFFECT_ADJUST_UNIT_PRODUCTION" => self.unit_production.push(UnitProductionBonus {
                 unit: arg("UnitType").map(str::to_owned),
                 percent: amount,
                 ..Default::default()
             }),
-            "EFFECT_ADJUST_UNIT_DOMAIN_PRODUCTION" => self.unit_production.push(UnitProductionBonus {
-                domain: arg("Domain").map(str::to_owned),
-                percent: amount,
-                ..Default::default()
-            }),
+            "EFFECT_ADJUST_UNIT_DOMAIN_PRODUCTION" => {
+                self.unit_production.push(UnitProductionBonus {
+                    domain: arg("Domain").map(str::to_owned),
+                    percent: amount,
+                    ..Default::default()
+                })
+            }
             "EFFECT_ADJUST_CITY_YIELD_CHANGE" => {
                 if let Some(i) = yield_i {
-                    if capital { self.capital_flat[i] += amount } else { self.city_flat[i] += amount }
+                    if capital {
+                        self.capital_flat[i] += amount
+                    } else {
+                        self.city_flat[i] += amount
+                    }
                 }
             }
             "EFFECT_ADJUST_CITY_YIELD_MODIFIER" | "EFFECT_ADJUST_PLAYER_YIELD_MODIFIER" => {
                 if let Some(i) = yield_i {
-                    if capital { self.capital_percent[i] += amount } else { self.city_percent[i] += amount }
+                    if capital {
+                        self.capital_percent[i] += amount
+                    } else {
+                        self.city_percent[i] += amount
+                    }
                 }
             }
             "EFFECT_ADJUST_BUILDING_YIELD_CHANGE" => {
-                if let (Some(i), Some(building)) = (yield_i, arg("BuildingType").and_then(|b| rules.idx(b))) {
+                if let (Some(i), Some(building)) =
+                    (yield_i, arg("BuildingType").and_then(|b| rules.idx(b)))
+                {
                     let mut y = [0.0; 6];
                     y[i] = amount;
                     self.building_flat.push((building, y));
@@ -218,8 +244,18 @@ impl Game {
         owners.extend(p.policies.iter().map(|&i| content.policies[i].id.as_str()));
         owners.extend(p.beliefs.iter().map(|&i| content.beliefs[i].id.as_str()));
         owners.extend(p.pantheon.iter().map(|&i| content.beliefs[i].id.as_str()));
-        owners.extend(content.leaders[p.leader].traits.iter().map(|t| t.id.as_str()));
-        owners.extend(content.civilizations[p.civ].traits.iter().map(|t| t.id.as_str()));
+        owners.extend(
+            content.leaders[p.leader]
+                .traits
+                .iter()
+                .map(|t| t.id.as_str()),
+        );
+        owners.extend(
+            content.civilizations[p.civ]
+                .traits
+                .iter()
+                .map(|t| t.id.as_str()),
+        );
         for owner in owners {
             for modifier in content.modifiers_of(owner) {
                 bonuses.apply(rules, modifier);
@@ -228,10 +264,18 @@ impl Game {
 
         // Ronald Reagan: Peace Through Strength.
         if content.leaders[p.leader].id == rules::REAGAN {
-            bonuses.unit_production.push(UnitProductionBonus { military_only: true, percent: 15.0, ..Default::default() });
+            bonuses.unit_production.push(UnitProductionBonus {
+                military_only: true,
+                percent: 15.0,
+                ..Default::default()
+            });
             bonuses.combat_in_territory += 5;
             bonuses.capital_flat[rules::CULTURE] += 2.0;
-            let economic = p.policies.iter().filter(|&&i| content.policies[i].slot == "SLOT_ECONOMIC").count();
+            let economic = p
+                .policies
+                .iter()
+                .filter(|&&i| content.policies[i].slot == "SLOT_ECONOMIC")
+                .count();
             bonuses.city_flat[rules::GOLD] += economic as f32;
             if let Some(hub) = rules.idx("DISTRICT_COMMERCIAL_HUB") {
                 let mut y = [0.0; 6];
@@ -244,7 +288,12 @@ impl Game {
     }
 
     /// City-state envoy and suzerain bonuses for a city of `owner`.
-    pub(crate) fn city_state_bonus(&self, owner: crate::map::PlayerId, city: &City, mut y: [f32; 6]) -> [f32; 6] {
+    pub(crate) fn city_state_bonus(
+        &self,
+        owner: crate::map::PlayerId,
+        city: &City,
+        mut y: [f32; 6],
+    ) -> [f32; 6] {
         let p = &self.players[owner];
         for (&state, &count) in &p.envoys {
             let cs = &self.players[state];

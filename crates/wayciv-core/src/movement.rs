@@ -29,7 +29,10 @@ impl Game {
         let water = map.is_water(rules, pos);
         let terrain = &rules.content.terrains[map.tile(pos).terrain];
         let ocean = terrain.water && !terrain.shallow_water;
-        let ice = map.tile(pos).feature.is_some_and(|f| rules.content.features[f].id == "FEATURE_ICE");
+        let ice = map
+            .tile(pos)
+            .feature
+            .is_some_and(|f| rules.content.features[f].id == "FEATURE_ICE");
         if ice {
             return false;
         }
@@ -39,7 +42,10 @@ impl Game {
                 (water || own_city) && (!ocean || self.can_enter_ocean(unit.owner))
             }
             _ => {
-                if water && !(self.can_embark(unit.owner) && (!ocean || self.can_enter_ocean(unit.owner))) {
+                if water
+                    && !(self.can_embark(unit.owner)
+                        && (!ocean || self.can_enter_ocean(unit.owner)))
+                {
                     return false;
                 }
                 if let Some(owner) = map.tile(pos).owner {
@@ -99,10 +105,17 @@ impl Game {
 
     /// Whether an enemy military unit or city exerts zone of control on `pos`.
     pub fn zone_of_control(&self, player: PlayerId, pos: Pos) -> bool {
-        self.map.grid.neighbors(pos).chain(std::iter::once(pos)).any(|n| {
-            self.ground_units_at(n).any(|u| self.players[player].at_war_with(u.owner) && self.is_military(u))
-                || self.city_at(n).is_some_and(|c| self.players[player].at_war_with(c.owner))
-        })
+        self.map
+            .grid
+            .neighbors(pos)
+            .chain(std::iter::once(pos))
+            .any(|n| {
+                self.ground_units_at(n)
+                    .any(|u| self.players[player].at_war_with(u.owner) && self.is_military(u))
+                    || self
+                        .city_at(n)
+                        .is_some_and(|c| self.players[player].at_war_with(c.owner))
+            })
     }
 
     /// Zones of control stop military units, except flying strike drones.
@@ -113,7 +126,9 @@ impl Game {
     /// True if `unit` could end its move on `pos` (stacking rules).
     pub fn can_stop(&self, unit: &Unit, pos: Pos) -> bool {
         let military = self.is_military(unit);
-        !self.ground_units_at(pos).any(|u| u.id != unit.id && (u.owner != unit.owner || self.is_military(u) == military))
+        !self
+            .ground_units_at(pos)
+            .any(|u| u.id != unit.id && (u.owner != unit.owner || self.is_military(u) == military))
             && self.city_at(pos).is_none_or(|c| c.owner == unit.owner)
     }
 
@@ -129,7 +144,12 @@ impl Game {
         let mut best: HashMap<Pos, (i32, i32)> = HashMap::new();
         let mut came: HashMap<Pos, Pos> = HashMap::new();
         best.insert(unit.pos, (0, unit.moves));
-        heap.push(Reverse((0, -unit.moves, grid.distance(unit.pos, goal), unit.pos)));
+        heap.push(Reverse((
+            0,
+            -unit.moves,
+            grid.distance(unit.pos, goal),
+            unit.pos,
+        )));
         while let Some(Reverse((turns, neg_left, _, pos))) = heap.pop() {
             if pos == goal {
                 let mut path = vec![goal];
@@ -144,14 +164,18 @@ impl Game {
                 path.reverse();
                 return Some(path);
             }
-            if best.get(&pos).is_some_and(|&(t, l)| (t, -l) < (turns, neg_left)) {
+            if best
+                .get(&pos)
+                .is_some_and(|&(t, l)| (t, -l) < (turns, neg_left))
+            {
                 continue;
             }
             for next in grid.neighbors(pos) {
                 if grid.distance(unit.pos, next) > MAX_SEARCH || !self.passable(unit, next) {
                     continue;
                 }
-                let occupied_by_other = self.ground_units_at(next).any(|u| u.owner != unit.owner) || self.city_at(next).is_some_and(|c| c.owner != unit.owner);
+                let occupied_by_other = self.ground_units_at(next).any(|u| u.owner != unit.owner)
+                    || self.city_at(next).is_some_and(|c| c.owner != unit.owner);
                 if occupied_by_other && next != goal {
                     continue;
                 }
@@ -165,11 +189,19 @@ impl Game {
                     t += 1;
                     left = full;
                 }
-                left = if cost == i32::MAX { 0 } else { (left - cost).max(0) };
-                if next != goal && self.zone_of_control(unit.owner, next) && self.zoc_applies(unit) {
+                left = if cost == i32::MAX {
+                    0
+                } else {
+                    (left - cost).max(0)
+                };
+                if next != goal && self.zone_of_control(unit.owner, next) && self.zoc_applies(unit)
+                {
                     left = 0;
                 }
-                if best.get(&next).is_none_or(|&(bt, bl)| (t, -left) < (bt, -bl)) {
+                if best
+                    .get(&next)
+                    .is_none_or(|&(bt, bl)| (t, -left) < (bt, -bl))
+                {
                     best.insert(next, (t, left));
                     came.insert(next, pos);
                     heap.push(Reverse((t, -left, grid.distance(next, goal), next)));
@@ -182,7 +214,11 @@ impl Game {
     /// Tiles `unit` can reach with its remaining moves this turn.
     pub fn reachable(&self, unit: &Unit) -> Vec<Pos> {
         if self.is_air(unit) {
-            return if unit.moves > 0 { self.rebase_targets(unit) } else { Vec::new() };
+            return if unit.moves > 0 {
+                self.rebase_targets(unit)
+            } else {
+                Vec::new()
+            };
         }
         let grid = self.map.grid;
         let mut best: HashMap<Pos, i32> = HashMap::new();
@@ -195,14 +231,21 @@ impl Game {
                 continue;
             }
             for next in grid.neighbors(pos) {
-                if !self.passable(unit, next) || self.ground_units_at(next).any(|u| u.owner != unit.owner) || self.city_at(next).is_some_and(|c| c.owner != unit.owner) {
+                if !self.passable(unit, next)
+                    || self.ground_units_at(next).any(|u| u.owner != unit.owner)
+                    || self.city_at(next).is_some_and(|c| c.owner != unit.owner)
+                {
                     continue;
                 }
                 let cost = self.move_cost(unit, pos, next);
                 if cost > left && left < full {
                     continue;
                 }
-                let mut remaining = if cost == i32::MAX { 0 } else { (left - cost).max(0) };
+                let mut remaining = if cost == i32::MAX {
+                    0
+                } else {
+                    (left - cost).max(0)
+                };
                 if self.zoc_applies(unit) && self.zone_of_control(unit.owner, next) {
                     remaining = 0;
                 }
@@ -212,7 +255,9 @@ impl Game {
                 }
             }
         }
-        best.into_keys().filter(|&p| p != unit.pos && self.can_stop(unit, p)).collect()
+        best.into_keys()
+            .filter(|&p| p != unit.pos && self.can_stop(unit, p))
+            .collect()
     }
 
     fn bonus_moves(&self, _unit: &Unit) -> i32 {
@@ -241,8 +286,12 @@ impl Game {
     /// Advances a unit along its stored path with its remaining moves.
     pub(crate) fn continue_path(&mut self, id: UnitId) {
         loop {
-            let Some(unit) = self.units.get(&id).cloned() else { return };
-            let Some(&next) = unit.path.first() else { return };
+            let Some(unit) = self.units.get(&id).cloned() else {
+                return;
+            };
+            let Some(&next) = unit.path.first() else {
+                return;
+            };
             if unit.moves <= 0 {
                 return;
             }
@@ -251,7 +300,8 @@ impl Game {
                 return;
             }
             // An enemy in the way: attack only if it is the destination.
-            let hostile = self.ground_units_at(next).any(|u| u.owner != unit.owner) || self.city_at(next).is_some_and(|c| c.owner != unit.owner);
+            let hostile = self.ground_units_at(next).any(|u| u.owner != unit.owner)
+                || self.city_at(next).is_some_and(|c| c.owner != unit.owner);
             if hostile {
                 let last = unit.path.len() == 1;
                 self.units.get_mut(&id).unwrap().path.clear();
@@ -275,7 +325,11 @@ impl Game {
                 let u = self.units.get_mut(&id).unwrap();
                 u.pos = next;
                 u.path.remove(0);
-                u.moves = if cost == i32::MAX || zoc { 0 } else { (u.moves - cost).max(0) };
+                u.moves = if cost == i32::MAX || zoc {
+                    0
+                } else {
+                    (u.moves - cost).max(0)
+                };
                 u.fortified = false;
                 u.fortify_turns = 0;
             }
@@ -288,11 +342,17 @@ impl Game {
     /// natural wonders, popping into an empty enemy city.
     fn on_entered(&mut self, id: UnitId, pos: Pos) {
         self.check_camp_cleared(id, pos);
-        let Some(unit) = self.units.get(&id).cloned() else { return };
+        let Some(unit) = self.units.get(&id).cloned() else {
+            return;
+        };
         // Civilians have no health: an enemy combat unit on their tile kills them.
         let victims: Vec<UnitId> = self
             .units_at(pos)
-            .filter(|u| u.owner != unit.owner && !self.is_military(u) && self.players[unit.owner].at_war_with(u.owner))
+            .filter(|u| {
+                u.owner != unit.owner
+                    && !self.is_military(u)
+                    && self.players[unit.owner].at_war_with(u.owner)
+            })
             .map(|u| u.id)
             .collect();
         for victim in victims {
@@ -353,16 +413,25 @@ impl Game {
         met.sort();
         met.dedup();
         for other in met {
-            if self.players[player].relations[other].met || self.players[other].is_barbarian() || self.players[player].is_barbarian() {
+            if self.players[player].relations[other].met
+                || self.players[other].is_barbarian()
+                || self.players[player].is_barbarian()
+            {
                 continue;
             }
             self.players[player].relations[other].met = true;
             self.players[other].relations[player].met = true;
-            let (a, b) = (self.players[player].clone_name(), self.players[other].clone_name());
+            let (a, b) = (
+                self.players[player].clone_name(),
+                self.players[other].clone_name(),
+            );
             if self.players[other].is_city_state() {
                 if self.players[player].is_major() {
                     // Meeting a city-state first grants an envoy, as in Civ VI.
-                    let first = !self.players.iter().any(|p| p.id != player && p.is_major() && p.relations[other].met);
+                    let first = !self
+                        .players
+                        .iter()
+                        .any(|p| p.id != player && p.is_major() && p.relations[other].met);
                     if first {
                         *self.players[player].envoys.entry(other).or_insert(0) += 1;
                     }
@@ -372,12 +441,22 @@ impl Game {
             } else if self.players[player].is_city_state() {
                 self.notify(other, format!("You met the city-state of {a}."), None);
             } else {
-                self.notify(player, format!("You met {b} of {}.", self.players[other].civ_name), None);
-                self.notify(other, format!("You met {a} of {}.", self.players[player].civ_name), None);
+                self.notify(
+                    player,
+                    format!("You met {b} of {}.", self.players[other].civ_name),
+                    None,
+                );
+                self.notify(
+                    other,
+                    format!("You met {a} of {}.", self.players[player].civ_name),
+                    None,
+                );
                 if self.players[player].human {
-                    self.popups.push((other, crate::diplomacy::DiploEvent::FirstMeet));
+                    self.popups
+                        .push((other, crate::diplomacy::DiploEvent::FirstMeet));
                 } else if self.players[other].human {
-                    self.popups.push((player, crate::diplomacy::DiploEvent::FirstMeet));
+                    self.popups
+                        .push((player, crate::diplomacy::DiploEvent::FirstMeet));
                 }
                 self.check_boosts(player, crate::research::Trigger::MetCiv);
                 self.check_boosts(other, crate::research::Trigger::MetCiv);

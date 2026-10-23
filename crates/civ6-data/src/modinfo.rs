@@ -21,7 +21,10 @@ pub struct UpdateDatabaseAction {
 pub fn find_action(dlc_dir: &Path, id: &str) -> Result<UpdateDatabaseAction> {
     for entry in fs::read_dir(dlc_dir)?.flatten() {
         let path = entry.path();
-        if !path.extension().is_some_and(|e| e.eq_ignore_ascii_case("modinfo")) {
+        if !path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("modinfo"))
+        {
             continue;
         }
         let text = fs::read_to_string(&path)?;
@@ -41,16 +44,26 @@ pub fn find_action(dlc_dir: &Path, id: &str) -> Result<UpdateDatabaseAction> {
                 files.push(resolved);
             }
         }
-        return Ok(UpdateDatabaseAction { id: id.to_string(), files });
+        return Ok(UpdateDatabaseAction {
+            id: id.to_string(),
+            files,
+        });
     }
-    Err(format!("no InGameActions/UpdateDatabase id={id} in {}", dlc_dir.display()).into())
+    Err(format!(
+        "no InGameActions/UpdateDatabase id={id} in {}",
+        dlc_dir.display()
+    )
+    .into())
 }
 
 impl GameplayDatabase {
     /// Applies an action's files in order (`.xml` and `.sql`).
     pub fn apply_action(&mut self, action: &UpdateDatabaseAction) -> Result<()> {
         for file in &action.files {
-            if file.extension().is_some_and(|e| e.eq_ignore_ascii_case("sql")) {
+            if file
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("sql"))
+            {
                 self.execute_sql_file(file)?;
             } else {
                 self.load_xml_file(file)?;

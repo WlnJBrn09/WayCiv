@@ -17,16 +17,34 @@ pub struct Setup {
 
 impl Setup {
     pub fn new(rules: &Arc<Rules>) -> Self {
-        let leader = rules.content.leaders.iter().position(|l| l.id == wayciv_core::rules::REAGAN).unwrap_or(0);
-        let seed = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(1) % 100_000;
-        Self { leader, map_type: MapType::Earth, size: MapSize::Large, opponents: 9, city_states: 12, seed }
+        let leader = rules
+            .content
+            .leaders
+            .iter()
+            .position(|l| l.id == wayciv_core::rules::REAGAN)
+            .unwrap_or(0);
+        let seed = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(1)
+            % 100_000;
+        Self {
+            leader,
+            map_type: MapType::Earth,
+            size: MapSize::Large,
+            opponents: 9,
+            city_states: 12,
+            seed,
+        }
     }
 }
 
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let rules = app.rules.clone().expect("rules loaded");
     let content = &rules.content;
-    let crate::Stage::Setup(setup) = &mut app.stage else { return };
+    let crate::Stage::Setup(setup) = &mut app.stage else {
+        return;
+    };
     let mut start = false;
 
     egui::Panel::right("setup_details").exact_size(430.0).show(ui, |ui| {
@@ -109,29 +127,66 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     });
 
     egui::CentralPanel::default().show(ui, |ui| {
-        ui.heading(RichText::new("Choose Your Leader").size(28.0).color(palette::GOLD));
+        ui.heading(
+            RichText::new("Choose Your Leader")
+                .size(28.0)
+                .color(palette::GOLD),
+        );
         ui.add_space(6.0);
         egui::ScrollArea::vertical().show(ui, |ui| {
             let tile = 150.0;
-            let per_row = ((ui.available_width() + 8.0) / (tile + 8.0)).floor().max(1.0) as usize;
+            let per_row = ((ui.available_width() + 8.0) / (tile + 8.0))
+                .floor()
+                .max(1.0) as usize;
             let mut order: Vec<usize> = (0..content.leaders.len()).collect();
             order.sort_by_key(|&i| content.leaders[i].name.clone());
             for row in order.chunks(per_row) {
                 ui.horizontal(|ui| {
                     for &i in row {
                         let leader = &content.leaders[i];
-                        let (rect, response) = ui.allocate_exact_size(vec2(tile, tile + 40.0), Sense::click());
+                        let (rect, response) =
+                            ui.allocate_exact_size(vec2(tile, tile + 40.0), Sense::click());
                         let image = egui::Rect::from_min_size(rect.min, vec2(tile, tile));
-                        app.portraits.paint(ui, image, &leader.id, &leader.name, (leader.primary_color, leader.secondary_color));
+                        app.portraits.paint(
+                            ui,
+                            image,
+                            &leader.id,
+                            &leader.name,
+                            (leader.primary_color, leader.secondary_color),
+                        );
                         let selected = setup.leader == i;
                         if selected || response.hovered() {
-                            let color = if selected { palette::GOLD } else { Color32::from_gray(200) };
-                            ui.painter().rect_stroke(image, 4.0, egui::Stroke::new(3.0, color), egui::StrokeKind::Outside);
+                            let color = if selected {
+                                palette::GOLD
+                            } else {
+                                Color32::from_gray(200)
+                            };
+                            ui.painter().rect_stroke(
+                                image,
+                                4.0,
+                                egui::Stroke::new(3.0, color),
+                                egui::StrokeKind::Outside,
+                            );
                         }
-                        let civ = rules.civilization(&leader.civilization).map(|c| c.name.as_str()).unwrap_or("");
+                        let civ = rules
+                            .civilization(&leader.civilization)
+                            .map(|c| c.name.as_str())
+                            .unwrap_or("");
                         let name = fit(ui, &leader.name, 14.0, tile);
-                        ui.painter().text(image.left_bottom() + vec2(tile / 2.0, 4.0), egui::Align2::CENTER_TOP, name, egui::FontId::proportional(14.0), Color32::WHITE);
-                        ui.painter().text(image.left_bottom() + vec2(tile / 2.0, 22.0), egui::Align2::CENTER_TOP, civ, egui::FontId::proportional(12.0), Color32::from_gray(170));
+                        ui.painter().text(
+                            image.left_bottom() + vec2(tile / 2.0, 4.0),
+                            egui::Align2::CENTER_TOP,
+                            name,
+                            egui::FontId::proportional(14.0),
+                            Color32::WHITE,
+                        );
+                        ui.painter().text(
+                            image.left_bottom() + vec2(tile / 2.0, 22.0),
+                            egui::Align2::CENTER_TOP,
+                            civ,
+                            egui::FontId::proportional(12.0),
+                            Color32::from_gray(170),
+                        );
                         if response.hovered() {
                             response.clone().on_hover_text(&leader.name);
                         }
@@ -163,7 +218,12 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
 /// `text` shortened with an ellipsis to fit `width` pixels.
 fn fit(ui: &egui::Ui, text: &str, size: f32, width: f32) -> String {
     let font = egui::FontId::proportional(size);
-    let measure = |t: &str| ui.painter().layout_no_wrap(t.to_string(), font.clone(), Color32::WHITE).size().x;
+    let measure = |t: &str| {
+        ui.painter()
+            .layout_no_wrap(t.to_string(), font.clone(), Color32::WHITE)
+            .size()
+            .x
+    };
     if measure(text) <= width - 4.0 {
         return text.to_string();
     }

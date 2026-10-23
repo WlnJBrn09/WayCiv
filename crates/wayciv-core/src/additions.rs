@@ -3,7 +3,9 @@
 //! Intelligence tech with its own AI tree, Datacenter districts, Anduril
 //! Strike Drones, and modern great people.
 
-use civ6_data::content::{Adjacency, Building, Content, District, Feature, GreatPerson, Research, Terrain};
+use civ6_data::content::{
+    Adjacency, Building, Content, District, Feature, GreatPerson, Research, Terrain,
+};
 
 pub const TECH_AI: &str = "TECH_ARTIFICIAL_INTELLIGENCE";
 pub const DATACENTER: &str = "DISTRICT_DATACENTER";
@@ -41,16 +43,86 @@ pub const AI_AUTOMATED_SCIENCE: &str = "AI_AUTOMATED_SCIENCE";
 pub const AI_SUPERINTELLIGENCE: &str = "AI_SUPERINTELLIGENCE";
 
 pub const AI_TREE: [AiTech; 10] = [
-    AiTech { id: AI_MACHINE_LEARNING, name: "Machine Learning", cost: 120, prereqs: &[], row: 0, description: "+15% Science in every city." },
-    AiTech { id: AI_COMPUTER_VISION, name: "Computer Vision", cost: 220, prereqs: &[AI_MACHINE_LEARNING], row: -1, description: "+3 Combat Strength for all units." },
-    AiTech { id: AI_NEURAL_NETWORKS, name: "Neural Networks", cost: 220, prereqs: &[AI_MACHINE_LEARNING], row: 1, description: "Campuses give +3 Science. +2 Compute from every Datacenter." },
-    AiTech { id: AI_AUTONOMOUS_SYSTEMS, name: "Autonomous Systems", cost: 360, prereqs: &[AI_COMPUTER_VISION], row: -1, description: "Unlocks Anduril Strike Drones, built three at a time." },
-    AiTech { id: AI_DEEP_LEARNING, name: "Deep Learning", cost: 360, prereqs: &[AI_NEURAL_NETWORKS], row: 1, description: "+20% Science. Unlocks the GPU Cluster (+8 Compute) in Datacenters." },
-    AiTech { id: AI_ROBOTIC_AUTOMATION, name: "Robotic Automation", cost: 520, prereqs: &[AI_AUTONOMOUS_SYSTEMS], row: -1, description: "+20% Production in every city." },
-    AiTech { id: AI_LARGE_LANGUAGE_MODELS, name: "Large Language Models", cost: 520, prereqs: &[AI_DEEP_LEARNING], row: 1, description: "+25% Science and +15% Culture." },
-    AiTech { id: AI_RESEARCH_AGENTS, name: "AI Research Agents", cost: 720, prereqs: &[AI_LARGE_LANGUAGE_MODELS], row: 1, description: "+15% Science, and a free Eureka every 5 turns." },
-    AiTech { id: AI_AUTOMATED_SCIENCE, name: "Automated Science", cost: 950, prereqs: &[AI_RESEARCH_AGENTS, AI_ROBOTIC_AUTOMATION], row: 0, description: "+25% Science. Space race projects cost 30% less." },
-    AiTech { id: AI_SUPERINTELLIGENCE, name: "Superintelligence", cost: 1300, prereqs: &[AI_AUTOMATED_SCIENCE], row: 0, description: "+50% Science and +20% Production." },
+    AiTech {
+        id: AI_MACHINE_LEARNING,
+        name: "Machine Learning",
+        cost: 120,
+        prereqs: &[],
+        row: 0,
+        description: "+15% Science in every city.",
+    },
+    AiTech {
+        id: AI_COMPUTER_VISION,
+        name: "Computer Vision",
+        cost: 220,
+        prereqs: &[AI_MACHINE_LEARNING],
+        row: -1,
+        description: "+3 Combat Strength for all units.",
+    },
+    AiTech {
+        id: AI_NEURAL_NETWORKS,
+        name: "Neural Networks",
+        cost: 220,
+        prereqs: &[AI_MACHINE_LEARNING],
+        row: 1,
+        description: "Campuses give +3 Science. +2 Compute from every Datacenter.",
+    },
+    AiTech {
+        id: AI_AUTONOMOUS_SYSTEMS,
+        name: "Autonomous Systems",
+        cost: 360,
+        prereqs: &[AI_COMPUTER_VISION],
+        row: -1,
+        description: "Unlocks Anduril Strike Drones, built three at a time.",
+    },
+    AiTech {
+        id: AI_DEEP_LEARNING,
+        name: "Deep Learning",
+        cost: 360,
+        prereqs: &[AI_NEURAL_NETWORKS],
+        row: 1,
+        description: "+20% Science. Unlocks the GPU Cluster (+8 Compute) in Datacenters.",
+    },
+    AiTech {
+        id: AI_ROBOTIC_AUTOMATION,
+        name: "Robotic Automation",
+        cost: 520,
+        prereqs: &[AI_AUTONOMOUS_SYSTEMS],
+        row: -1,
+        description: "+20% Production in every city.",
+    },
+    AiTech {
+        id: AI_LARGE_LANGUAGE_MODELS,
+        name: "Large Language Models",
+        cost: 520,
+        prereqs: &[AI_DEEP_LEARNING],
+        row: 1,
+        description: "+25% Science and +15% Culture.",
+    },
+    AiTech {
+        id: AI_RESEARCH_AGENTS,
+        name: "AI Research Agents",
+        cost: 720,
+        prereqs: &[AI_LARGE_LANGUAGE_MODELS],
+        row: 1,
+        description: "+15% Science, and a free Eureka every 5 turns.",
+    },
+    AiTech {
+        id: AI_AUTOMATED_SCIENCE,
+        name: "Automated Science",
+        cost: 950,
+        prereqs: &[AI_RESEARCH_AGENTS, AI_ROBOTIC_AUTOMATION],
+        row: 0,
+        description: "+25% Science. Space race projects cost 30% less.",
+    },
+    AiTech {
+        id: AI_SUPERINTELLIGENCE,
+        name: "Superintelligence",
+        cost: 1300,
+        prereqs: &[AI_AUTOMATED_SCIENCE],
+        row: 0,
+        description: "+50% Science and +20% Production.",
+    },
 ];
 
 /// The AI tree as tree items, for the shared research code and tree view.
@@ -77,11 +149,24 @@ pub fn apply(content: &mut Content) {
 
 fn biomes(content: &mut Content) {
     let s = |v: &[&str]| v.iter().map(|x| x.to_string()).collect::<Vec<_>>();
-    if let Some(t) = content.terrains.iter_mut().find(|t| t.id == "TERRAIN_OCEAN") {
+    if let Some(t) = content
+        .terrains
+        .iter_mut()
+        .find(|t| t.id == "TERRAIN_OCEAN")
+    {
         t.name = "Sea".into();
     }
-    if let Some(ocean) = content.terrains.iter().find(|t| t.id == "TERRAIN_OCEAN").cloned() {
-        content.terrains.push(Terrain { id: "TERRAIN_DEEP_OCEAN".into(), name: "Deep Sea".into(), ..ocean });
+    if let Some(ocean) = content
+        .terrains
+        .iter()
+        .find(|t| t.id == "TERRAIN_OCEAN")
+        .cloned()
+    {
+        content.terrains.push(Terrain {
+            id: "TERRAIN_DEEP_OCEAN".into(),
+            name: "Deep Sea".into(),
+            ..ocean
+        });
     }
     let mut floodplains = None;
     let mut forest = None;
@@ -117,7 +202,11 @@ fn biomes(content: &mut Content) {
         forest: false,
         valid_terrains: Vec::new(),
     };
-    let flood = floodplains.unwrap_or_else(|| Feature { yields: [3, 0, 0, 0, 0, 0], removable: false, ..blank.clone() });
+    let flood = floodplains.unwrap_or_else(|| Feature {
+        yields: [3, 0, 0, 0, 0, 0],
+        removable: false,
+        ..blank.clone()
+    });
     content.features.push(Feature {
         id: "FEATURE_FLOODPLAINS_GRASSLAND".into(),
         name: "Floodplains".into(),
@@ -132,11 +221,23 @@ fn biomes(content: &mut Content) {
         valid_terrains: s(&["TERRAIN_PLAINS"]),
         ..flood
     });
-    let woods = forest.unwrap_or_else(|| Feature { yields: [0, 1, 0, 0, 0, 0], movement_change: 1, defense_modifier: 3, removable: true, forest: true, ..blank.clone() });
+    let woods = forest.unwrap_or_else(|| Feature {
+        yields: [0, 1, 0, 0, 0, 0],
+        movement_change: 1,
+        defense_modifier: 3,
+        removable: true,
+        forest: true,
+        ..blank.clone()
+    });
     content.features.push(Feature {
         id: "FEATURE_TAIGA".into(),
         name: "Taiga".into(),
-        valid_terrains: s(&["TERRAIN_TUNDRA", "TERRAIN_TUNDRA_HILLS", "TERRAIN_PLAINS", "TERRAIN_PLAINS_HILLS"]),
+        valid_terrains: s(&[
+            "TERRAIN_TUNDRA",
+            "TERRAIN_TUNDRA_HILLS",
+            "TERRAIN_PLAINS",
+            "TERRAIN_PLAINS_HILLS",
+        ]),
         ..woods
     });
     content.features.push(Feature {
@@ -158,7 +259,13 @@ fn biomes(content: &mut Content) {
     // works on the others.
     let twins = [
         ("FEATURE_FOREST", &["FEATURE_TAIGA"][..]),
-        ("FEATURE_FLOODPLAINS", &["FEATURE_FLOODPLAINS_GRASSLAND", "FEATURE_FLOODPLAINS_PLAINS"][..]),
+        (
+            "FEATURE_FLOODPLAINS",
+            &[
+                "FEATURE_FLOODPLAINS_GRASSLAND",
+                "FEATURE_FLOODPLAINS_PLAINS",
+            ][..],
+        ),
     ];
     for (original, copies) in twins {
         let add = |list: &mut Vec<String>| {
@@ -179,7 +286,12 @@ fn biomes(content: &mut Content) {
                 .adjacencies
                 .iter()
                 .filter(|a| a.adjacent_feature.as_deref() == Some(original))
-                .flat_map(|a| copies.iter().map(move |c| Adjacency { adjacent_feature: Some(c.to_string()), ..a.clone() }))
+                .flat_map(|a| {
+                    copies.iter().map(move |c| Adjacency {
+                        adjacent_feature: Some(c.to_string()),
+                        ..a.clone()
+                    })
+                })
                 .collect();
             d.adjacencies.extend(extra);
         }
@@ -245,7 +357,13 @@ fn artificial_intelligence(content: &mut Content) {
         internal_only: false,
     });
 
-    let building = |id: &str, name: &str, description: &str, cost: i32, tech: &str, district: Option<&str>, yields: [i32; 6]| Building {
+    let building = |id: &str,
+                    name: &str,
+                    description: &str,
+                    cost: i32,
+                    tech: &str,
+                    district: Option<&str>,
+                    yields: [i32; 6]| Building {
         id: id.into(),
         name: name.into(),
         description: description.into(),
@@ -289,7 +407,12 @@ fn artificial_intelligence(content: &mut Content) {
         .units
         .iter()
         .find(|u| u.id == "UNIT_MACHINE_GUN")
-        .or_else(|| content.units.iter().find(|u| u.ranged_combat > 0 && u.domain == "DOMAIN_LAND" && u.unique_to.is_none()))
+        .or_else(|| {
+            content
+                .units
+                .iter()
+                .find(|u| u.ranged_combat > 0 && u.domain == "DOMAIN_LAND" && u.unique_to.is_none())
+        })
         .cloned();
     if let Some(template) = template {
         content.units.push(civ6_data::content::Unit {
@@ -322,15 +445,60 @@ fn artificial_intelligence(content: &mut Content) {
 
 fn great_people(content: &mut Content) {
     let people = [
-        (ELON_MUSK, "Elon Musk", "GREAT_PERSON_CLASS_ENGINEER", "Minor boosts to AI, rockets and solar."),
-        (GWYNNE_SHOTWELL, "Gwynne Shotwell", "GREAT_PERSON_CLASS_ENGINEER", "A big boost to rockets."),
-        (PALMER_LUCKEY, "Palmer Luckey", "GREAT_PERSON_CLASS_ENGINEER", "Deploys Anduril Strike Drones."),
-        (ILYA_SUTSKEVER, "Ilya Sutskever", "GREAT_PERSON_CLASS_SCIENTIST", "A big boost to artificial intelligence."),
-        ("GREAT_PERSON_INDIVIDUAL_YANNI", "Yanni", "GREAT_PERSON_CLASS_MUSICIAN", "Creates a Great Work of Music."),
-        ("GREAT_PERSON_INDIVIDUAL_NF", "NF", "GREAT_PERSON_CLASS_MUSICIAN", "Creates a Great Work of Music."),
-        ("GREAT_PERSON_INDIVIDUAL_MICHAEL_CRICHTON", "Michael Crichton", "GREAT_PERSON_CLASS_WRITER", "Creates a Great Work of Writing."),
-        ("GREAT_PERSON_INDIVIDUAL_IAIN_BANKS", "Iain M. Banks", "GREAT_PERSON_CLASS_WRITER", "Creates a Great Work of Writing."),
-        ("GREAT_PERSON_INDIVIDUAL_DOUGLAS_ADAMS", "Douglas Adams", "GREAT_PERSON_CLASS_WRITER", "Creates a Great Work of Writing."),
+        (
+            ELON_MUSK,
+            "Elon Musk",
+            "GREAT_PERSON_CLASS_ENGINEER",
+            "Minor boosts to AI, rockets and solar.",
+        ),
+        (
+            GWYNNE_SHOTWELL,
+            "Gwynne Shotwell",
+            "GREAT_PERSON_CLASS_ENGINEER",
+            "A big boost to rockets.",
+        ),
+        (
+            PALMER_LUCKEY,
+            "Palmer Luckey",
+            "GREAT_PERSON_CLASS_ENGINEER",
+            "Deploys Anduril Strike Drones.",
+        ),
+        (
+            ILYA_SUTSKEVER,
+            "Ilya Sutskever",
+            "GREAT_PERSON_CLASS_SCIENTIST",
+            "A big boost to artificial intelligence.",
+        ),
+        (
+            "GREAT_PERSON_INDIVIDUAL_YANNI",
+            "Yanni",
+            "GREAT_PERSON_CLASS_MUSICIAN",
+            "Creates a Great Work of Music.",
+        ),
+        (
+            "GREAT_PERSON_INDIVIDUAL_NF",
+            "NF",
+            "GREAT_PERSON_CLASS_MUSICIAN",
+            "Creates a Great Work of Music.",
+        ),
+        (
+            "GREAT_PERSON_INDIVIDUAL_MICHAEL_CRICHTON",
+            "Michael Crichton",
+            "GREAT_PERSON_CLASS_WRITER",
+            "Creates a Great Work of Writing.",
+        ),
+        (
+            "GREAT_PERSON_INDIVIDUAL_IAIN_BANKS",
+            "Iain M. Banks",
+            "GREAT_PERSON_CLASS_WRITER",
+            "Creates a Great Work of Writing.",
+        ),
+        (
+            "GREAT_PERSON_INDIVIDUAL_DOUGLAS_ADAMS",
+            "Douglas Adams",
+            "GREAT_PERSON_CLASS_WRITER",
+            "Creates a Great Work of Writing.",
+        ),
     ];
     for (id, name, class, ability) in people {
         content.great_people.push(GreatPerson {

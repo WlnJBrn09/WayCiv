@@ -25,7 +25,12 @@ impl Game {
             content
                 .modifiers_of(owner)
                 .filter(|m| m.effect == "EFFECT_ADJUST_TRADE_ROUTE_CAPACITY")
-                .map(|m| m.arguments.get("Amount").and_then(|a| a.parse::<i32>().ok()).unwrap_or(1))
+                .map(|m| {
+                    m.arguments
+                        .get("Amount")
+                        .and_then(|a| a.parse::<i32>().ok())
+                        .unwrap_or(1)
+                })
                 .sum()
         };
         let mut total = 0;
@@ -43,7 +48,8 @@ impl Game {
         for c in self.player_cities(player) {
             for d in &c.districts {
                 let district = &content.districts[d.district];
-                total += amount(&district.id).max(district.replaces.as_deref().map(amount).unwrap_or(0));
+                total +=
+                    amount(&district.id).max(district.replaces.as_deref().map(amount).unwrap_or(0));
             }
             for &b in &c.buildings {
                 total += amount(&content.buildings[b].id);
@@ -60,7 +66,12 @@ impl Game {
     pub fn route_yields(&self, owner: PlayerId, destination: CityId) -> [f32; 6] {
         let content = &self.rules.content;
         let dest = &self.cities[&destination];
-        let districts = dest.districts.iter().filter(|d| content.districts[d.district].requires_population).count().min(4) as f32;
+        let districts = dest
+            .districts
+            .iter()
+            .filter(|d| content.districts[d.district].requires_population)
+            .count()
+            .min(4) as f32;
         let bonuses = self.bonuses(owner);
         let mut y = [0f32; 6];
         if dest.owner == owner {
@@ -70,7 +81,13 @@ impl Game {
                 y[i] += bonuses.trade_domestic[i];
             }
         } else {
-            y[GOLD] += 3.0 + districts + if self.players[dest.owner].is_city_state() { 1.0 } else { 0.0 };
+            y[GOLD] += 3.0
+                + districts
+                + if self.players[dest.owner].is_city_state() {
+                    1.0
+                } else {
+                    0.0
+                };
             for i in 0..6 {
                 y[i] += bonuses.trade_international[i];
             }
@@ -80,38 +97,69 @@ impl Game {
 
     /// Cities a Trader standing in one of its owner's cities can reach.
     pub fn trade_destinations(&self, trader: UnitId) -> Vec<CityId> {
-        let Some(u) = self.units.get(&trader) else { return Vec::new() };
+        let Some(u) = self.units.get(&trader) else {
+            return Vec::new();
+        };
         if !self.unit_type(u).make_trade_route {
             return Vec::new();
         }
-        let Some(origin) = self.city_at(u.pos).filter(|c| c.owner == u.owner) else { return Vec::new() };
+        let Some(origin) = self.city_at(u.pos).filter(|c| c.owner == u.owner) else {
+            return Vec::new();
+        };
         let me = &self.players[u.owner];
         self.cities
             .values()
             .filter(|c| c.id != origin.id)
-            .filter(|c| c.owner == u.owner || (me.relations[c.owner].met && !me.at_war_with(c.owner) && !self.players[c.owner].is_barbarian()))
+            .filter(|c| {
+                c.owner == u.owner
+                    || (me.relations[c.owner].met
+                        && !me.at_war_with(c.owner)
+                        && !self.players[c.owner].is_barbarian())
+            })
             .filter(|c| self.map.grid.distance(c.pos, origin.pos) <= ROUTE_RANGE)
-            .filter(|c| !self.trade_routes.iter().any(|r| r.owner == u.owner && r.origin == origin.id && r.destination == c.id))
+            .filter(|c| {
+                !self
+                    .trade_routes
+                    .iter()
+                    .any(|r| r.owner == u.owner && r.origin == origin.id && r.destination == c.id)
+            })
             .map(|c| c.id)
             .collect()
     }
 
-    pub fn establish_trade_route(&mut self, trader: UnitId, destination: CityId) -> Result<(), String> {
+    pub fn establish_trade_route(
+        &mut self,
+        trader: UnitId,
+        destination: CityId,
+    ) -> Result<(), String> {
         if !self.trade_destinations(trader).contains(&destination) {
             return Err("The Trader can't reach that city from here.".into());
         }
         let u = self.units[&trader].clone();
         let used = self.trade_routes_of(u.owner).count() as i32;
         if used >= self.trade_capacity(u.owner) {
-            return Err("No trade route capacity left. Commercial Hubs, Harbors and some civics add more.".into());
+            return Err(
+                "No trade route capacity left. Commercial Hubs, Harbors and some civics add more."
+                    .into(),
+            );
         }
         let origin = self.city_at(u.pos).unwrap().id;
         self.units.remove(&trader);
-        self.trade_routes.push(TradeRoute { owner: u.owner, origin, destination, turns_left: ROUTE_TURNS, trader: u.kind });
+        self.trade_routes.push(TradeRoute {
+            owner: u.owner,
+            origin,
+            destination,
+            turns_left: ROUTE_TURNS,
+            trader: u.kind,
+        });
         let (from, to) = (self.cities[&origin].pos, self.cities[&destination].pos);
         self.build_road(from, to);
         let name = self.cities[&destination].name.clone();
-        self.notify(u.owner, format!("Trade route to {name} established."), Some(to));
+        self.notify(
+            u.owner,
+            format!("Trade route to {name} established."),
+            Some(to),
+        );
         self.check_boosts(u.owner, crate::research::Trigger::Poll);
         Ok(())
     }
@@ -128,7 +176,11 @@ impl Game {
                 break;
             }
             for n in grid.neighbors(pos) {
-                if !came.contains_key(&n) && self.map.is_land(&rules, n) && !self.map.is_impassable(&rules, n) && grid.distance(n, from) <= ROUTE_RANGE + 2 {
+                if !came.contains_key(&n)
+                    && self.map.is_land(&rules, n)
+                    && !self.map.is_impassable(&rules, n)
+                    && grid.distance(n, from) <= ROUTE_RANGE + 2
+                {
                     came.insert(n, pos);
                     queue.push_back(n);
                 }
@@ -159,10 +211,23 @@ impl Game {
     }
 
     fn return_trader(&mut self, route: &TradeRoute, why: &str) {
-        let name = self.cities.get(&route.destination).map(|c| c.name.clone()).unwrap_or_default();
-        if let Some(origin) = self.cities.get(&route.origin).filter(|c| c.owner == route.owner).map(|c| c.pos) {
+        let name = self
+            .cities
+            .get(&route.destination)
+            .map(|c| c.name.clone())
+            .unwrap_or_default();
+        if let Some(origin) = self
+            .cities
+            .get(&route.origin)
+            .filter(|c| c.owner == route.owner)
+            .map(|c| c.pos)
+        {
             self.spawn_exact(route.owner, route.trader, origin);
-            self.notify(route.owner, format!("The trade route to {name} {why}. Your Trader is ready for a new route."), Some(origin));
+            self.notify(
+                route.owner,
+                format!("The trade route to {name} {why}. Your Trader is ready for a new route."),
+                Some(origin),
+            );
         }
     }
 

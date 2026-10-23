@@ -50,9 +50,18 @@ pub enum MapSize {
 impl MapSize {
     pub fn grid(self) -> Grid {
         match self {
-            MapSize::Small => Grid { width: 52, height: 32 },
-            MapSize::Standard => Grid { width: 70, height: 42 },
-            MapSize::Large => Grid { width: 90, height: 54 },
+            MapSize::Small => Grid {
+                width: 52,
+                height: 32,
+            },
+            MapSize::Standard => Grid {
+                width: 70,
+                height: 42,
+            },
+            MapSize::Large => Grid {
+                width: 90,
+                height: 54,
+            },
         }
     }
 }
@@ -89,7 +98,9 @@ impl Map {
     pub fn is_impassable(&self, rules: &Rules, pos: Pos) -> bool {
         let tile = self.tile(pos);
         rules.content.terrains[tile.terrain].mountain
-            || tile.feature.is_some_and(|f| rules.content.features[f].impassable)
+            || tile
+                .feature
+                .is_some_and(|f| rules.content.features[f].impassable)
     }
 
     /// Base yields of a tile before its city's modifiers: terrain, feature,
@@ -127,7 +138,11 @@ struct Noise {
 
 impl Noise {
     fn new(rng: &mut Rng, period: usize, rows: usize) -> Self {
-        Self { period, rows, lattice: (0..period * (rows + 1)).map(|_| rng.unit()).collect() }
+        Self {
+            period,
+            rows,
+            lattice: (0..period * (rows + 1)).map(|_| rng.unit()).collect(),
+        }
     }
 
     fn at(&self, x: f64, y: f64) -> f64 {
@@ -158,7 +173,11 @@ fn fractal(rng: &mut Rng, grid: Grid, base_cells: usize, octaves: usize) -> Vec<
     let layers: Vec<Noise> = (0..octaves)
         .map(|o| {
             let cells = base_cells << o;
-            Noise::new(rng, cells, cells * grid.height as usize / grid.width as usize + 2)
+            Noise::new(
+                rng,
+                cells,
+                cells * grid.height as usize / grid.width as usize + 2,
+            )
         })
         .collect();
     grid.all()
@@ -252,14 +271,20 @@ pub fn generate(rules: &Rules, size: MapSize, rng: &mut Rng) -> Map {
     if let Some(deep) = rules.idx("TERRAIN_DEEP_OCEAN") {
         let land: Vec<Pos> = grid.all().filter(|&p| map.is_land(rules, p)).collect();
         for &pos in &water_positions {
-            if map.tile(pos).terrain != coast && !grid.within(pos, 3).iter().any(|p| land.contains(p)) {
+            if map.tile(pos).terrain != coast
+                && !grid.within(pos, 3).iter().any(|p| land.contains(p))
+            {
                 map.tile_mut(pos).terrain = deep;
             }
         }
     }
 
     // Features.
-    let (taiga, dunes, glacier) = (feature("FEATURE_TAIGA"), feature("FEATURE_DUNES"), feature("FEATURE_GLACIER"));
+    let (taiga, dunes, glacier) = (
+        feature("FEATURE_TAIGA"),
+        feature("FEATURE_DUNES"),
+        feature("FEATURE_GLACIER"),
+    );
     let (forest, jungle, marsh, oasis, ice, floodplains) = (
         feature("FEATURE_FOREST"),
         feature("FEATURE_JUNGLE"),
@@ -275,20 +300,30 @@ pub fn generate(rules: &Rules, size: MapSize, rng: &mut Rng) -> Map {
         let id = terrain.id.as_str();
         let wet = moisture[i];
         let chosen = if terrain.water {
-            (latitude > 0.86 && rng.chance(0.6)).then_some(ice).flatten()
+            (latitude > 0.86 && rng.chance(0.6))
+                .then_some(ice)
+                .flatten()
         } else if terrain.mountain {
             None
         } else if id.starts_with("TERRAIN_DESERT") {
             if !terrain.hills && wet < 0.3 && rng.chance(0.4) {
                 dunes
             } else {
-                (!terrain.hills && rng.chance(0.03)).then_some(oasis).flatten()
+                (!terrain.hills && rng.chance(0.03))
+                    .then_some(oasis)
+                    .flatten()
             }
         } else if id.starts_with("TERRAIN_SNOW") {
-            (latitude > 0.9 && rng.chance(0.5)).then_some(glacier).flatten()
+            (latitude > 0.9 && rng.chance(0.5))
+                .then_some(glacier)
+                .flatten()
         } else if id.starts_with("TERRAIN_TUNDRA") && wet > 0.4 && rng.chance(0.6) {
             taiga
-        } else if latitude < 0.35 && wet > 0.55 && !id.starts_with("TERRAIN_TUNDRA") && rng.chance(0.75) {
+        } else if latitude < 0.35
+            && wet > 0.55
+            && !id.starts_with("TERRAIN_TUNDRA")
+            && rng.chance(0.75)
+        {
             jungle
         } else if wet > 0.48 && rng.chance(0.55) {
             forest
@@ -310,12 +345,22 @@ pub fn generate(rules: &Rules, size: MapSize, rng: &mut Rng) -> Map {
 
 fn valid_feature(rules: &Rules, feature: usize, terrain: usize) -> bool {
     let feature = &rules.content.features[feature];
-    feature.valid_terrains.is_empty() || feature.valid_terrains.contains(&rules.content.terrains[terrain].id)
+    feature.valid_terrains.is_empty()
+        || feature
+            .valid_terrains
+            .contains(&rules.content.terrains[terrain].id)
 }
 
 /// Rivers run downhill from high ground to the sea. Rivers are a tile flag
 /// (WayCiv simplifies Civ VI's edge rivers), giving +1 Gold and fresh water.
-fn place_rivers(rules: &Rules, map: &mut Map, elevation: &[f64], sea_level: f64, rng: &mut Rng, floodplains: Option<usize>) {
+fn place_rivers(
+    rules: &Rules,
+    map: &mut Map,
+    elevation: &[f64],
+    sea_level: f64,
+    rng: &mut Rng,
+    floodplains: Option<usize>,
+) {
     let grid = map.grid;
     let sources: Vec<Pos> = grid
         .all()
@@ -326,7 +371,9 @@ fn place_rivers(rules: &Rules, map: &mut Map, elevation: &[f64], sea_level: f64,
         .collect();
     let count = (grid.len() / 160).max(4);
     for _ in 0..count {
-        let Some(&start) = rng.pick(&sources) else { return };
+        let Some(&start) = rng.pick(&sources) else {
+            return;
+        };
         let mut pos = start;
         for _ in 0..30 {
             if map.is_water(rules, pos) {
@@ -337,7 +384,11 @@ fn place_rivers(rules: &Rules, map: &mut Map, elevation: &[f64], sea_level: f64,
                 let tile = map.tile(pos);
                 if let Some(fp) = floodplains {
                     let terrain = &rules.content.terrains[tile.terrain];
-                    if tile.feature.is_none() && !terrain.hills && terrain.id == "TERRAIN_DESERT" && valid_feature(rules, fp, tile.terrain) {
+                    if tile.feature.is_none()
+                        && !terrain.hills
+                        && terrain.id == "TERRAIN_DESERT"
+                        && valid_feature(rules, fp, tile.terrain)
+                    {
                         map.tile_mut(pos).feature = Some(fp);
                     }
                 }
@@ -348,15 +399,24 @@ fn place_rivers(rules: &Rules, map: &mut Map, elevation: &[f64], sea_level: f64,
                     "TERRAIN_PLAINS" => rules.idx("FEATURE_FLOODPLAINS_PLAINS"),
                     _ => None,
                 };
-                if let Some(fp) = wet_floodplains.filter(|_| tile.feature.is_none() && rng.chance(0.4)) {
+                if let Some(fp) =
+                    wet_floodplains.filter(|_| tile.feature.is_none() && rng.chance(0.4))
+                {
                     map.tile_mut(pos).feature = Some(fp);
                 }
             }
-            let next = grid
-                .neighbors(pos)
-                .min_by(|a, b| elevation[grid.index(*a)].partial_cmp(&elevation[grid.index(*b)]).unwrap());
+            let next = grid.neighbors(pos).min_by(|a, b| {
+                elevation[grid.index(*a)]
+                    .partial_cmp(&elevation[grid.index(*b)])
+                    .unwrap()
+            });
             match next {
-                Some(n) if elevation[grid.index(n)] < elevation[grid.index(pos)] || elevation[grid.index(n)] < sea_level => pos = n,
+                Some(n)
+                    if elevation[grid.index(n)] < elevation[grid.index(pos)]
+                        || elevation[grid.index(n)] < sea_level =>
+                {
+                    pos = n
+                }
                 _ => break,
             }
         }
@@ -402,12 +462,20 @@ pub(crate) fn place_resources(rules: &Rules, map: &mut Map, rng: &mut Rng) {
     let grid = map.grid;
     for pos in grid.all() {
         let tile = map.tile(pos);
-        if tile.feature.is_some_and(|f| rules.content.features[f].natural_wonder) {
+        if tile
+            .feature
+            .is_some_and(|f| rules.content.features[f].natural_wonder)
+        {
             continue;
         }
         let terrain = &rules.content.terrains[tile.terrain];
         let open_sea = terrain.water && !terrain.shallow_water;
-        if open_sea || tile.feature.is_some_and(|f| rules.content.features[f].impassable) || !rng.chance(if terrain.water { 0.06 } else { 0.11 }) {
+        if open_sea
+            || tile
+                .feature
+                .is_some_and(|f| rules.content.features[f].impassable)
+            || !rng.chance(if terrain.water { 0.06 } else { 0.11 })
+        {
             continue;
         }
         let terrain_id = &terrain.id;
@@ -421,7 +489,17 @@ pub(crate) fn place_resources(rules: &Rules, map: &mut Map, rng: &mut Rng) {
                 Some(f) => r.valid_features.iter().any(|v| v == f),
                 None => r.valid_terrains.iter().any(|v| v == terrain_id),
             })
-            .map(|(i, r)| (i, if terrain.water { r.sea_frequency.max(r.frequency) } else { r.frequency }.max(1)))
+            .map(|(i, r)| {
+                (
+                    i,
+                    if terrain.water {
+                        r.sea_frequency.max(r.frequency)
+                    } else {
+                        r.frequency
+                    }
+                    .max(1),
+                )
+            })
             .collect();
         let total: i32 = candidates.iter().map(|(_, w)| w).sum();
         if total == 0 {
@@ -464,12 +542,25 @@ pub fn site_score(rules: &Rules, map: &Map, pos: Pos) -> f64 {
 }
 
 /// Picks `count` well-spaced, fertile starting tiles.
-pub fn starting_positions(rules: &Rules, map: &Map, count: usize, min_distance: i32, rng: &mut Rng) -> Vec<Pos> {
+pub fn starting_positions(
+    rules: &Rules,
+    map: &Map,
+    count: usize,
+    min_distance: i32,
+    rng: &mut Rng,
+) -> Vec<Pos> {
     starting_positions_avoiding(rules, map, count, min_distance, &[], rng)
 }
 
 /// Like `starting_positions`, also keeping clear of tiles already taken.
-pub fn starting_positions_avoiding(rules: &Rules, map: &Map, count: usize, min_distance: i32, taken: &[Pos], rng: &mut Rng) -> Vec<Pos> {
+pub fn starting_positions_avoiding(
+    rules: &Rules,
+    map: &Map,
+    count: usize,
+    min_distance: i32,
+    taken: &[Pos],
+    rng: &mut Rng,
+) -> Vec<Pos> {
     let grid = map.grid;
     let mut candidates: Vec<(Pos, f64)> = grid
         .all()
@@ -481,13 +572,21 @@ pub fn starting_positions_avoiding(rules: &Rules, map: &Map, count: usize, min_d
     let mut chosen: Vec<Pos> = Vec::new();
     let mut distance = min_distance;
     while chosen.len() < count && distance >= 3 {
-        let mut pool: Vec<Pos> = candidates.iter().take(candidates.len() / 2 + 1).map(|(p, _)| *p).collect();
+        let mut pool: Vec<Pos> = candidates
+            .iter()
+            .take(candidates.len() / 2 + 1)
+            .map(|(p, _)| *p)
+            .collect();
         rng.shuffle(&mut pool);
         for pos in pool {
             if chosen.len() >= count {
                 break;
             }
-            if chosen.iter().chain(taken).all(|c| grid.distance(*c, pos) >= distance) {
+            if chosen
+                .iter()
+                .chain(taken)
+                .all(|c| grid.distance(*c, pos) >= distance)
+            {
                 chosen.push(pos);
             }
         }

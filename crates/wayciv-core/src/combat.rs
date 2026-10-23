@@ -51,11 +51,14 @@ impl Game {
 
     fn enemy_at(&self, player: PlayerId, pos: Pos) -> bool {
         let at_war = |owner: PlayerId| self.players[player].at_war_with(owner);
-        self.ground_units_at(pos).any(|u| at_war(u.owner)) || self.city_at(pos).is_some_and(|c| at_war(c.owner))
+        self.ground_units_at(pos).any(|u| at_war(u.owner))
+            || self.city_at(pos).is_some_and(|c| at_war(c.owner))
     }
 
     pub fn can_attack(&self, unit: &Unit, target: Pos) -> bool {
-        let Some(kind) = self.attack_kind(unit) else { return false };
+        let Some(kind) = self.attack_kind(unit) else {
+            return false;
+        };
         if unit.attacked || unit.moves <= 0 || !self.enemy_at(unit.owner, target) {
             return false;
         }
@@ -64,7 +67,8 @@ impl Game {
             AttackKind::Melee => {
                 distance == 1
                     && self.passable(unit, target)
-                    && !self.map.is_water(&self.rules, unit.pos) == !self.map.is_water(&self.rules, target)
+                    && !self.map.is_water(&self.rules, unit.pos)
+                        == !self.map.is_water(&self.rules, target)
             }
             // Aircraft strike anything within their operation range.
             _ if self.is_air(unit) => distance <= self.unit_type(unit).range.max(1),
@@ -73,7 +77,14 @@ impl Game {
     }
 
     /// Strength of a unit in a fight, with every modifier applied.
-    pub fn unit_strength(&self, unit: &Unit, attacking: bool, kind: AttackKind, versus: Option<&Unit>, versus_city: bool) -> i32 {
+    pub fn unit_strength(
+        &self,
+        unit: &Unit,
+        attacking: bool,
+        kind: AttackKind,
+        versus: Option<&Unit>,
+        versus_city: bool,
+    ) -> i32 {
         let rules = &self.rules;
         let ty = self.unit_type(unit);
         let mut s = match (attacking, kind) {
@@ -109,7 +120,11 @@ impl Game {
         }
         if let Some(other) = versus {
             let my_class = ty.promotion_class.as_deref().unwrap_or("");
-            let their_class = self.unit_type(other).promotion_class.as_deref().unwrap_or("");
+            let their_class = self
+                .unit_type(other)
+                .promotion_class
+                .as_deref()
+                .unwrap_or("");
             if my_class == "PROMOTION_CLASS_ANTI_CAVALRY" && their_class.contains("CAVALRY") {
                 s += 10;
             }
@@ -129,18 +144,37 @@ impl Game {
             .content
             .units
             .iter()
-            .filter(|u| u.combat > 0 && u.ranged_combat == 0 && u.domain == "DOMAIN_LAND" && u.unique_to.is_none())
+            .filter(|u| {
+                u.combat > 0
+                    && u.ranged_combat == 0
+                    && u.domain == "DOMAIN_LAND"
+                    && u.unique_to.is_none()
+            })
             .filter(|u| p.meets(rules, u.prereq_tech.as_deref(), u.prereq_civic.as_deref()))
             .map(|u| u.combat)
             .max()
             .unwrap_or(20);
-        let walls = c.buildings.iter().filter(|&&b| rules.content.buildings[b].outer_defense > 0).count() as i32;
-        let garrison = self.ground_units_at(c.pos).filter(|u| u.owner == c.owner && self.is_military(u)).map(|u| self.unit_type(u).combat).max().unwrap_or(0);
-        (best_melee - 10).max(12) + walls * 3 + i32::from(c.capital) * 3 + garrison / 10 - (200 - c.hp) / 20
+        let walls = c
+            .buildings
+            .iter()
+            .filter(|&&b| rules.content.buildings[b].outer_defense > 0)
+            .count() as i32;
+        let garrison = self
+            .ground_units_at(c.pos)
+            .filter(|u| u.owner == c.owner && self.is_military(u))
+            .map(|u| self.unit_type(u).combat)
+            .max()
+            .unwrap_or(0);
+        (best_melee - 10).max(12) + walls * 3 + i32::from(c.capital) * 3 + garrison / 10
+            - (200 - c.hp) / 20
     }
 
     pub fn max_walls(&self, city: CityId) -> i32 {
-        self.cities[&city].buildings.iter().map(|&b| self.rules.content.buildings[b].outer_defense).sum()
+        self.cities[&city]
+            .buildings
+            .iter()
+            .map(|&b| self.rules.content.buildings[b].outer_defense)
+            .sum()
     }
 
     pub fn preview(&self, attacker: UnitId, target: Pos) -> Option<CombatPreview> {
@@ -153,14 +187,24 @@ impl Game {
                 attack,
                 defense,
                 damage_to_defender: damage(attack, defense, 6),
-                damage_to_attacker: if kind == AttackKind::Melee { damage(defense, attack, 6) } else { 0 },
+                damage_to_attacker: if kind == AttackKind::Melee {
+                    damage(defense, attack, 6)
+                } else {
+                    0
+                },
                 kind,
             });
         }
         let defender = self.defender_at(target, unit.owner)?;
         if !self.is_military(defender) {
             // Civilians have no health: one attack kills them.
-            return Some(CombatPreview { attack: self.unit_strength(unit, true, kind, None, false), defense: 0, damage_to_defender: 100, damage_to_attacker: 0, kind });
+            return Some(CombatPreview {
+                attack: self.unit_strength(unit, true, kind, None, false),
+                defense: 0,
+                damage_to_defender: 100,
+                damage_to_attacker: 0,
+                kind,
+            });
         }
         let attack = self.unit_strength(unit, true, kind, Some(defender), false);
         let defense = self.unit_strength(defender, false, kind, Some(unit), false);
@@ -168,14 +212,21 @@ impl Game {
             attack,
             defense,
             damage_to_defender: damage(attack, defense, 6),
-            damage_to_attacker: if kind == AttackKind::Melee { damage(defense, attack, 6) } else { 0 },
+            damage_to_attacker: if kind == AttackKind::Melee {
+                damage(defense, attack, 6)
+            } else {
+                0
+            },
             kind,
         })
     }
 
     /// The unit that defends `pos` against `attacker_owner`: military first.
     fn defender_at(&self, pos: Pos, attacker_owner: PlayerId) -> Option<&Unit> {
-        let mut units: Vec<&Unit> = self.ground_units_at(pos).filter(|u| self.players[attacker_owner].at_war_with(u.owner)).collect();
+        let mut units: Vec<&Unit> = self
+            .ground_units_at(pos)
+            .filter(|u| self.players[attacker_owner].at_war_with(u.owner))
+            .collect();
         units.sort_by_key(|u| std::cmp::Reverse(self.unit_type(u).combat));
         units.into_iter().next()
     }
@@ -189,7 +240,10 @@ impl Game {
         let roll = self.rng.below(12);
         let counter_roll = self.rng.below(12);
         let attacker_name = self.unit_type(&unit).name.clone();
-        let city = self.city_at(target).filter(|c| c.owner != unit.owner).map(|c| c.id);
+        let city = self
+            .city_at(target)
+            .filter(|c| c.owner != unit.owner)
+            .map(|c| c.id);
         if let Some(city) = city {
             let attack = self.unit_strength(&unit, true, kind, None, true);
             let defense = self.city_strength(city);
@@ -211,38 +265,56 @@ impl Game {
             }
             c.turns_since_combat = 0;
             let (city_name, owner, hp) = (c.name.clone(), c.owner, c.hp);
-            self.combat_log.push(format!("{attacker_name} attacked {city_name} for {dealt}."));
+            self.combat_log
+                .push(format!("{attacker_name} attacked {city_name} for {dealt}."));
             if kind == AttackKind::Melee {
                 let taken = damage(defense, attack, counter_roll);
                 self.hurt(attacker, taken, Some(owner));
                 // Barbarians raid cities but never take them.
-                if hp <= 0 && self.units.contains_key(&attacker) && !self.players[unit.owner].is_barbarian() {
+                if hp <= 0
+                    && self.units.contains_key(&attacker)
+                    && !self.players[unit.owner].is_barbarian()
+                {
                     self.capture_city(city, unit.owner, attacker);
                 }
             }
             self.notify(owner, format!("{city_name} is under attack!"), Some(target));
-        } else if self.defender_at(target, unit.owner).is_some_and(|d| !self.is_military(d)) {
+        } else if self
+            .defender_at(target, unit.owner)
+            .is_some_and(|d| !self.is_military(d))
+        {
             self.kill_civilians(&unit, target, kind);
         } else {
-            let defender = self.defender_at(target, unit.owner).ok_or("Nothing to attack.")?.clone();
+            let defender = self
+                .defender_at(target, unit.owner)
+                .ok_or("Nothing to attack.")?
+                .clone();
             let attack = self.unit_strength(&unit, true, kind, Some(&defender), false);
             let defense = self.unit_strength(&defender, false, kind, Some(&unit), false);
             let dealt = damage(attack, defense, roll);
             let defender_name = self.unit_type(&defender).name.clone();
-            self.combat_log.push(format!("{attacker_name} attacked {defender_name} for {dealt}."));
+            self.combat_log.push(format!(
+                "{attacker_name} attacked {defender_name} for {dealt}."
+            ));
             let killed = self.hurt(defender.id, dealt, Some(unit.owner));
             if killed {
                 self.players[unit.owner].units_killed += 1;
                 if self.players[defender.owner].is_barbarian() {
                     self.players[unit.owner].barbarians_killed += 1;
                 }
-                self.check_boosts(unit.owner, crate::research::Trigger::Killed { with: unit.kind });
+                self.check_boosts(
+                    unit.owner,
+                    crate::research::Trigger::Killed { with: unit.kind },
+                );
             }
             if kind == AttackKind::Melee {
                 let taken = damage(defense, attack, counter_roll);
                 let attacker_died = self.hurt(attacker, taken, Some(defender.owner));
                 // A victorious melee attacker advances into the empty tile.
-                if killed && !attacker_died && !self.ground_units_at(target).any(|u| self.is_military(u)) {
+                if killed
+                    && !attacker_died
+                    && !self.ground_units_at(target).any(|u| self.is_military(u))
+                {
                     let u = self.units.get_mut(&attacker).unwrap();
                     u.pos = target;
                     self.check_camp_cleared(attacker, target);
@@ -284,12 +356,24 @@ impl Game {
         for id in victims {
             let dead = self.units.remove(&id).unwrap();
             let name = self.unit_type(&dead).name.clone();
-            self.combat_log.push(format!("{} killed a {name}.", self.unit_type(attacker).name));
+            self.combat_log.push(format!(
+                "{} killed a {name}.",
+                self.unit_type(attacker).name
+            ));
             self.notify(dead.owner, format!("Your {name} was killed."), Some(target));
-            self.notify(attacker.owner, format!("Killed an enemy {name}."), Some(target));
+            self.notify(
+                attacker.owner,
+                format!("Killed an enemy {name}."),
+                Some(target),
+            );
             self.check_elimination(dead.owner);
         }
-        if kind == AttackKind::Melee && self.units.get(&attacker.id).is_some_and(|u| self.can_stop(u, target)) {
+        if kind == AttackKind::Melee
+            && self
+                .units
+                .get(&attacker.id)
+                .is_some_and(|u| self.can_stop(u, target))
+        {
             self.units.get_mut(&attacker.id).unwrap().pos = target;
             self.check_camp_cleared(attacker.id, target);
             self.update_visibility(attacker.owner);
@@ -298,14 +382,20 @@ impl Game {
 
     /// Damages a unit; returns true if it died.
     fn hurt(&mut self, id: UnitId, amount: i32, by: Option<PlayerId>) -> bool {
-        let Some(u) = self.units.get_mut(&id) else { return false };
+        let Some(u) = self.units.get_mut(&id) else {
+            return false;
+        };
         u.hp -= amount;
         if u.hp > 0 {
             return false;
         }
         let dead = self.units.remove(&id).unwrap();
         let name = self.unit_type(&dead).name.clone();
-        self.notify(dead.owner, format!("Your {name} was killed."), Some(dead.pos));
+        self.notify(
+            dead.owner,
+            format!("Your {name} was killed."),
+            Some(dead.pos),
+        );
         if let Some(by) = by {
             self.notify(by, format!("Defeated an enemy {name}."), Some(dead.pos));
         }
@@ -319,7 +409,9 @@ impl Game {
         !c.has_attacked
             && self.max_walls(city) > 0
             && self.map.grid.distance(c.pos, target) <= 2
-            && self.ground_units_at(target).any(|u| self.players[c.owner].at_war_with(u.owner))
+            && self
+                .ground_units_at(target)
+                .any(|u| self.players[c.owner].at_war_with(u.owner))
     }
 
     pub fn city_attack(&mut self, city: CityId, target: Pos) -> Result<(), String> {
@@ -327,7 +419,10 @@ impl Game {
             return Err("The city can't attack there.".into());
         }
         let owner = self.cities[&city].owner;
-        let defender = self.defender_at(target, owner).ok_or("Nothing to attack.")?.clone();
+        let defender = self
+            .defender_at(target, owner)
+            .ok_or("Nothing to attack.")?
+            .clone();
         let attack = self.city_strength(city);
         let defense = self.unit_strength(&defender, false, AttackKind::Ranged, None, false);
         let roll = self.rng.below(12);
@@ -344,7 +439,11 @@ impl Game {
         self.destroy_based_aircraft(city, old_owner);
         self.cancel_routes(|_, r| r.origin != city && r.destination != city);
         // Civilians in the city are captured or destroyed.
-        let civilians: Vec<UnitId> = self.ground_units_at(pos).filter(|u| u.owner == old_owner).map(|u| u.id).collect();
+        let civilians: Vec<UnitId> = self
+            .ground_units_at(pos)
+            .filter(|u| u.owner == old_owner)
+            .map(|u| u.id)
+            .collect();
         for id in civilians {
             self.units.remove(&id);
         }
@@ -360,7 +459,10 @@ impl Game {
             c.wall_hp = 0;
             c.production = None;
             c.capital = false;
-            c.buildings.retain(|&b| Some(b) != palace && !rules.content.buildings[b].wonder || rules.content.buildings[b].wonder);
+            c.buildings.retain(|&b| {
+                Some(b) != palace && !rules.content.buildings[b].wonder
+                    || rules.content.buildings[b].wonder
+            });
             c.buildings.retain(|&b| Some(b) != palace);
         }
         for t in self.map.tiles.iter_mut() {
@@ -373,7 +475,10 @@ impl Game {
         }
         if was_capital {
             self.players[old_owner].capital = None;
-            let next = self.player_cities(old_owner).max_by_key(|c| c.population).map(|c| c.id);
+            let next = self
+                .player_cities(old_owner)
+                .max_by_key(|c| c.population)
+                .map(|c| c.id);
             if let Some(next) = next {
                 self.cities.get_mut(&next).unwrap().capital = true;
                 self.players[old_owner].capital = Some(next);
@@ -395,8 +500,13 @@ impl Game {
             return;
         }
         let has_city = self.player_cities(player).next().is_some();
-        let has_settler = self.player_units(player).any(|u| self.unit_type(u).found_city);
-        if !has_city && (self.turn > 1 && !has_settler || self.players[player].cities_founded > 0 && !has_settler) {
+        let has_settler = self
+            .player_units(player)
+            .any(|u| self.unit_type(u).found_city);
+        if !has_city
+            && (self.turn > 1 && !has_settler
+                || self.players[player].cities_founded > 0 && !has_settler)
+        {
             self.players[player].alive = false;
             let units: Vec<UnitId> = self.player_units(player).map(|u| u.id).collect();
             for id in units {

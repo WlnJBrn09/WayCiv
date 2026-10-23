@@ -57,7 +57,10 @@ impl Game {
             loyalty: 100,
         };
         if let Some(center) = rules.idx("DISTRICT_CITY_CENTER") {
-            city.districts.push(CityDistrict { district: center, pos });
+            city.districts.push(CityDistrict {
+                district: center,
+                pos,
+            });
             self.map.tile_mut(pos).district = Some(center);
         }
         if first || self.players[owner].is_city_state() && self.players[owner].capital.is_none() {
@@ -73,7 +76,10 @@ impl Game {
         }
         // Removing a forest/jungle/marsh under the city, as Civ VI does.
         let tile = self.map.tile_mut(pos);
-        if tile.feature.is_some_and(|f| !rules.content.features[f].natural_wonder) {
+        if tile
+            .feature
+            .is_some_and(|f| !rules.content.features[f].natural_wonder)
+        {
             tile.feature = None;
         }
         tile.improvement = None;
@@ -97,10 +103,17 @@ impl Game {
         let civ = &self.rules.content.civilizations[p.civ];
         let used: Vec<&str> = self.cities.values().map(|c| c.name.as_str()).collect();
         let leader = &self.rules.content.leaders[p.leader];
-        let capital = (!leader.capital.is_empty() && !used.contains(&leader.capital.as_str()) && p.cities_founded == 0)
+        let capital = (!leader.capital.is_empty()
+            && !used.contains(&leader.capital.as_str())
+            && p.cities_founded == 0)
             .then(|| leader.capital.clone());
         capital
-            .or_else(|| civ.city_names.iter().find(|n| !used.contains(&n.as_str()) && !n.starts_with("LOC_")).cloned())
+            .or_else(|| {
+                civ.city_names
+                    .iter()
+                    .find(|n| !used.contains(&n.as_str()) && !n.starts_with("LOC_"))
+                    .cloned()
+            })
             .unwrap_or_else(|| format!("{} {}", civ.adjective, p.cities_founded + 1))
     }
 
@@ -113,7 +126,12 @@ impl Game {
 
     pub fn city_tiles(&self, city: CityId) -> Vec<Pos> {
         let c = &self.cities[&city];
-        self.map.grid.within(c.pos, CITY_RANGE).into_iter().filter(|&p| self.map.tile(p).owning_city == Some(city)).collect()
+        self.map
+            .grid
+            .within(c.pos, CITY_RANGE)
+            .into_iter()
+            .filter(|&p| self.map.tile(p).owning_city == Some(city))
+            .collect()
     }
 
     /// Yields of a tile for its owner, including improvement and visible resource.
@@ -137,15 +155,33 @@ impl Game {
         let mut candidates: Vec<(Pos, f32)> = self
             .city_tiles(city)
             .into_iter()
-            .filter(|&p| p != center && self.map.tile(p).district.is_none() && self.map.tile(p).wonder.is_none())
-            .filter(|&p| !self.ground_units_at(p).any(|u| self.players[owner].at_war_with(u.owner)))
+            .filter(|&p| {
+                p != center
+                    && self.map.tile(p).district.is_none()
+                    && self.map.tile(p).wonder.is_none()
+            })
+            .filter(|&p| {
+                !self
+                    .ground_units_at(p)
+                    .any(|u| self.players[owner].at_war_with(u.owner))
+            })
             .map(|p| {
                 let y = self.tile_yields(owner, p);
-                (p, y[FOOD] as f32 * 1.4 + y[PRODUCTION] as f32 * 1.2 + y[GOLD] as f32 * 0.6 + (y[SCIENCE] + y[CULTURE] + y[FAITH]) as f32 * 0.8)
+                (
+                    p,
+                    y[FOOD] as f32 * 1.4
+                        + y[PRODUCTION] as f32 * 1.2
+                        + y[GOLD] as f32 * 0.6
+                        + (y[SCIENCE] + y[CULTURE] + y[FAITH]) as f32 * 0.8,
+                )
             })
             .collect();
         candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-        let worked = candidates.into_iter().take(population as usize).map(|(p, _)| p).collect();
+        let worked = candidates
+            .into_iter()
+            .take(population as usize)
+            .map(|(p, _)| p)
+            .collect();
         self.cities.get_mut(&city).unwrap().worked = worked;
     }
 
@@ -154,15 +190,38 @@ impl Game {
         let fresh_water = self.map.tile(city.pos).river
             || self.map.grid.neighbors(city.pos).any(|n| {
                 self.map.tile(n).river
-                    || self.map.tile(n).feature.is_some_and(|f| rules.content.features[f].id == "FEATURE_OASIS")
+                    || self
+                        .map
+                        .tile(n)
+                        .feature
+                        .is_some_and(|f| rules.content.features[f].id == "FEATURE_OASIS")
             });
-        let water = if fresh_water { 5 } else if self.map.is_coastal_land(rules, city.pos) { 3 } else { 2 };
-        let buildings: i32 = city.buildings.iter().map(|&b| rules.content.buildings[b].housing).sum();
-        let districts: i32 = city.districts.iter().map(|d| rules.content.districts[d.district].housing).sum();
+        let water = if fresh_water {
+            5
+        } else if self.map.is_coastal_land(rules, city.pos) {
+            3
+        } else {
+            2
+        };
+        let buildings: i32 = city
+            .buildings
+            .iter()
+            .map(|&b| rules.content.buildings[b].housing)
+            .sum();
+        let districts: i32 = city
+            .districts
+            .iter()
+            .map(|d| rules.content.districts[d.district].housing)
+            .sum();
         let farms = self
             .city_tiles(city.id)
             .iter()
-            .filter(|&&p| self.map.tile(p).improvement.is_some_and(|i| rules.content.improvements[i].id == "IMPROVEMENT_FARM"))
+            .filter(|&&p| {
+                self.map
+                    .tile(p)
+                    .improvement
+                    .is_some_and(|i| rules.content.improvements[i].id == "IMPROVEMENT_FARM")
+            })
             .count() as i32;
         water + buildings + districts + farms / 2 + self.bonuses(city.owner).housing
     }
@@ -177,9 +236,11 @@ impl Game {
                 continue;
             }
             if let Some(r) = tile.resource
-                && self.rules.content.resources[r].class == "RESOURCECLASS_LUXURY" && !found.contains(&r) {
-                    found.push(r);
-                }
+                && self.rules.content.resources[r].class == "RESOURCECLASS_LUXURY"
+                && !found.contains(&r)
+            {
+                found.push(r);
+            }
         }
         found
     }
@@ -189,7 +250,11 @@ impl Game {
     pub fn has_resource(&self, player: PlayerId, resource: &str) -> bool {
         let content = &self.rules.content;
         self.map.tiles.iter().any(|t| {
-            t.owner == Some(player) && t.improvement.is_some() && !t.pillaged && t.resource.is_some_and(|r| content.resources[r].id == resource)
+            t.owner == Some(player)
+                && t.improvement.is_some()
+                && !t.pillaged
+                && t.resource
+                    .is_some_and(|r| content.resources[r].id == resource)
         })
     }
 
@@ -199,10 +264,26 @@ impl Game {
         let cities = self.player_cities(city.owner).count().max(1) as i32;
         let luxuries = self.luxuries(city.owner).len() as i32 * 4;
         let from_luxuries = (luxuries + cities - 1) / cities;
-        let buildings: i32 = city.buildings.iter().map(|&b| rules.content.buildings[b].amenities).sum();
-        let districts: i32 = city.districts.iter().map(|d| rules.content.districts[d.district].amenities).sum();
-        let war_weariness = if self.real_wars(city.owner) > 0 && self.turn > 50 { 1 } else { 0 };
-        (from_luxuries.min(4) + buildings + districts + self.bonuses(city.owner).amenities - war_weariness, needed)
+        let buildings: i32 = city
+            .buildings
+            .iter()
+            .map(|&b| rules.content.buildings[b].amenities)
+            .sum();
+        let districts: i32 = city
+            .districts
+            .iter()
+            .map(|d| rules.content.districts[d.district].amenities)
+            .sum();
+        let war_weariness = if self.real_wars(city.owner) > 0 && self.turn > 50 {
+            1
+        } else {
+            0
+        };
+        (
+            from_luxuries.min(4) + buildings + districts + self.bonuses(city.owner).amenities
+                - war_weariness,
+            needed,
+        )
     }
 
     pub fn growth_threshold(population: i32) -> i32 {
@@ -222,8 +303,14 @@ impl Game {
                 let terrain = &rules.content.terrains[tile.terrain].id;
                 let feature = tile.feature.map(|f| &rules.content.features[f]);
                 let hit = adj.adjacent_terrain.as_ref().is_some_and(|t| t == terrain)
-                    || adj.adjacent_feature.as_ref().is_some_and(|f| feature.is_some_and(|x| &x.id == f))
-                    || adj.adjacent_district.as_ref().is_some_and(|ad| tile.district.is_some_and(|x| &rules.content.districts[x].id == ad))
+                    || adj
+                        .adjacent_feature
+                        .as_ref()
+                        .is_some_and(|f| feature.is_some_and(|x| &x.id == f))
+                    || adj.adjacent_district.as_ref().is_some_and(|ad| {
+                        tile.district
+                            .is_some_and(|x| &rules.content.districts[x].id == ad)
+                    })
                     || (adj.other_district && tile.district.is_some())
                     || (adj.adjacent_wonder && tile.wonder.is_some())
                     || (adj.adjacent_natural_wonder && feature.is_some_and(|f| f.natural_wonder))
@@ -249,7 +336,14 @@ impl Game {
         let bonuses = self.bonuses(owner);
         let mut y = [0f32; 6];
         let center = self.tile_yields(owner, city.pos);
-        let center = [center[0].max(2), center[1].max(1), center[2], center[3], center[4], center[5]];
+        let center = [
+            center[0].max(2),
+            center[1].max(1),
+            center[2],
+            center[3],
+            center[4],
+            center[5],
+        ];
         for i in 0..6 {
             y[i] += center[i] as f32;
         }
@@ -338,9 +432,18 @@ impl Game {
             }
         }
         let threshold = Self::growth_threshold(city.population);
-        let turns_to_grow = (surplus > 0.0).then(|| ((threshold - city.food) as f32 / surplus).ceil().max(1.0) as i32);
+        let turns_to_grow = (surplus > 0.0)
+            .then(|| ((threshold - city.food) as f32 / surplus).ceil().max(1.0) as i32);
         y[FOOD] = surplus + food_consumed;
-        CityReport { yields: y, food_consumed, growth_threshold: threshold, housing, amenities, amenities_needed: needed, turns_to_grow }
+        CityReport {
+            yields: y,
+            food_consumed,
+            growth_threshold: threshold,
+            housing,
+            amenities,
+            amenities_needed: needed,
+            turns_to_grow,
+        }
     }
 
     /// Key into `City::progress` for an item.
@@ -371,7 +474,9 @@ impl Game {
                 let base = content.districts[*i].cost as f32;
                 (base * (1.0 + 4.0 * self.game_progress(player))).round() as i32
             }
-            Production::Project(i) => (content.projects[*i].cost as f32 * self.project_cost_multiplier(player)).round() as i32,
+            Production::Project(i) => (content.projects[*i].cost as f32
+                * self.project_cost_multiplier(player))
+            .round() as i32,
         }
     }
 
@@ -404,7 +509,9 @@ impl Game {
         let content = &self.rules.content;
         match item {
             Production::Unit(i) => content.units[*i].name.clone(),
-            Production::Building(i) | Production::Wonder(i, _) => content.buildings[*i].name.clone(),
+            Production::Building(i) | Production::Wonder(i, _) => {
+                content.buildings[*i].name.clone()
+            }
             Production::District(i, _) => content.districts[*i].name.clone(),
             Production::Project(i) => content.projects[*i].name.clone(),
         }
@@ -413,17 +520,29 @@ impl Game {
     /// Gold price to buy `item` outright (Civ VI charges about twice the
     /// production cost, minus progress already made).
     pub fn purchase_cost(&self, city: CityId, item: &Production) -> Option<i32> {
-        if matches!(item, Production::District(..) | Production::Wonder(..) | Production::Project(_)) {
+        if matches!(
+            item,
+            Production::District(..) | Production::Wonder(..) | Production::Project(_)
+        ) {
             return None;
         }
         let c = &self.cities[&city];
         let cost = self.production_cost(c.owner, item);
-        let done = c.progress.get(&Self::production_key(item)).copied().unwrap_or(0);
-        Some(((cost - done).max(0) as f32 * 2.0 * self.bonuses(c.owner).purchase_multiplier).ceil() as i32)
+        let done = c
+            .progress
+            .get(&Self::production_key(item))
+            .copied()
+            .unwrap_or(0);
+        Some(
+            ((cost - done).max(0) as f32 * 2.0 * self.bonuses(c.owner).purchase_multiplier).ceil()
+                as i32,
+        )
     }
 
     pub fn purchase(&mut self, city: CityId, item: Production) -> Result<(), String> {
-        let price = self.purchase_cost(city, &item).ok_or("This can't be purchased.")?;
+        let price = self
+            .purchase_cost(city, &item)
+            .ok_or("This can't be purchased.")?;
         let owner = self.cities[&city].owner;
         if self.players[owner].gold < price {
             return Err(format!("Not enough Gold ({price} needed)."));
@@ -454,7 +573,11 @@ impl Game {
         }
         for i in 0..content.buildings.len() {
             let wonder = content.buildings[i].wonder;
-            let item = if wonder { Production::Wonder(i, Pos::default()) } else { Production::Building(i) };
+            let item = if wonder {
+                Production::Wonder(i, Pos::default())
+            } else {
+                Production::Building(i)
+            };
             if self.can_produce_ignoring_site(city, &item) {
                 items.push(item);
             }
@@ -477,10 +600,12 @@ impl Game {
     pub fn can_produce(&self, city: CityId, item: &Production) -> bool {
         match item {
             Production::District(d, pos) => {
-                self.can_produce_ignoring_site(city, item) && self.district_sites(city, *d).contains(pos)
+                self.can_produce_ignoring_site(city, item)
+                    && self.district_sites(city, *d).contains(pos)
             }
             Production::Wonder(w, pos) => {
-                self.can_produce_ignoring_site(city, item) && self.wonder_sites(city, *w).contains(pos)
+                self.can_produce_ignoring_site(city, item)
+                    && self.wonder_sites(city, *w).contains(pos)
             }
             _ => self.can_produce_ignoring_site(city, item),
         }
@@ -493,7 +618,8 @@ impl Game {
             None => true,
             Some(owner) => {
                 p.is_major()
-                    && (self.rules.content.civilizations[p.civ].id == *owner || self.rules.content.leaders[p.leader].id == *owner)
+                    && (self.rules.content.civilizations[p.civ].id == *owner
+                        || self.rules.content.leaders[p.leader].id == *owner)
             }
         }
     }
@@ -502,9 +628,21 @@ impl Game {
     fn replaced_for(&self, player: PlayerId, id: &str, kind: &str) -> bool {
         let content = &self.rules.content;
         match kind {
-            "unit" => content.units.iter().any(|u| u.replaces.as_deref() == Some(id) && self.unique_ok(player, &u.unique_to) && u.unique_to.is_some()),
-            "building" => content.buildings.iter().any(|b| b.replaces.as_deref() == Some(id) && b.unique_to.is_some() && self.unique_ok(player, &b.unique_to)),
-            _ => content.districts.iter().any(|d| d.replaces.as_deref() == Some(id) && d.unique_to.is_some() && self.unique_ok(player, &d.unique_to)),
+            "unit" => content.units.iter().any(|u| {
+                u.replaces.as_deref() == Some(id)
+                    && self.unique_ok(player, &u.unique_to)
+                    && u.unique_to.is_some()
+            }),
+            "building" => content.buildings.iter().any(|b| {
+                b.replaces.as_deref() == Some(id)
+                    && b.unique_to.is_some()
+                    && self.unique_ok(player, &b.unique_to)
+            }),
+            _ => content.districts.iter().any(|d| {
+                d.replaces.as_deref() == Some(id)
+                    && d.unique_to.is_some()
+                    && self.unique_ok(player, &d.unique_to)
+            }),
         }
     }
 
@@ -519,7 +657,9 @@ impl Game {
 
     fn city_has_building_type(&self, city: &City, id: &str) -> bool {
         let content = &self.rules.content;
-        city.buildings.iter().any(|&b| content.buildings[b].id == id || content.buildings[b].replaces.as_deref() == Some(id))
+        city.buildings.iter().any(|&b| {
+            content.buildings[b].id == id || content.buildings[b].replaces.as_deref() == Some(id)
+        })
     }
 
     pub fn can_produce_ignoring_site(&self, city: CityId, item: &Production) -> bool {
@@ -568,13 +708,17 @@ impl Game {
                 if !self.ai_requirement_met(owner, &u.id) {
                     return false;
                 }
-                if u.obsolete_tech.as_deref().is_some_and(|t| p.has_tech(rules, t)) {
+                if u.obsolete_tech
+                    .as_deref()
+                    .is_some_and(|t| p.has_tech(rules, t))
+                {
                     return false;
                 }
                 if let Some(resource) = &u.strategic_resource
-                    && !self.has_resource(owner, resource) {
-                        return false;
-                    }
+                    && !self.has_resource(owner, resource)
+                {
+                    return false;
+                }
                 p.meets(rules, u.prereq_tech.as_deref(), u.prereq_civic.as_deref())
             }
             Production::Building(i) | Production::Wonder(i, _) => {
@@ -582,23 +726,46 @@ impl Game {
                 if b.wonder != matches!(item, Production::Wonder(..)) {
                     return false;
                 }
-                if b.id == "BUILDING_PALACE" || b.enabled_by_religion || c.has_building(*i) || !self.ai_requirement_met(owner, &b.id) {
+                if b.id == "BUILDING_PALACE"
+                    || b.enabled_by_religion
+                    || c.has_building(*i)
+                    || !self.ai_requirement_met(owner, &b.id)
+                {
                     return false;
                 }
-                if !self.unique_ok(owner, &b.unique_to) || self.replaced_for(owner, &b.id, "building") {
+                if !self.unique_ok(owner, &b.unique_to)
+                    || self.replaced_for(owner, &b.id, "building")
+                {
                     return false;
                 }
-                if b.replaces.as_deref().is_some_and(|r| self.city_has_building_type(c, r)) {
+                if b.replaces
+                    .as_deref()
+                    .is_some_and(|r| self.city_has_building_type(c, r))
+                {
                     return false;
                 }
-                if b.wonder && (p.is_city_state() || self.world_wonders.contains(i) || self.cities.values().any(|other| other.production.as_ref() == Some(item) && other.id != city && other.owner == owner)) {
+                if b.wonder
+                    && (p.is_city_state()
+                        || self.world_wonders.contains(i)
+                        || self.cities.values().any(|other| {
+                            other.production.as_ref() == Some(item)
+                                && other.id != city
+                                && other.owner == owner
+                        }))
+                {
                     return false;
                 }
                 if let Some(district) = &b.prereq_district
-                    && !self.city_has_district_type(c, district) {
-                        return false;
-                    }
-                if !b.prereq_buildings.is_empty() && !b.prereq_buildings.iter().any(|pb| self.city_has_building_type(c, pb)) {
+                    && !self.city_has_district_type(c, district)
+                {
+                    return false;
+                }
+                if !b.prereq_buildings.is_empty()
+                    && !b
+                        .prereq_buildings
+                        .iter()
+                        .any(|pb| self.city_has_building_type(c, pb))
+                {
                     return false;
                 }
                 p.meets(rules, b.prereq_tech.as_deref(), b.prereq_civic.as_deref())
@@ -608,25 +775,42 @@ impl Game {
                 if d.internal_only || d.city_center || p.is_city_state() {
                     return false;
                 }
-                if !self.unique_ok(owner, &d.unique_to) || self.replaced_for(owner, &d.id, "district") {
+                if !self.unique_ok(owner, &d.unique_to)
+                    || self.replaced_for(owner, &d.id, "district")
+                {
                     return false;
                 }
                 let base_id = d.replaces.clone().unwrap_or_else(|| d.id.clone());
-                if self.city_has_district_type(c, &base_id) || c.production.as_ref().is_some_and(|x| matches!(x, Production::District(j, _) if j == i)) && false {
+                if self.city_has_district_type(c, &base_id)
+                    || c.production
+                        .as_ref()
+                        .is_some_and(|x| matches!(x, Production::District(j, _) if j == i))
+                        && false
+                {
                     return false;
                 }
                 // WayCiv rule: Aerodromes don't count toward the population
                 // limit on specialty districts (like Spaceports).
                 let limited = |d: &crate::rules::District| {
-                    d.requires_population && d.id != "DISTRICT_AERODROME" && d.replaces.as_deref() != Some("DISTRICT_AERODROME")
+                    d.requires_population
+                        && d.id != "DISTRICT_AERODROME"
+                        && d.replaces.as_deref() != Some("DISTRICT_AERODROME")
                 };
                 if limited(d) {
-                    let specialty = c.districts.iter().filter(|x| limited(&content.districts[x.district])).count() as i32;
+                    let specialty = c
+                        .districts
+                        .iter()
+                        .filter(|x| limited(&content.districts[x.district]))
+                        .count() as i32;
                     if specialty >= (c.population + 2) / 3 {
                         return false;
                     }
                 }
-                if d.coast && !self.map.grid.within(c.pos, CITY_RANGE).iter().any(|&t| self.map.is_water(rules, t) && self.map.tile(t).owning_city == Some(city)) {
+                if d.coast
+                    && !self.map.grid.within(c.pos, CITY_RANGE).iter().any(|&t| {
+                        self.map.is_water(rules, t) && self.map.tile(t).owning_city == Some(city)
+                    })
+                {
                     return false;
                 }
                 p.meets(rules, d.prereq_tech.as_deref(), d.prereq_civic.as_deref())
@@ -637,13 +821,25 @@ impl Game {
                     return false;
                 }
                 if let Some(district) = &project.prereq_district
-                    && !self.city_has_district_type(c, district) {
-                        return false;
-                    }
+                    && !self.city_has_district_type(c, district)
+                {
+                    return false;
+                }
                 // Space projects run in order.
-                let order: Vec<usize> = content.projects.iter().enumerate().filter(|(_, x)| x.space_race).map(|(j, _)| j).collect();
+                let order: Vec<usize> = content
+                    .projects
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, x)| x.space_race)
+                    .map(|(j, _)| j)
+                    .collect();
                 let position = order.iter().position(|j| j == i).unwrap_or(0);
-                if order[..position].iter().any(|j| !p.space_projects.contains(j)) && position > 0 && position < 2 {
+                if order[..position]
+                    .iter()
+                    .any(|j| !p.space_projects.contains(j))
+                    && position > 0
+                    && position < 2
+                {
                     return false;
                 }
                 p.meets(rules, project.prereq_tech.as_deref(), None)
@@ -676,7 +872,9 @@ impl Game {
         let c = &self.cities[&city];
         self.city_tiles(city)
             .into_iter()
-            .filter(|&p| p != c.pos && self.map.is_land(rules, p) && !self.map.is_impassable(rules, p))
+            .filter(|&p| {
+                p != c.pos && self.map.is_land(rules, p) && !self.map.is_impassable(rules, p)
+            })
             .filter(|&p| self.map.tile(p).district.is_none() && self.map.tile(p).wonder.is_none())
             .collect()
     }
@@ -691,7 +889,9 @@ impl Game {
 
     /// Adds a turn of production; finishes the item when complete.
     pub(crate) fn progress_production(&mut self, city: CityId) {
-        let Some(item) = self.cities[&city].production.clone() else { return };
+        let Some(item) = self.cities[&city].production.clone() else {
+            return;
+        };
         if !self.can_produce(city, &item) {
             self.cities.get_mut(&city).unwrap().production = None;
             return;
@@ -725,7 +925,8 @@ impl Game {
             Production::Unit(i) => {
                 let unit = &content.units[*i];
                 let military = unit.combat > 0 || unit.ranged_combat > 0 || unit.bombard > 0;
-                let occupied = |g: &Game, p: Pos| g.ground_units_at(p).any(|u| g.is_military(u) == military);
+                let occupied =
+                    |g: &Game, p: Pos| g.ground_units_at(p).any(|u| g.is_military(u) == military);
                 let spot = if unit.domain == "DOMAIN_AIR" {
                     self.free_air_base(city)
                 } else if !occupied(self, pos) {
@@ -757,12 +958,20 @@ impl Game {
                         if made >= crate::additions::DRONES_PER_BATCH {
                             break;
                         }
-                        if !occupied(self, p) && self.map.is_land(&rules, p) && !self.map.is_impassable(&rules, p) && self.map.tile(p).owner == Some(owner) {
+                        if !occupied(self, p)
+                            && self.map.is_land(&rules, p)
+                            && !self.map.is_impassable(&rules, p)
+                            && self.map.tile(p).owner == Some(owner)
+                        {
                             self.spawn_kind(owner, *i, p);
                             made += 1;
                         }
                     }
-                    self.notify(owner, format!("{name} built {made} {}s.", unit.name), Some(pos));
+                    self.notify(
+                        owner,
+                        format!("{name} built {made} {}s.", unit.name),
+                        Some(pos),
+                    );
                 } else {
                     self.notify(owner, format!("{name} trained a {}.", unit.name), Some(pos));
                 }
@@ -774,7 +983,11 @@ impl Game {
                     c.wall_hp += content.buildings[*i].outer_defense;
                 }
                 self.on_built(owner, *i);
-                self.notify(owner, format!("{name} built the {}.", content.buildings[*i].name), Some(pos));
+                self.notify(
+                    owner,
+                    format!("{name} built the {}.", content.buildings[*i].name),
+                    Some(pos),
+                );
             }
             Production::Wonder(i, at) => {
                 self.cities.get_mut(&city).unwrap().buildings.push(*i);
@@ -784,7 +997,11 @@ impl Game {
                 let wonder = content.buildings[*i].name.clone();
                 let builder = self.players[owner].civ_name.clone();
                 for p in 0..self.players.len() {
-                    let msg = if p == owner { format!("{name} completed {wonder}!") } else { format!("{builder} completed {wonder}.") };
+                    let msg = if p == owner {
+                        format!("{name} completed {wonder}!")
+                    } else {
+                        format!("{builder} completed {wonder}.")
+                    };
                     if self.players[p].is_major() {
                         self.notify(p, msg, Some(*at));
                     }
@@ -792,20 +1009,38 @@ impl Game {
                 self.on_built(owner, *i);
             }
             Production::District(i, at) => {
-                self.cities.get_mut(&city).unwrap().districts.push(CityDistrict { district: *i, pos: *at });
+                self.cities
+                    .get_mut(&city)
+                    .unwrap()
+                    .districts
+                    .push(CityDistrict {
+                        district: *i,
+                        pos: *at,
+                    });
                 let tile = self.map.tile_mut(*at);
                 tile.district = Some(*i);
                 tile.improvement = None;
-                if tile.feature.is_some_and(|f| !content.features[f].natural_wonder) {
+                if tile
+                    .feature
+                    .is_some_and(|f| !content.features[f].natural_wonder)
+                {
                     tile.feature = None;
                 }
                 self.on_district(owner, *i);
-                self.notify(owner, format!("{name} completed a {}.", content.districts[*i].name), Some(*at));
+                self.notify(
+                    owner,
+                    format!("{name} completed a {}.", content.districts[*i].name),
+                    Some(*at),
+                );
                 self.assign_tiles(city);
             }
             Production::Project(i) => {
                 self.players[owner].space_projects.push(*i);
-                self.notify(owner, format!("{name} completed {}.", content.projects[*i].name), Some(pos));
+                self.notify(
+                    owner,
+                    format!("{name} completed {}.", content.projects[*i].name),
+                    Some(pos),
+                );
             }
         }
         // As in Civ VI, the city then asks what to build next.
@@ -878,7 +1113,11 @@ impl Game {
             c.turns_since_combat += 1;
             if c.turns_since_combat > 1 {
                 c.hp = (c.hp + 20).min(200);
-                let max_walls: i32 = c.buildings.iter().map(|&b| self.rules.content.buildings[b].outer_defense).sum();
+                let max_walls: i32 = c
+                    .buildings
+                    .iter()
+                    .map(|&b| self.rules.content.buildings[b].outer_defense)
+                    .sum();
                 c.wall_hp = (c.wall_hp + 10).min(max_walls);
             }
         }
@@ -900,11 +1139,26 @@ impl Game {
             .grid
             .within(center, CITY_RANGE)
             .into_iter()
-            .filter(|&p| self.map.tile(p).owner.is_none() && self.map.grid.neighbors(p).any(|n| self.map.tile(n).owning_city == Some(id)))
+            .filter(|&p| {
+                self.map.tile(p).owner.is_none()
+                    && self
+                        .map
+                        .grid
+                        .neighbors(p)
+                        .any(|n| self.map.tile(n).owning_city == Some(id))
+            })
             .max_by_key(|&p| {
                 let y = self.tile_yields(owner, p);
                 let resource = i32::from(self.map.tile(p).resource.is_some()) * 3;
-                (y[FOOD] * 3 + y[PRODUCTION] * 3 + y[GOLD] + y[SCIENCE] + y[CULTURE] + y[FAITH] + resource) * 10 - self.map.grid.distance(center, p) * 4
+                (y[FOOD] * 3
+                    + y[PRODUCTION] * 3
+                    + y[GOLD]
+                    + y[SCIENCE]
+                    + y[CULTURE]
+                    + y[FAITH]
+                    + resource)
+                    * 10
+                    - self.map.grid.distance(center, p) * 4
             });
         if let Some(pos) = best {
             self.cities.get_mut(&id).unwrap().border_culture -= cost;

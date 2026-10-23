@@ -25,14 +25,19 @@ pub const MIN_CITY_DISTANCE: i32 = 4;
 
 impl Game {
     pub fn can_found_city(&self, unit: UnitId) -> bool {
-        let Some(u) = self.units.get(&unit) else { return false };
+        let Some(u) = self.units.get(&unit) else {
+            return false;
+        };
         let rules = &self.rules;
         self.unit_type(u).found_city
             && u.moves > 0
             && self.map.is_land(rules, u.pos)
             && !self.map.is_impassable(rules, u.pos)
             && self.map.tile(u.pos).owner.is_none_or(|o| o == u.owner)
-            && self.cities.values().all(|c| self.map.grid.distance(c.pos, u.pos) >= MIN_CITY_DISTANCE)
+            && self
+                .cities
+                .values()
+                .all(|c| self.map.grid.distance(c.pos, u.pos) >= MIN_CITY_DISTANCE)
     }
 
     pub fn found_city(&mut self, unit: UnitId) -> Result<(), String> {
@@ -55,20 +60,31 @@ impl Game {
         let rules = &self.rules;
         let content = &rules.content;
         let tile = self.map.tile(pos);
-        if tile.owner != Some(player) || tile.district.is_some() || tile.wonder.is_some() || self.map.is_water(rules, pos) {
+        if tile.owner != Some(player)
+            || tile.district.is_some()
+            || tile.wonder.is_some()
+            || self.map.is_water(rules, pos)
+        {
             return Vec::new();
         }
         let p = &self.players[player];
         let terrain = &content.terrains[tile.terrain].id;
         let feature = tile.feature.map(|f| &content.features[f]);
-        let resource = tile.resource.map(|r| &content.resources[r]).filter(|r| p.meets(rules, r.prereq_tech.as_deref(), None));
+        let resource = tile
+            .resource
+            .map(|r| &content.resources[r])
+            .filter(|r| p.meets(rules, r.prereq_tech.as_deref(), None));
         (0..content.improvements.len())
             .filter(|&i| {
                 let imp = &content.improvements[i];
                 if !imp.buildable || Some(i) == tile.improvement && !tile.pillaged {
                     return false;
                 }
-                if !p.meets(rules, imp.prereq_tech.as_deref(), imp.prereq_civic.as_deref()) {
+                if !p.meets(
+                    rules,
+                    imp.prereq_tech.as_deref(),
+                    imp.prereq_civic.as_deref(),
+                ) {
                     return false;
                 }
                 if let Some(owner) = &imp.unique_to {
@@ -80,8 +96,14 @@ impl Game {
                 }
                 let on_resource = resource.is_some_and(|r| imp.valid_resources.contains(&r.id));
                 let on_feature = feature.is_some_and(|f| imp.valid_features.contains(&f.id));
-                let on_terrain = imp.valid_terrains.contains(terrain) && feature.is_none_or(|f| f.removable && !f.natural_wonder);
-                if resource.is_some() && !imp.valid_resources.is_empty() && !on_resource && !on_feature && !on_terrain {
+                let on_terrain = imp.valid_terrains.contains(terrain)
+                    && feature.is_none_or(|f| f.removable && !f.natural_wonder);
+                if resource.is_some()
+                    && !imp.valid_resources.is_empty()
+                    && !on_resource
+                    && !on_feature
+                    && !on_terrain
+                {
                     return false;
                 }
                 on_resource || on_feature || on_terrain
@@ -94,16 +116,20 @@ impl Game {
         if u.charges <= 0 || u.moves <= 0 || self.unit_type(&u).build_charges == 0 {
             return Err("This unit can't build improvements now.".into());
         }
-        if !self.valid_improvements(u.owner, u.pos).contains(&improvement) {
+        if !self
+            .valid_improvements(u.owner, u.pos)
+            .contains(&improvement)
+        {
             return Err("That improvement can't go here.".into());
         }
         let rules = self.rules.clone();
         let imp = &rules.content.improvements[improvement];
         let tile = self.map.tile_mut(u.pos);
         if let Some(f) = tile.feature
-            && !imp.valid_features.contains(&rules.content.features[f].id) {
-                tile.feature = None;
-            }
+            && !imp.valid_features.contains(&rules.content.features[f].id)
+        {
+            tile.feature = None;
+        }
         tile.improvement = Some(improvement);
         tile.pillaged = false;
         let owner = u.owner;
@@ -150,14 +176,20 @@ impl Game {
 
     /// Orders the UI offers for a unit.
     pub fn unit_actions(&self, unit: UnitId) -> Vec<UnitAction> {
-        let Some(u) = self.units.get(&unit) else { return Vec::new() };
+        let Some(u) = self.units.get(&unit) else {
+            return Vec::new();
+        };
         let ty = self.unit_type(u);
         let mut actions = Vec::new();
         if ty.found_city {
             actions.push(UnitAction::FoundCity);
         }
         if ty.build_charges > 0 && u.charges > 0 {
-            actions.extend(self.valid_improvements(u.owner, u.pos).into_iter().map(UnitAction::Build));
+            actions.extend(
+                self.valid_improvements(u.owner, u.pos)
+                    .into_iter()
+                    .map(UnitAction::Build),
+            );
         }
         if ty.found_religion && self.can_found_religion(unit) {
             actions.push(UnitAction::FoundReligion);
@@ -168,7 +200,11 @@ impl Game {
         if ty.make_trade_route {
             let used = self.trade_routes_of(u.owner).count() as i32;
             if used < self.trade_capacity(u.owner) {
-                actions.extend(self.trade_destinations(unit).into_iter().map(UnitAction::TradeRoute));
+                actions.extend(
+                    self.trade_destinations(unit)
+                        .into_iter()
+                        .map(UnitAction::TradeRoute),
+                );
             }
         }
         if u.great_person.is_some() && !ty.found_religion {
@@ -205,7 +241,11 @@ impl Game {
                 Ok(())
             }
             UnitAction::FoundReligion => {
-                let religion = self.free_religions().first().copied().ok_or("No religions left to found.")?;
+                let religion = self
+                    .free_religions()
+                    .first()
+                    .copied()
+                    .ok_or("No religions left to found.")?;
                 let (founder, follower) = self.default_beliefs();
                 self.found_religion(unit, religion, founder, follower)
             }
@@ -227,10 +267,15 @@ impl Game {
             UnitAction::SpreadReligion => "Spread Religion".into(),
             UnitAction::Activate => "Activate".into(),
             UnitAction::TradeRoute(city) => {
-                let Some(c) = self.cities.get(city) else { return "Trade Route".into() };
+                let Some(c) = self.cities.get(city) else {
+                    return "Trade Route".into();
+                };
                 // Only the human's units show action names.
                 let y = self.route_yields(self.human(), *city);
-                let parts: Vec<String> = (0..6).filter(|&i| y[i] > 0.0).map(|i| format!("+{:.0} {}", y[i], crate::rules::YIELD_NAMES[i])).collect();
+                let parts: Vec<String> = (0..6)
+                    .filter(|&i| y[i] > 0.0)
+                    .map(|i| format!("+{:.0} {}", y[i], crate::rules::YIELD_NAMES[i]))
+                    .collect();
                 format!("Trade route to {} ({})", c.name, parts.join(", "))
             }
         }

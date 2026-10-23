@@ -35,5 +35,7 @@ pub use state::{Game, Production, Settings, UnitId};
 
 /// Loads Civ VI content from the user's install and builds the rules.
 pub fn load_rules() -> civ6_data::Result<std::sync::Arc<Rules>> {
-    Ok(std::sync::Arc::new(Rules::new(civ6_data::content::Content::load_installed()?)))
+    Ok(std::sync::Arc::new(Rules::new(
+        civ6_data::content::Content::load_installed()?,
+    )))
 }

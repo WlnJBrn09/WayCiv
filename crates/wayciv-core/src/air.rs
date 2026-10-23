@@ -17,7 +17,8 @@ impl Game {
             .flat_map(|c| {
                 c.districts.iter().filter_map(move |d| {
                     let district = &content.districts[d.district];
-                    let aerodrome = district.id == "DISTRICT_AERODROME" || district.replaces.as_deref() == Some("DISTRICT_AERODROME");
+                    let aerodrome = district.id == "DISTRICT_AERODROME"
+                        || district.replaces.as_deref() == Some("DISTRICT_AERODROME");
                     aerodrome.then_some((c.id, d.pos))
                 })
             })
@@ -25,13 +26,19 @@ impl Game {
     }
 
     pub fn aircraft_at(&self, pos: Pos) -> usize {
-        self.units.values().filter(|u| u.pos == pos && self.is_air(u)).count()
+        self.units
+            .values()
+            .filter(|u| u.pos == pos && self.is_air(u))
+            .count()
     }
 
     /// The city's Aerodrome tile, if it has a free slot.
     pub fn free_air_base(&self, city: CityId) -> Option<Pos> {
         let owner = self.cities.get(&city)?.owner;
-        self.air_bases(owner).into_iter().find(|(c, pos)| *c == city && self.aircraft_at(*pos) < AERODROME_SLOTS).map(|(_, p)| p)
+        self.air_bases(owner)
+            .into_iter()
+            .find(|(c, pos)| *c == city && self.aircraft_at(*pos) < AERODROME_SLOTS)
+            .map(|(_, p)| p)
     }
 
     /// Aerodromes this aircraft can rebase to.
@@ -40,14 +47,20 @@ impl Game {
         self.air_bases(unit.owner)
             .into_iter()
             .map(|(_, p)| p)
-            .filter(|&p| p != unit.pos && self.aircraft_at(p) < AERODROME_SLOTS && self.map.grid.distance(p, unit.pos) <= range)
+            .filter(|&p| {
+                p != unit.pos
+                    && self.aircraft_at(p) < AERODROME_SLOTS
+                    && self.map.grid.distance(p, unit.pos) <= range
+            })
             .collect()
     }
 
     pub fn rebase(&mut self, id: UnitId, to: Pos) -> Result<(), String> {
         let unit = self.units.get(&id).ok_or("No such unit.")?.clone();
         if unit.moves <= 0 || !self.rebase_targets(&unit).contains(&to) {
-            return Err("Aircraft can only rebase to an Aerodrome with a free slot within range.".into());
+            return Err(
+                "Aircraft can only rebase to an Aerodrome with a free slot within range.".into(),
+            );
         }
         let u = self.units.get_mut(&id).unwrap();
         u.pos = to;
@@ -83,7 +96,12 @@ impl Game {
     /// Aircraft based in a city's tiles are lost when the city falls.
     pub(crate) fn destroy_based_aircraft(&mut self, city: CityId, owner: PlayerId) {
         let tiles: Vec<Pos> = self.city_tiles(city);
-        let lost: Vec<UnitId> = self.units.values().filter(|u| u.owner == owner && self.is_air(u) && tiles.contains(&u.pos)).map(|u| u.id).collect();
+        let lost: Vec<UnitId> = self
+            .units
+            .values()
+            .filter(|u| u.owner == owner && self.is_air(u) && tiles.contains(&u.pos))
+            .map(|u| u.id)
+            .collect();
         for id in lost {
             self.units.remove(&id);
         }

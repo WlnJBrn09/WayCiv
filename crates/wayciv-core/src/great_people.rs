@@ -1,8 +1,8 @@
 //! Great people: points, recruitment, and (simplified) activation effects.
 
+use crate::additions::*;
 use crate::map::PlayerId;
 use crate::research::Tree;
-use crate::additions::*;
 use crate::state::{Game, Production, Unit, UnitId};
 
 impl Game {
@@ -53,9 +53,21 @@ impl Game {
     pub fn great_person_cost(&self, class: usize) -> i32 {
         let content = &self.rules.content;
         let class_id = &content.great_person_classes[class].id;
-        let recruited = self.great_people_taken.iter().filter(|&&g| &content.great_people[g].class == class_id).count() as i32;
-        let era = self.next_great_person(class).map(|g| self.rules.era_index(&content.great_people[g].era)).unwrap_or(0);
-        let base = content.eras.get(era).map(|e| e.great_person_base_cost).unwrap_or(60).max(30);
+        let recruited = self
+            .great_people_taken
+            .iter()
+            .filter(|&&g| &content.great_people[g].class == class_id)
+            .count() as i32;
+        let era = self
+            .next_great_person(class)
+            .map(|g| self.rules.era_index(&content.great_people[g].era))
+            .unwrap_or(0);
+        let base = content
+            .eras
+            .get(era)
+            .map(|e| e.great_person_base_cost)
+            .unwrap_or(60)
+            .max(30);
         base + recruited * base / 3
     }
 
@@ -65,23 +77,34 @@ impl Game {
             return;
         }
         for (class, rate) in self.great_person_rates(player) {
-            *self.players[player].great_person_points.entry(class).or_insert(0) += rate;
-            let Some(person) = self.next_great_person(class) else { continue };
+            *self.players[player]
+                .great_person_points
+                .entry(class)
+                .or_insert(0) += rate;
+            let Some(person) = self.next_great_person(class) else {
+                continue;
+            };
             let cost = self.great_person_cost(class);
             if self.players[player].great_person_points[&class] < cost {
                 continue;
             }
-            *self.players[player].great_person_points.get_mut(&class).unwrap() -= cost;
+            *self.players[player]
+                .great_person_points
+                .get_mut(&class)
+                .unwrap() -= cost;
             self.great_people_taken.push(person);
             let content = &self.rules.content;
             let unit = content.great_person_classes[class].unit.clone();
             let name = content.great_people[person].name.clone();
             let class_name = content.great_person_classes[class].name.clone();
-            let Some(capital) = self.players[player].capital.map(|c| self.cities[&c].pos) else { continue };
+            let Some(capital) = self.players[player].capital.map(|c| self.cities[&c].pos) else {
+                continue;
+            };
             if let Some(id) = self.spawn(player, &unit, capital)
-                && let Some(u) = self.units.get_mut(&id) {
-                    u.great_person = Some(person);
-                }
+                && let Some(u) = self.units.get_mut(&id)
+            {
+                u.great_person = Some(person);
+            }
             for p in 0..self.players.len() {
                 if !self.players[p].is_major() {
                     continue;
@@ -89,7 +112,10 @@ impl Game {
                 let text = if p == player {
                     format!("{name} ({class_name}) has joined your civilization!")
                 } else {
-                    format!("{name} ({class_name}) was recruited by {}.", self.players[player].civ_name)
+                    format!(
+                        "{name} ({class_name}) was recruited by {}.",
+                        self.players[player].civ_name
+                    )
                 };
                 self.notify(p, text, Some(capital));
             }
@@ -114,8 +140,12 @@ impl Game {
         }
         let class = content.great_people[person].class.as_str();
         match class {
-            "GREAT_PERSON_CLASS_SCIENTIST" => "Eurekas for two technologies you haven't researched.".into(),
-            "GREAT_PERSON_CLASS_ENGINEER" => "Adds 250 Production to what this city is building.".into(),
+            "GREAT_PERSON_CLASS_SCIENTIST" => {
+                "Eurekas for two technologies you haven't researched.".into()
+            }
+            "GREAT_PERSON_CLASS_ENGINEER" => {
+                "Adds 250 Production to what this city is building.".into()
+            }
             "GREAT_PERSON_CLASS_MERCHANT" => "Grants 200 Gold.".into(),
             "GREAT_PERSON_CLASS_GENERAL" | "GREAT_PERSON_CLASS_ADMIRAL" => {
                 "Every military unit within 3 tiles gains a level and fully heals.".into()
@@ -131,7 +161,10 @@ impl Game {
         let class = self.rules.content.great_people[person].class.clone();
         let owner = u.owner;
         let id = self.rules.content.great_people[person].id.clone();
-        if matches!(id.as_str(), ELON_MUSK | GWYNNE_SHOTWELL | PALMER_LUCKEY | ILYA_SUTSKEVER) {
+        if matches!(
+            id.as_str(),
+            ELON_MUSK | GWYNNE_SHOTWELL | PALMER_LUCKEY | ILYA_SUTSKEVER
+        ) {
             self.modern_great_person(&id, &u)?;
             self.units.remove(&unit);
             let name = self.rules.content.great_people[person].name.clone();
@@ -141,7 +174,9 @@ impl Game {
         match class.as_str() {
             "GREAT_PERSON_CLASS_SCIENTIST" => {
                 let mut targets: Vec<usize> = (0..self.rules.content.techs.len())
-                    .filter(|&i| !self.players[owner].techs[i] && !self.players[owner].tech_boosted[i])
+                    .filter(|&i| {
+                        !self.players[owner].techs[i] && !self.players[owner].tech_boosted[i]
+                    })
                     .collect();
                 targets.sort_by_key(|&i| self.rules.content.techs[i].cost);
                 for i in targets.into_iter().take(2) {
@@ -149,15 +184,33 @@ impl Game {
                 }
             }
             "GREAT_PERSON_CLASS_ENGINEER" => {
-                let city = self.map.tile(u.pos).owning_city.filter(|c| self.cities[c].owner == owner).ok_or("Must be in your territory.")?;
-                let item = self.cities[&city].production.clone().ok_or("The city isn't building anything.")?;
-                *self.cities.get_mut(&city).unwrap().progress.entry(Self::production_key(&item)).or_insert(0) += 250;
+                let city = self
+                    .map
+                    .tile(u.pos)
+                    .owning_city
+                    .filter(|c| self.cities[c].owner == owner)
+                    .ok_or("Must be in your territory.")?;
+                let item = self.cities[&city]
+                    .production
+                    .clone()
+                    .ok_or("The city isn't building anything.")?;
+                *self
+                    .cities
+                    .get_mut(&city)
+                    .unwrap()
+                    .progress
+                    .entry(Self::production_key(&item))
+                    .or_insert(0) += 250;
             }
             "GREAT_PERSON_CLASS_MERCHANT" => self.players[owner].gold += 200,
             "GREAT_PERSON_CLASS_GENERAL" | "GREAT_PERSON_CLASS_ADMIRAL" => {
                 let nearby: Vec<UnitId> = self
                     .player_units(owner)
-                    .filter(|x| x.id != unit && self.is_military(x) && self.map.grid.distance(x.pos, u.pos) <= 3)
+                    .filter(|x| {
+                        x.id != unit
+                            && self.is_military(x)
+                            && self.map.grid.distance(x.pos, u.pos) <= 3
+                    })
                     .map(|x| x.id)
                     .collect();
                 for id in nearby {
@@ -166,7 +219,9 @@ impl Game {
                     x.hp = 100;
                 }
             }
-            "GREAT_PERSON_CLASS_PROPHET" => return Err("Great Prophets found religions on a Holy Site.".into()),
+            "GREAT_PERSON_CLASS_PROPHET" => {
+                return Err("Great Prophets found religions on a Holy Site.".into());
+            }
             _ => self.players[owner].great_works += 1,
         }
         self.units.remove(&unit);
@@ -178,17 +233,25 @@ impl Game {
     /// Elon Musk, Gwynne Shotwell, Palmer Luckey, and Ilya Sutskever.
     fn modern_great_person(&mut self, id: &str, u: &Unit) -> Result<(), String> {
         let owner = u.owner;
-        let here = self.map.tile(u.pos).owning_city.filter(|c| self.cities[c].owner == owner);
+        let here = self
+            .map
+            .tile(u.pos)
+            .owning_city
+            .filter(|c| self.cities[c].owner == owner);
         let tech = |g: &Game, t: &str| g.rules.tech(t);
         // The cheapest AI tree item available (or the current one).
         let ai_target = |g: &Game| {
             g.current_research(owner, Tree::Ai).or_else(|| {
-                (0..g.rules.ai_tree.len()).filter(|&i| g.researchable(owner, Tree::Ai, i)).min_by_key(|&i| g.rules.ai_tree[i].cost)
+                (0..g.rules.ai_tree.len())
+                    .filter(|&i| g.researchable(owner, Tree::Ai, i))
+                    .min_by_key(|&i| g.rules.ai_tree[i].cost)
             })
         };
         let space_project = |g: &Game, city: Option<crate::map::CityId>| {
             city.and_then(|c| match &g.cities[&c].production {
-                Some(Production::Project(p)) if g.rules.content.projects[*p].space_race => Some((c, Production::Project(*p))),
+                Some(Production::Project(p)) if g.rules.content.projects[*p].space_race => {
+                    Some((c, Production::Project(*p)))
+                }
                 _ => None,
             })
         };
@@ -204,7 +267,15 @@ impl Game {
                     }
                 }
                 match (tech(self, "TECH_ROCKETRY"), space_project(self, Some(city))) {
-                    (_, Some((c, item))) => *self.cities.get_mut(&c).unwrap().progress.entry(Self::production_key(&item)).or_insert(0) += 300,
+                    (_, Some((c, item))) => {
+                        *self
+                            .cities
+                            .get_mut(&c)
+                            .unwrap()
+                            .progress
+                            .entry(Self::production_key(&item))
+                            .or_insert(0) += 300
+                    }
                     (Some(i), None) => self.boost(owner, Tree::Tech, i, 40),
                     _ => {}
                 }
@@ -215,7 +286,15 @@ impl Game {
                 }
             }
             GWYNNE_SHOTWELL => match space_project(self, here) {
-                Some((c, item)) => *self.cities.get_mut(&c).unwrap().progress.entry(Self::production_key(&item)).or_insert(0) += 1500,
+                Some((c, item)) => {
+                    *self
+                        .cities
+                        .get_mut(&c)
+                        .unwrap()
+                        .progress
+                        .entry(Self::production_key(&item))
+                        .or_insert(0) += 1500
+                }
                 None => {
                     for t in ["TECH_ROCKETRY", "TECH_SATELLITES"] {
                         if let Some(i) = tech(self, t) {
@@ -225,14 +304,23 @@ impl Game {
                 }
             },
             PALMER_LUCKEY => {
-                let drone = self.rules.idx(STRIKE_DRONE).ok_or("No drones in this game.")?;
+                let drone = self
+                    .rules
+                    .idx(STRIKE_DRONE)
+                    .ok_or("No drones in this game.")?;
                 let spots: Vec<_> = self
                     .map
                     .grid
                     .within(u.pos, 3)
                     .into_iter()
-                    .filter(|&p| self.map.is_land(&self.rules, p) && !self.map.is_impassable(&self.rules, p))
-                    .filter(|&p| !self.ground_units_at(p).any(|x| x.owner != owner || self.is_military(x)))
+                    .filter(|&p| {
+                        self.map.is_land(&self.rules, p) && !self.map.is_impassable(&self.rules, p)
+                    })
+                    .filter(|&p| {
+                        !self
+                            .ground_units_at(p)
+                            .any(|x| x.owner != owner || self.is_military(x))
+                    })
                     .take(DRONES_PER_BATCH)
                     .collect();
                 for p in spots {

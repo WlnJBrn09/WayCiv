@@ -25,12 +25,16 @@ pub struct LoyaltyReport {
 
 impl Game {
     pub fn loyalty_applies(&self, city: CityId) -> bool {
-        self.cities.get(&city).is_some_and(|c| self.players[c.owner].is_major())
+        self.cities
+            .get(&city)
+            .is_some_and(|c| self.players[c.owner].is_major())
     }
 
     pub fn loyalty_report(&self, id: CityId) -> LoyaltyReport {
         let mut report = LoyaltyReport::default();
-        let Some(city) = self.cities.get(&id) else { return report };
+        let Some(city) = self.cities.get(&id) else {
+            return report;
+        };
         if !self.loyalty_applies(id) {
             return report;
         }
@@ -52,7 +56,9 @@ impl Game {
         }
         let foreign_total: f32 = foreign.values().sum();
         let pressure = ((own - foreign_total) * 0.5).clamp(-15.0, 10.0).round() as i32;
-        report.lines.push(("Nearby population (yours vs. foreign)".into(), pressure));
+        report
+            .lines
+            .push(("Nearby population (yours vs. foreign)".into(), pressure));
         report.strongest_foreign = foreign
             .iter()
             .filter(|(p, _)| self.players[**p].is_major() && self.players[**p].alive)
@@ -61,17 +67,31 @@ impl Game {
         if city.capital {
             report.lines.push(("Capital".into(), 5));
         }
-        let garrisoned = self.ground_units_at(city.pos).any(|u| u.owner == owner && self.is_military(u));
+        let garrisoned = self
+            .ground_units_at(city.pos)
+            .any(|u| u.owner == owner && self.is_military(u));
         if garrisoned {
             report.lines.push(("Garrison".into(), 2));
         }
-        if self.rules.idx("BUILDING_MONUMENT").is_some_and(|m| city.has_building(m)) {
+        if self
+            .rules
+            .idx("BUILDING_MONUMENT")
+            .is_some_and(|m| city.has_building(m))
+        {
             report.lines.push(("Monument".into(), 1));
         }
         let (amenities, needed) = self.amenities(city);
         let mood = (amenities - needed).clamp(-6, 2);
         if mood != 0 {
-            report.lines.push((if mood > 0 { "Happy citizens" } else { "Unhappy citizens" }.into(), mood));
+            report.lines.push((
+                if mood > 0 {
+                    "Happy citizens"
+                } else {
+                    "Unhappy citizens"
+                }
+                .into(),
+                mood,
+            ));
         }
         if city.founder != owner {
             report.lines.push(("Occupied".into(), -3));
@@ -79,7 +99,12 @@ impl Game {
                 report.lines.push(("Occupied capital".into(), -2));
             }
         }
-        report.per_turn = report.lines.iter().map(|(_, v)| v).sum::<i32>().clamp(-20, 20);
+        report.per_turn = report
+            .lines
+            .iter()
+            .map(|(_, v)| v)
+            .sum::<i32>()
+            .clamp(-20, 20);
         report
     }
 
@@ -97,10 +122,17 @@ impl Game {
             let (after, owner, name, pos) = (c.loyalty, c.owner, c.name.clone(), c.pos);
             for threshold in [50, 25] {
                 if before > threshold && after <= threshold {
-                    self.notify(owner, format!("{name} is losing loyalty ({after}). Garrison it or grow nearby cities."), Some(pos));
+                    self.notify(
+                        owner,
+                        format!(
+                            "{name} is losing loyalty ({after}). Garrison it or grow nearby cities."
+                        ),
+                        Some(pos),
+                    );
                 }
             }
-            if after == 0 && report.per_turn < 0
+            if after == 0
+                && report.per_turn < 0
                 && let Some(to) = report.strongest_foreign
             {
                 self.defect(id, to);
@@ -131,8 +163,16 @@ impl Game {
                 t.owner = Some(to);
             }
         }
-        let refuge = self.player_cities(old).filter(|c| c.id != city).min_by_key(|c| self.map.grid.distance(c.pos, pos)).map(|c| c.pos);
-        let stranded: Vec<_> = self.ground_units_at(pos).filter(|u| u.owner == old).map(|u| u.id).collect();
+        let refuge = self
+            .player_cities(old)
+            .filter(|c| c.id != city)
+            .min_by_key(|c| self.map.grid.distance(c.pos, pos))
+            .map(|c| c.pos);
+        let stranded: Vec<_> = self
+            .ground_units_at(pos)
+            .filter(|u| u.owner == old)
+            .map(|u| u.id)
+            .collect();
         for id in stranded {
             match refuge {
                 Some(p) => self.units.get_mut(&id).unwrap().pos = p,
@@ -143,15 +183,29 @@ impl Game {
         }
         if was_capital {
             self.players[old].capital = None;
-            let next = self.player_cities(old).max_by_key(|c| c.population).map(|c| c.id);
+            let next = self
+                .player_cities(old)
+                .max_by_key(|c| c.population)
+                .map(|c| c.id);
             if let Some(next) = next {
                 self.cities.get_mut(&next).unwrap().capital = true;
                 self.players[old].capital = Some(next);
             }
         }
-        let (old_civ, new_civ) = (self.players[old].civ_name.clone(), self.players[to].civ_name.clone());
-        self.notify(old, format!("{name} has lost all loyalty and joined {new_civ}!"), Some(pos));
-        self.notify(to, format!("{name} has declared loyalty to you, leaving {old_civ}!"), Some(pos));
+        let (old_civ, new_civ) = (
+            self.players[old].civ_name.clone(),
+            self.players[to].civ_name.clone(),
+        );
+        self.notify(
+            old,
+            format!("{name} has lost all loyalty and joined {new_civ}!"),
+            Some(pos),
+        );
+        self.notify(
+            to,
+            format!("{name} has declared loyalty to you, leaving {old_civ}!"),
+            Some(pos),
+        );
         self.assign_tiles(city);
         self.check_elimination(old);
         self.update_visibility(to);

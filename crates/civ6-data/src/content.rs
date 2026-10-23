@@ -11,8 +11,14 @@ use std::collections::HashMap;
 use std::path::Path;
 
 /// Yield order used everywhere: food, production, gold, science, culture, faith.
-pub const YIELDS: [&str; 6] =
-    ["YIELD_FOOD", "YIELD_PRODUCTION", "YIELD_GOLD", "YIELD_SCIENCE", "YIELD_CULTURE", "YIELD_FAITH"];
+pub const YIELDS: [&str; 6] = [
+    "YIELD_FOOD",
+    "YIELD_PRODUCTION",
+    "YIELD_GOLD",
+    "YIELD_SCIENCE",
+    "YIELD_CULTURE",
+    "YIELD_FAITH",
+];
 pub type Yields = [i32; 6];
 
 pub fn yield_index(yield_type: &str) -> Option<usize> {
@@ -371,12 +377,21 @@ impl Content {
     }
 
     pub fn from_database(db: &Connection, text: Text, colors: &Colors) -> Result<Self> {
-        let mut content = Content { text, ..Default::default() };
+        let mut content = Content {
+            text,
+            ..Default::default()
+        };
 
         let yields = |table: &str, key: &str| -> Result<HashMap<String, Yields>> {
             let mut map: HashMap<String, Yields> = HashMap::new();
             let sql = format!("SELECT {key}, YieldType, YieldChange FROM {table}");
-            for (id, yield_type, amount) in query(db, &sql, |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i32>(2)?)))? {
+            for (id, yield_type, amount) in query(db, &sql, |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, i32>(2)?,
+                ))
+            })? {
                 if let Some(i) = yield_index(&yield_type) {
                     map.entry(id).or_default()[i] += amount;
                 }
@@ -385,16 +400,23 @@ impl Content {
         };
         let pairs = |sql: &str| -> Result<HashMap<String, Vec<String>>> {
             let mut map: HashMap<String, Vec<String>> = HashMap::new();
-            for (a, b) in query(db, sql, |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))? {
+            for (a, b) in query(db, sql, |r| {
+                Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+            })? {
                 map.entry(a).or_default().push(b);
             }
             Ok(map)
         };
-        let replaces = |table: &str, unique: &str, replaced: &str| -> Result<HashMap<String, String>> {
-            Ok(query(db, &format!("SELECT {unique}, {replaced} FROM {table}"), |r| Ok((r.get(0)?, r.get(1)?)))?
+        let replaces =
+            |table: &str, unique: &str, replaced: &str| -> Result<HashMap<String, String>> {
+                Ok(query(
+                    db,
+                    &format!("SELECT {unique}, {replaced} FROM {table}"),
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )?
                 .into_iter()
                 .collect())
-        };
+            };
         // Trait -> civilization or leader that owns it, for unique items.
         let trait_owner: HashMap<String, String> = query(
             db,
@@ -403,7 +425,8 @@ impl Content {
         )?
         .into_iter()
         .collect();
-        let owner = |trait_type: Option<String>| trait_type.and_then(|tr| trait_owner.get(&tr).cloned());
+        let owner =
+            |trait_type: Option<String>| trait_type.and_then(|tr| trait_owner.get(&tr).cloned());
         let text = &content.text;
         let name = |key: String| text.get(&key);
         let opt_name = |key: Option<String>| key.map(|k| text.get(&k)).unwrap_or_default();
@@ -447,8 +470,10 @@ impl Content {
             },
         )?;
         let resource_yields = yields("Resource_YieldChanges", "ResourceType")?;
-        let resource_terrains = pairs("SELECT ResourceType, TerrainType FROM Resource_ValidTerrains")?;
-        let resource_features = pairs("SELECT ResourceType, FeatureType FROM Resource_ValidFeatures")?;
+        let resource_terrains =
+            pairs("SELECT ResourceType, TerrainType FROM Resource_ValidTerrains")?;
+        let resource_features =
+            pairs("SELECT ResourceType, FeatureType FROM Resource_ValidFeatures")?;
         let resources = query(
             db,
             "SELECT ResourceType, Name, ResourceClassType, PrereqTech, Frequency, SeaFrequency FROM Resources",
@@ -467,9 +492,12 @@ impl Content {
             },
         )?;
         let improvement_yields = yields("Improvement_YieldChanges", "ImprovementType")?;
-        let improvement_terrains = pairs("SELECT ImprovementType, TerrainType FROM Improvement_ValidTerrains")?;
-        let improvement_features = pairs("SELECT ImprovementType, FeatureType FROM Improvement_ValidFeatures")?;
-        let improvement_resources = pairs("SELECT ImprovementType, ResourceType FROM Improvement_ValidResources")?;
+        let improvement_terrains =
+            pairs("SELECT ImprovementType, TerrainType FROM Improvement_ValidTerrains")?;
+        let improvement_features =
+            pairs("SELECT ImprovementType, FeatureType FROM Improvement_ValidFeatures")?;
+        let improvement_resources =
+            pairs("SELECT ImprovementType, ResourceType FROM Improvement_ValidResources")?;
         let improvements = query(
             db,
             "SELECT ImprovementType, Name, PrereqTech, PrereqCivic, Buildable, TraitType FROM Improvements",
@@ -489,17 +517,20 @@ impl Content {
             },
         )?;
 
-        let traits: HashMap<String, Trait> = query(db, "SELECT TraitType, Name, Description FROM Traits", |r| {
-            let description: Option<String> = r.get(2)?;
-            Ok(Trait {
-                id: r.get(0)?,
-                name: opt_name(r.get(1)?),
-                description: description.map(|k| text.get_or_empty(&k)).unwrap_or_default(),
-            })
-        })?
-        .into_iter()
-        .map(|t| (t.id.clone(), t))
-        .collect();
+        let traits: HashMap<String, Trait> =
+            query(db, "SELECT TraitType, Name, Description FROM Traits", |r| {
+                let description: Option<String> = r.get(2)?;
+                Ok(Trait {
+                    id: r.get(0)?,
+                    name: opt_name(r.get(1)?),
+                    description: description
+                        .map(|k| text.get_or_empty(&k))
+                        .unwrap_or_default(),
+                })
+            })?
+            .into_iter()
+            .map(|t| (t.id.clone(), t))
+            .collect();
         let named_traits = |ids: Option<&Vec<String>>| -> Vec<Trait> {
             ids.into_iter()
                 .flatten()
@@ -509,7 +540,9 @@ impl Content {
         };
         let civ_traits = pairs("SELECT CivilizationType, TraitType FROM CivilizationTraits")?;
         let leader_traits = pairs("SELECT LeaderType, TraitType FROM LeaderTraits")?;
-        let city_names = pairs("SELECT CivilizationType, CityName FROM CityNames ORDER BY CivilizationType, SortIndex, ID")?;
+        let city_names = pairs(
+            "SELECT CivilizationType, CityName FROM CityNames ORDER BY CivilizationType, SortIndex, ID",
+        )?;
         let civilizations = query(
             db,
             "SELECT CivilizationType, Name, Adjective FROM Civilizations WHERE StartingCivilizationLevelType = 'CIVILIZATION_LEVEL_FULL_CIV'",
@@ -519,7 +552,12 @@ impl Content {
                     name: name(r.get(1)?),
                     adjective: name(r.get(2)?),
                     traits: named_traits(civ_traits.get(&id)),
-                    city_names: city_names.get(&id).into_iter().flatten().map(|k| text.get(k)).collect(),
+                    city_names: city_names
+                        .get(&id)
+                        .into_iter()
+                        .flatten()
+                        .map(|k| text.get(k))
+                        .collect(),
                     id,
                 })
             },
@@ -529,7 +567,13 @@ impl Content {
             "SELECT c.CivilizationType, c.Name, COALESCE(p.Value, '') FROM Civilizations c \
              LEFT JOIN TypeProperties p ON p.Type = c.CivilizationType AND p.Name = 'CityStateCategory' \
              WHERE c.StartingCivilizationLevelType = 'CIVILIZATION_LEVEL_CITY_STATE'",
-            |r| Ok(CityState { id: r.get(0)?, name: name(r.get(1)?), category: r.get(2)? }),
+            |r| {
+                Ok(CityState {
+                    id: r.get(0)?,
+                    name: name(r.get(1)?),
+                    category: r.get(2)?,
+                })
+            },
         )?;
         let agendas: HashMap<String, (String, String)> = query(
             db,
@@ -546,7 +590,9 @@ impl Content {
              WHERE c.StartingCivilizationLevelType = 'CIVILIZATION_LEVEL_FULL_CIV'",
             |r| {
                 let id: String = r.get(0)?;
-                let (primary_color, secondary_color) = colors.player(&id).unwrap_or(([200, 200, 200], [40, 40, 40]));
+                let (primary_color, secondary_color) = colors
+                    .player(&id)
+                    .unwrap_or(([200, 200, 200], [40, 40, 40]));
                 Ok(Leader {
                     name: name(r.get(1)?),
                     civilization: r.get(2)?,
@@ -562,7 +608,11 @@ impl Content {
 
         let unit_replaces = replaces("UnitReplaces", "CivUniqueUnitType", "ReplacesUnitType")?;
         let unit_maintenance: HashMap<String, i32> =
-            query(db, "SELECT UnitType, Maintenance FROM Units", |r| Ok((r.get(0)?, r.get(1)?)))?.into_iter().collect();
+            query(db, "SELECT UnitType, Maintenance FROM Units", |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })?
+            .into_iter()
+            .collect();
         let units = query(
             db,
             "SELECT UnitType, Name, Description, Cost, BaseMoves, BaseSightRange, Combat, RangedCombat, Range, Bombard, Domain, \
@@ -599,7 +649,10 @@ impl Content {
                     purchase_yield: r.get(24)?,
                     must_purchase: flag(r, 25)?,
                     strategic_resource: r.get(26)?,
-                    barbarian: r.get::<_, Option<String>>(21)?.is_some_and(|t| t.contains("BARBARIAN")) || id.contains("BARBARIAN"),
+                    barbarian: r
+                        .get::<_, Option<String>>(21)?
+                        .is_some_and(|t| t.contains("BARBARIAN"))
+                        || id.contains("BARBARIAN"),
                     anti_air: num(r, 27)?,
                     make_trade_route: flag(r, 28)?,
                     id,
@@ -609,7 +662,11 @@ impl Content {
 
         let building_yields = yields("Building_YieldChanges", "BuildingType")?;
         let building_prereqs = pairs("SELECT Building, PrereqBuilding FROM BuildingPrereqs")?;
-        let building_replaces = replaces("BuildingReplaces", "CivUniqueBuildingType", "ReplacesBuildingType")?;
+        let building_replaces = replaces(
+            "BuildingReplaces",
+            "CivUniqueBuildingType",
+            "ReplacesBuildingType",
+        )?;
         let building_gpp = great_person_points(db, "Building_GreatPersonPoints", "BuildingType")?;
         let buildings = query(
             db,
@@ -642,7 +699,11 @@ impl Content {
         )?;
 
         let adjacencies = district_adjacencies(db, text)?;
-        let district_replaces = replaces("DistrictReplaces", "CivUniqueDistrictType", "ReplacesDistrictType")?;
+        let district_replaces = replaces(
+            "DistrictReplaces",
+            "CivUniqueDistrictType",
+            "ReplacesDistrictType",
+        )?;
         let district_gpp = great_person_points(db, "District_GreatPersonPoints", "DistrictType")?;
         let districts = query(
             db,
@@ -680,18 +741,22 @@ impl Content {
         )?
         .into_iter()
         .collect();
-        let techs = query(db, "SELECT TechnologyType, Name, Cost, EraType, UITreeRow FROM Technologies", |r| {
-            let id: String = r.get(0)?;
-            Ok(Research {
-                name: name(r.get(1)?),
-                cost: num(r, 2)?,
-                era: r.get(3)?,
-                prereqs: tech_prereqs.get(&id).cloned().unwrap_or_default(),
-                tree_row: r.get::<_, Option<i32>>(4)?.unwrap_or(0),
-                boost: tech_boosts.get(&id).cloned(),
-                id,
-            })
-        })?;
+        let techs = query(
+            db,
+            "SELECT TechnologyType, Name, Cost, EraType, UITreeRow FROM Technologies",
+            |r| {
+                let id: String = r.get(0)?;
+                Ok(Research {
+                    name: name(r.get(1)?),
+                    cost: num(r, 2)?,
+                    era: r.get(3)?,
+                    prereqs: tech_prereqs.get(&id).cloned().unwrap_or_default(),
+                    tree_row: r.get::<_, Option<i32>>(4)?.unwrap_or(0),
+                    boost: tech_boosts.get(&id).cloned(),
+                    id,
+                })
+            },
+        )?;
         let civic_prereqs = pairs("SELECT Civic, PrereqCivic FROM CivicPrereqs")?;
         let civic_boosts: HashMap<String, String> = query(
             db,
@@ -700,37 +765,51 @@ impl Content {
         )?
         .into_iter()
         .collect();
-        let civics = query(db, "SELECT CivicType, Name, Cost, EraType, UITreeRow FROM Civics", |r| {
-            let id: String = r.get(0)?;
-            Ok(Research {
-                name: name(r.get(1)?),
-                cost: num(r, 2)?,
-                era: r.get(3)?,
-                prereqs: civic_prereqs.get(&id).cloned().unwrap_or_default(),
-                tree_row: r.get::<_, Option<i32>>(4)?.unwrap_or(0),
-                boost: civic_boosts.get(&id).cloned(),
-                id,
-            })
-        })?;
+        let civics = query(
+            db,
+            "SELECT CivicType, Name, Cost, EraType, UITreeRow FROM Civics",
+            |r| {
+                let id: String = r.get(0)?;
+                Ok(Research {
+                    name: name(r.get(1)?),
+                    cost: num(r, 2)?,
+                    era: r.get(3)?,
+                    prereqs: civic_prereqs.get(&id).cloned().unwrap_or_default(),
+                    tree_row: r.get::<_, Option<i32>>(4)?.unwrap_or(0),
+                    boost: civic_boosts.get(&id).cloned(),
+                    id,
+                })
+            },
+        )?;
 
         let mut slots: HashMap<String, Vec<(String, i32)>> = HashMap::new();
         for (government, slot, count) in query(
             db,
             "SELECT GovernmentType, GovernmentSlotType, NumSlots FROM Government_SlotCounts",
-            |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i32>(2)?)),
+            |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, i32>(2)?,
+                ))
+            },
         )? {
             slots.entry(government).or_default().push((slot, count));
         }
-        let governments = query(db, "SELECT GovernmentType, Name, PrereqCivic, InherentBonusDesc FROM Governments", |r| {
-            let id: String = r.get(0)?;
-            Ok(Government {
-                name: name(r.get(1)?),
-                prereq_civic: r.get(2)?,
-                bonus: opt_name(r.get(3)?),
-                slots: slots.get(&id).cloned().unwrap_or_default(),
-                id,
-            })
-        })?;
+        let governments = query(
+            db,
+            "SELECT GovernmentType, Name, PrereqCivic, InherentBonusDesc FROM Governments",
+            |r| {
+                let id: String = r.get(0)?;
+                Ok(Government {
+                    name: name(r.get(1)?),
+                    prereq_civic: r.get(2)?,
+                    bonus: opt_name(r.get(3)?),
+                    slots: slots.get(&id).cloned().unwrap_or_default(),
+                    id,
+                })
+            },
+        )?;
         let obsolete: HashMap<String, String> =
             query(db, "SELECT PolicyType, ObsoletePolicy FROM ObsoletePolicies WHERE ObsoletePolicy IS NOT NULL", |r| Ok((r.get(0)?, r.get(1)?)))?
                 .into_iter()
@@ -750,25 +829,56 @@ impl Content {
                 })
             },
         )?;
-        let beliefs = query(db, "SELECT BeliefType, Name, Description, BeliefClassType FROM Beliefs", |r| {
-            Ok(Belief { id: r.get(0)?, name: name(r.get(1)?), description: opt_name(r.get(2)?), class: r.get(3)? })
-        })?;
-        let religions = query(db, "SELECT ReligionType, Name, Pantheon, Color FROM Religions", |r| {
-            let color: Option<String> = r.get(3)?;
-            Ok(Religion {
-                id: r.get(0)?,
-                name: name(r.get(1)?),
-                pantheon: flag(r, 2)?,
-                color: color.and_then(|c| colors.named(&c)).unwrap_or([220, 220, 220]),
-            })
-        })?;
-        let eras = query(db, "SELECT EraType, Name, ChronologyIndex, GreatPersonBaseCost FROM Eras ORDER BY ChronologyIndex", |r| {
-            Ok(Era { id: r.get(0)?, name: name(r.get(1)?), index: num(r, 2)?, great_person_base_cost: num(r, 3)? })
-        })?;
+        let beliefs = query(
+            db,
+            "SELECT BeliefType, Name, Description, BeliefClassType FROM Beliefs",
+            |r| {
+                Ok(Belief {
+                    id: r.get(0)?,
+                    name: name(r.get(1)?),
+                    description: opt_name(r.get(2)?),
+                    class: r.get(3)?,
+                })
+            },
+        )?;
+        let religions = query(
+            db,
+            "SELECT ReligionType, Name, Pantheon, Color FROM Religions",
+            |r| {
+                let color: Option<String> = r.get(3)?;
+                Ok(Religion {
+                    id: r.get(0)?,
+                    name: name(r.get(1)?),
+                    pantheon: flag(r, 2)?,
+                    color: color
+                        .and_then(|c| colors.named(&c))
+                        .unwrap_or([220, 220, 220]),
+                })
+            },
+        )?;
+        let eras = query(
+            db,
+            "SELECT EraType, Name, ChronologyIndex, GreatPersonBaseCost FROM Eras ORDER BY ChronologyIndex",
+            |r| {
+                Ok(Era {
+                    id: r.get(0)?,
+                    name: name(r.get(1)?),
+                    index: num(r, 2)?,
+                    great_person_base_cost: num(r, 3)?,
+                })
+            },
+        )?;
         let great_person_classes = query(
             db,
             "SELECT GreatPersonClassType, Name, UnitType, DistrictType FROM GreatPersonClasses",
-            |r| Ok(GreatPersonClass { id: r.get(0)?, name: name(r.get(1)?), unit: r.get(2)?, district: r.get(3)? }),
+            |r| {
+                Ok(GreatPersonClass {
+                    id: r.get(0)?,
+                    name: name(r.get(1)?),
+                    unit: r.get(2)?,
+                    district: r.get(3)?,
+                })
+            },
         )?;
         let great_people = query(
             db,
@@ -853,7 +963,10 @@ impl Content {
                 x.yields = improvement_yields.get(&x.id).copied().unwrap_or_default();
                 x.valid_terrains = improvement_terrains.get(&x.id).cloned().unwrap_or_default();
                 x.valid_features = improvement_features.get(&x.id).cloned().unwrap_or_default();
-                x.valid_resources = improvement_resources.get(&x.id).cloned().unwrap_or_default();
+                x.valid_resources = improvement_resources
+                    .get(&x.id)
+                    .cloned()
+                    .unwrap_or_default();
                 x
             })
             .collect();
@@ -882,7 +995,11 @@ impl Content {
     /// Modifiers attached to an owner type (policy, belief, trait, building,
     /// district, government, great person, ...).
     pub fn modifiers_of(&self, owner: &str) -> impl Iterator<Item = &Modifier> {
-        self.owned_modifiers.get(owner).into_iter().flatten().filter_map(|id| self.modifiers.get(id))
+        self.owned_modifiers
+            .get(owner)
+            .into_iter()
+            .flatten()
+            .filter_map(|id| self.modifiers.get(id))
     }
 }
 
@@ -896,16 +1013,32 @@ fn flag(r: &Row, i: usize) -> rusqlite::Result<bool> {
     Ok(r.get::<_, Option<bool>>(i)?.unwrap_or(false))
 }
 
-fn query<T>(db: &Connection, sql: &str, map: impl FnMut(&Row) -> rusqlite::Result<T>) -> Result<Vec<T>> {
+fn query<T>(
+    db: &Connection,
+    sql: &str,
+    map: impl FnMut(&Row) -> rusqlite::Result<T>,
+) -> Result<Vec<T>> {
     let mut statement = db.prepare(sql).map_err(|e| format!("{e}\n  in: {sql}"))?;
-    let rows = statement.query_map([], map)?.collect::<rusqlite::Result<Vec<T>>>()?;
+    let rows = statement
+        .query_map([], map)?
+        .collect::<rusqlite::Result<Vec<T>>>()?;
     Ok(rows)
 }
 
-fn great_person_points(db: &Connection, table: &str, key: &str) -> Result<HashMap<String, Vec<(String, i32)>>> {
+fn great_person_points(
+    db: &Connection,
+    table: &str,
+    key: &str,
+) -> Result<HashMap<String, Vec<(String, i32)>>> {
     let mut map: HashMap<String, Vec<(String, i32)>> = HashMap::new();
     let sql = format!("SELECT {key}, GreatPersonClassType, PointsPerTurn FROM {table}");
-    for (id, class, points) in query(db, &sql, |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i32>(2)?)))? {
+    for (id, class, points) in query(db, &sql, |r| {
+        Ok((
+            r.get::<_, String>(0)?,
+            r.get::<_, String>(1)?,
+            r.get::<_, i32>(2)?,
+        ))
+    })? {
         map.entry(id).or_default().push((class, points));
     }
     Ok(map)
@@ -935,7 +1068,10 @@ fn district_adjacencies(db: &Connection, text: &Text) -> Result<HashMap<String, 
                     adjacent_wonder: flag(r, 9)?,
                     adjacent_resource: flag(r, 10)?,
                     adjacent_natural_wonder: flag(r, 11)?,
-                    description: r.get::<_, Option<String>>(12)?.map(|k| text.get(&k)).unwrap_or_default(),
+                    description: r
+                        .get::<_, Option<String>>(12)?
+                        .map(|k| text.get(&k))
+                        .unwrap_or_default(),
                 },
             ))
         },
@@ -949,11 +1085,21 @@ fn district_adjacencies(db: &Connection, text: &Text) -> Result<HashMap<String, 
     Ok(map)
 }
 
-fn load_modifiers(db: &Connection) -> Result<(HashMap<String, Modifier>, HashMap<String, Vec<String>>)> {
+fn load_modifiers(
+    db: &Connection,
+) -> Result<(HashMap<String, Modifier>, HashMap<String, Vec<String>>)> {
     let mut arguments: HashMap<String, HashMap<String, String>> = HashMap::new();
-    for (id, name, value) in query(db, "SELECT ModifierId, Name, Value FROM ModifierArguments", |r| {
-        Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, rusqlite::types::Value>(2)?))
-    })? {
+    for (id, name, value) in query(
+        db,
+        "SELECT ModifierId, Name, Value FROM ModifierArguments",
+        |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, rusqlite::types::Value>(2)?,
+            ))
+        },
+    )? {
         let value = match value {
             rusqlite::types::Value::Integer(i) => i.to_string(),
             rusqlite::types::Value::Real(f) => f.to_string(),
@@ -988,7 +1134,10 @@ fn load_modifiers(db: &Connection) -> Result<(HashMap<String, Modifier>, HashMap
         ("BuildingModifiers", "BuildingType"),
         ("DistrictModifiers", "DistrictType"),
         ("GovernmentModifiers", "GovernmentType"),
-        ("GreatPersonIndividualActionModifiers", "GreatPersonIndividualType"),
+        (
+            "GreatPersonIndividualActionModifiers",
+            "GreatPersonIndividualType",
+        ),
         ("TechnologyModifiers", "TechnologyType"),
         ("CivicModifiers", "CivicType"),
         ("UnitAbilityModifiers", "UnitAbilityType"),
@@ -996,7 +1145,11 @@ fn load_modifiers(db: &Connection) -> Result<(HashMap<String, Modifier>, HashMap
         ("ImprovementModifiers", "ImprovementType"),
     ] {
         let sql = format!("SELECT {key}, ModifierId FROM {table}");
-        let Ok(rows) = query(db, &sql, |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))) else { continue };
+        let Ok(rows) = query(db, &sql, |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+        }) else {
+            continue;
+        };
         for (owner, id) in rows {
             owned.entry(owner).or_default().push(id);
         }
@@ -1020,11 +1173,18 @@ impl Colors {
             colors.load_file(&file);
         }
         if let Ok(entries) = std::fs::read_dir(assets.join("dlc")) {
-            let mut dirs: Vec<_> = entries.flatten().map(|e| e.path().join("data")).filter(|p| p.is_dir()).collect();
+            let mut dirs: Vec<_> = entries
+                .flatten()
+                .map(|e| e.path().join("data"))
+                .filter(|p| p.is_dir())
+                .collect();
             dirs.sort();
             for dir in dirs {
                 for file in files_in_load_order(&dir, "xml")? {
-                    let name = file.file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
+                    let name = file
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_lowercase())
+                        .unwrap_or_default();
                     if name.ends_with("_colors.xml") && !name.contains("scenario") {
                         colors.load_file(&file);
                     }
@@ -1035,16 +1195,32 @@ impl Colors {
     }
 
     fn load_file(&mut self, path: &Path) {
-        let Ok(source) = std::fs::read_to_string(path) else { return };
-        let Ok(document) = roxmltree::Document::parse(source.trim_start_matches('\u{feff}')) else { return };
-        let field = |row: roxmltree::Node, name: &str| -> Option<String> {
-            row.attribute(name)
-                .map(str::to_owned)
-                .or_else(|| row.children().find(|c| c.has_tag_name(name)).and_then(|c| c.text()).map(|t| t.trim().to_owned()))
+        let Ok(source) = std::fs::read_to_string(path) else {
+            return;
         };
-        for table in document.root_element().children().filter(roxmltree::Node::is_element) {
-            for row in table.children().filter(|r| r.has_tag_name("Row") || r.has_tag_name("Replace")) {
-                let Some(id) = field(row, "Type") else { continue };
+        let Ok(document) = roxmltree::Document::parse(source.trim_start_matches('\u{feff}')) else {
+            return;
+        };
+        let field = |row: roxmltree::Node, name: &str| -> Option<String> {
+            row.attribute(name).map(str::to_owned).or_else(|| {
+                row.children()
+                    .find(|c| c.has_tag_name(name))
+                    .and_then(|c| c.text())
+                    .map(|t| t.trim().to_owned())
+            })
+        };
+        for table in document
+            .root_element()
+            .children()
+            .filter(roxmltree::Node::is_element)
+        {
+            for row in table
+                .children()
+                .filter(|r| r.has_tag_name("Row") || r.has_tag_name("Replace"))
+            {
+                let Some(id) = field(row, "Type") else {
+                    continue;
+                };
                 match table.tag_name().name() {
                     "Colors" => {
                         if let Some(rgb) = field(row, "Color").and_then(|c| parse_rgb(&c)) {
@@ -1052,7 +1228,9 @@ impl Colors {
                         }
                     }
                     "PlayerColors" => {
-                        if let (Some(primary), Some(secondary)) = (field(row, "PrimaryColor"), field(row, "SecondaryColor")) {
+                        if let (Some(primary), Some(secondary)) =
+                            (field(row, "PrimaryColor"), field(row, "SecondaryColor"))
+                        {
                             self.players.insert(id, (primary, secondary));
                         }
                     }
@@ -1074,11 +1252,22 @@ impl Colors {
 }
 
 fn parse_rgb(value: &str) -> Option<[u8; 3]> {
-    let parts: Vec<f32> = value.split(',').filter_map(|p| p.trim().parse().ok()).collect();
+    let parts: Vec<f32> = value
+        .split(',')
+        .filter_map(|p| p.trim().parse().ok())
+        .collect();
     if parts.len() < 3 {
         return None;
     }
     // Some files use 0..1 floats, most use 0..255 integers.
-    let scale = if parts[..3].iter().all(|v| *v <= 1.0) && value.contains('.') { 255.0 } else { 1.0 };
-    Some([(parts[0] * scale) as u8, (parts[1] * scale) as u8, (parts[2] * scale) as u8])
+    let scale = if parts[..3].iter().all(|v| *v <= 1.0) && value.contains('.') {
+        255.0
+    } else {
+        1.0
+    };
+    Some([
+        (parts[0] * scale) as u8,
+        (parts[1] * scale) as u8,
+        (parts[2] * scale) as u8,
+    ])
 }

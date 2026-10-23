@@ -18,7 +18,11 @@ impl Rng {
 
     /// Uniform in `0..n` (0 when `n` is 0).
     pub fn below(&mut self, n: u32) -> u32 {
-        if n == 0 { 0 } else { (self.next_u64() % u64::from(n)) as u32 }
+        if n == 0 {
+            0
+        } else {
+            (self.next_u64() % u64::from(n)) as u32
+        }
     }
 
     /// Uniform in `[0, 1)`.

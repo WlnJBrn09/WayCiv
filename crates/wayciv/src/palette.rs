@@ -12,7 +12,10 @@ pub fn with_alpha(c: Color32, a: u8) -> Color32 {
 
 /// Base color of a terrain type; hills and mountains share their biome's hue.
 pub fn biome(terrain_id: &str) -> Color32 {
-    let base = terrain_id.trim_start_matches("TERRAIN_").trim_end_matches("_HILLS").trim_end_matches("_MOUNTAIN");
+    let base = terrain_id
+        .trim_start_matches("TERRAIN_")
+        .trim_end_matches("_HILLS")
+        .trim_end_matches("_MOUNTAIN");
     match base {
         "DEEP_OCEAN" => Color32::from_rgb(14, 34, 82),
         "OCEAN" => Color32::from_rgb(28, 62, 122),
@@ -27,7 +30,10 @@ pub fn biome(terrain_id: &str) -> Color32 {
 }
 
 pub fn biome_name(terrain_id: &str) -> &'static str {
-    let base = terrain_id.trim_start_matches("TERRAIN_").trim_end_matches("_HILLS").trim_end_matches("_MOUNTAIN");
+    let base = terrain_id
+        .trim_start_matches("TERRAIN_")
+        .trim_end_matches("_HILLS")
+        .trim_end_matches("_MOUNTAIN");
     match base {
         "DEEP_OCEAN" => "Deep Sea",
         "OCEAN" => "Sea",
@@ -58,8 +64,16 @@ pub const LEGEND_FEATURES: [(&str, &str, &str); 10] = [
     ("FEATURE_TAIGA", "TERRAIN_TUNDRA", "Taiga"),
     ("FEATURE_JUNGLE", "TERRAIN_GRASS", "Rainforest"),
     ("FEATURE_MARSH", "TERRAIN_GRASS", "Marsh"),
-    ("FEATURE_FLOODPLAINS_GRASSLAND", "TERRAIN_GRASS", "Floodplains"),
-    ("FEATURE_FLOODPLAINS", "TERRAIN_DESERT", "Desert floodplains"),
+    (
+        "FEATURE_FLOODPLAINS_GRASSLAND",
+        "TERRAIN_GRASS",
+        "Floodplains",
+    ),
+    (
+        "FEATURE_FLOODPLAINS",
+        "TERRAIN_DESERT",
+        "Desert floodplains",
+    ),
     ("FEATURE_OASIS", "TERRAIN_DESERT", "Oasis"),
     ("FEATURE_DUNES", "TERRAIN_DESERT", "Dunes"),
     ("FEATURE_GLACIER", "TERRAIN_SNOW", "Glacier"),

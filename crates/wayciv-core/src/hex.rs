@@ -22,7 +22,10 @@ impl Pos {
     }
 
     pub fn from_axial(q: i32, r: i32) -> Self {
-        Self { x: q + (r - (r & 1)) / 2, y: r }
+        Self {
+            x: q + (r - (r & 1)) / 2,
+            y: r,
+        }
     }
 }
 
@@ -61,12 +64,16 @@ impl Grid {
 
     /// Wraps x; `None` above or below the map.
     pub fn normalize(self, pos: Pos) -> Option<Pos> {
-        (0..self.height).contains(&pos.y).then(|| Pos::new(pos.x.rem_euclid(self.width), pos.y))
+        (0..self.height)
+            .contains(&pos.y)
+            .then(|| Pos::new(pos.x.rem_euclid(self.width), pos.y))
     }
 
     pub fn neighbors(self, pos: Pos) -> impl Iterator<Item = Pos> {
         let (q, r) = pos.axial();
-        AXIAL_DIRECTIONS.into_iter().filter_map(move |(dq, dr)| self.normalize(Pos::from_axial(q + dq, r + dr)))
+        AXIAL_DIRECTIONS
+            .into_iter()
+            .filter_map(move |(dq, dr)| self.normalize(Pos::from_axial(q + dq, r + dr)))
     }
 
     /// Hex distance, taking the shorter way around the east-west wrap.
@@ -88,9 +95,10 @@ impl Grid {
         for dq in -radius..=radius {
             for dr in (-radius).max(-dq - radius)..=radius.min(-dq + radius) {
                 if let Some(pos) = self.normalize(Pos::from_axial(cq + dq, cr + dr))
-                    && !tiles.contains(&pos) {
-                        tiles.push(pos);
-                    }
+                    && !tiles.contains(&pos)
+                {
+                    tiles.push(pos);
+                }
             }
         }
         tiles.sort_by_key(|p| self.distance(center, *p));
@@ -106,7 +114,10 @@ impl Grid {
 mod tests {
     use super::*;
 
-    const GRID: Grid = Grid { width: 20, height: 10 };
+    const GRID: Grid = Grid {
+        width: 20,
+        height: 10,
+    };
 
     #[test]
     fn axial_round_trip() {

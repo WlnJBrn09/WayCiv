@@ -5,6 +5,7 @@ mod icons;
 mod map_view;
 mod palette;
 mod portraits;
+mod render;
 mod screens;
 mod setup_screen;
 
@@ -13,7 +14,11 @@ use wayciv_core::{Game, Rules};
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_title("WayCiv").with_app_id("wayciv").with_inner_size([1500.0, 920.0]).with_min_inner_size([1000.0, 640.0]),
+        viewport: egui::ViewportBuilder::default()
+            .with_title("WayCiv")
+            .with_app_id("wayciv")
+            .with_inner_size([1500.0, 920.0])
+            .with_min_inner_size([1000.0, 640.0]),
         ..Default::default()
     };
     eframe::run_native("WayCiv", options, Box::new(|cc| Ok(Box::new(App::new(cc)))))
@@ -45,7 +50,12 @@ impl App {
             ctx.request_repaint();
         });
         let snapshot = std::env::var("WAYCIV_SNAPSHOT").ok().map(|p| (p, 0));
-        Self { stage: Stage::Loading(rx), rules: None, portraits: portraits::Portraits::new(), snapshot }
+        Self {
+            stage: Stage::Loading(rx),
+            rules: None,
+            portraits: portraits::Portraits::new(),
+            snapshot,
+        }
     }
 
     pub fn start(&mut self, game: Game) {
@@ -61,7 +71,11 @@ impl App {
         let settings = wayciv_core::Settings {
             seed: env("WAYCIV_SEED").and_then(|s| s.parse().ok()).unwrap_or(7),
             human_leader: env("WAYCIV_LEADER").unwrap_or(wayciv_core::rules::REAGAN.to_string()),
-            map_type: if env("WAYCIV_MAP").as_deref() == Some("random") { wayciv_core::MapType::Random } else { wayciv_core::MapType::Earth },
+            map_type: if env("WAYCIV_MAP").as_deref() == Some("random") {
+                wayciv_core::MapType::Random
+            } else {
+                wayciv_core::MapType::Earth
+            },
             size: match env("WAYCIV_SIZE").as_deref() {
                 Some("small") => wayciv_core::MapSize::Small,
                 Some("standard") => wayciv_core::MapSize::Standard,
@@ -72,7 +86,9 @@ impl App {
             ..Default::default()
         };
         let mut game = wayciv_core::new_game(rules.clone(), settings);
-        let turns: u32 = env("WAYCIV_TURNS").and_then(|s| s.parse().ok()).unwrap_or(0);
+        let turns: u32 = env("WAYCIV_TURNS")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
         if turns > 0 {
             let human = game.human();
             game.players[human].human = false;
@@ -84,8 +100,14 @@ impl App {
         }
         if env("WAYCIV_REVEAL").is_some() {
             let human = game.human();
-            game.players[human].revealed.iter_mut().for_each(|r| *r = true);
-            game.players[human].visible.iter_mut().for_each(|r| *r = true);
+            game.players[human]
+                .revealed
+                .iter_mut()
+                .for_each(|r| *r = true);
+            game.players[human]
+                .visible
+                .iter_mut()
+                .for_each(|r| *r = true);
         }
         self.start(game);
         if let Stage::Playing(s) = &mut self.stage {
@@ -107,11 +129,14 @@ impl App {
                 Some("legend") => s.windows.legend = true,
                 Some("diplomacy") => {
                     let me = s.game.human();
-                    s.windows.diplomacy = (0..s.game.players.len()).find(|&o| o != me && s.game.players[o].is_major());
+                    s.windows.diplomacy = (0..s.game.players.len())
+                        .find(|&o| o != me && s.game.players[o].is_major());
                 }
                 Some("popup") => {
                     let me = s.game.human();
-                    let other = (0..s.game.players.len()).find(|&o| o != me && s.game.players[o].is_major()).unwrap_or(1);
+                    let other = (0..s.game.players.len())
+                        .find(|&o| o != me && s.game.players[o].is_major())
+                        .unwrap_or(1);
                     s.popup = Some((other, wayciv_core::diplomacy::DiploEvent::FirstMeet));
                 }
                 _ => {}
@@ -119,14 +144,19 @@ impl App {
             if let Some(z) = env("WAYCIV_ZOOM").and_then(|z| z.parse().ok()) {
                 s.cam.zoom = z;
             }
-            if let Some((x, y)) = env("WAYCIV_CENTER").and_then(|c| c.split_once(',').and_then(|(x, y)| Some((x.parse().ok()?, y.parse().ok()?)))) {
+            if let Some((x, y)) = env("WAYCIV_CENTER").and_then(|c| {
+                c.split_once(',')
+                    .and_then(|(x, y)| Some((x.parse().ok()?, y.parse().ok()?)))
+            }) {
                 map_view_center(s, wayciv_core::Pos::new(x, y));
             }
         }
     }
 
     fn snapshot_hook(&mut self, ctx: &egui::Context) {
-        let Some((path, frames)) = &mut self.snapshot else { return };
+        let Some((path, frames)) = &mut self.snapshot else {
+            return;
+        };
         if matches!(self.stage, Stage::Loading(_)) {
             ctx.request_repaint();
             return;
@@ -176,7 +206,9 @@ impl eframe::App for App {
         match &mut self.stage {
             Stage::Loading(_) => {
                 egui::CentralPanel::default().show(ui, |ui| {
-                    ui.centered_and_justified(|ui| ui.heading("Loading Civilization VI content from your install..."));
+                    ui.centered_and_justified(|ui| {
+                        ui.heading("Loading Civilization VI content from your install...")
+                    });
                 });
             }
             Stage::Failed(error) => {

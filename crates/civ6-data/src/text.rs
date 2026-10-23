@@ -22,10 +22,12 @@ impl Text {
             let mut dlc: Vec<_> = entries
                 .flatten()
                 .map(|e| e.path())
-                .filter(|p| p.file_name().is_some_and(|n| {
-                    let n = n.to_string_lossy();
-                    !n.contains("scenario") && !n.ends_with("mode") && n != "treerandomizer"
-                }))
+                .filter(|p| {
+                    p.file_name().is_some_and(|n| {
+                        let n = n.to_string_lossy();
+                        !n.contains("scenario") && !n.ends_with("mode") && n != "treerandomizer"
+                    })
+                })
                 .map(|p| p.join("text/en_us"))
                 .collect();
             dlc.sort();
@@ -33,7 +35,10 @@ impl Text {
         }
         for dir in dirs.iter().filter(|d| d.is_dir()) {
             for file in crate::files_in_load_order(dir, "xml")? {
-                let name = file.file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
+                let name = file
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_lowercase())
+                    .unwrap_or_default();
                 if name.contains("scenario") || name.contains("_mode") {
                     continue;
                 }
@@ -44,18 +49,29 @@ impl Text {
     }
 
     fn load_file(&mut self, path: &Path) {
-        let Ok(source) = fs::read_to_string(path) else { return };
-        let Ok(document) = roxmltree::Document::parse(source.trim_start_matches('\u{feff}')) else { return };
-        for row in document.descendants().filter(|n| n.has_tag_name("Row") || n.has_tag_name("Replace")) {
+        let Ok(source) = fs::read_to_string(path) else {
+            return;
+        };
+        let Ok(document) = roxmltree::Document::parse(source.trim_start_matches('\u{feff}')) else {
+            return;
+        };
+        for row in document
+            .descendants()
+            .filter(|n| n.has_tag_name("Row") || n.has_tag_name("Replace"))
+        {
             let language = row.attribute("Language").unwrap_or("en_US");
             if !language.eq_ignore_ascii_case("en_US") {
                 continue;
             }
-            let Some(tag) = row.attribute("Tag") else { continue };
-            let value = row
-                .attribute("Text")
-                .map(str::to_owned)
-                .or_else(|| row.children().find(|c| c.has_tag_name("Text")).and_then(|c| c.text()).map(str::to_owned));
+            let Some(tag) = row.attribute("Tag") else {
+                continue;
+            };
+            let value = row.attribute("Text").map(str::to_owned).or_else(|| {
+                row.children()
+                    .find(|c| c.has_tag_name("Text"))
+                    .and_then(|c| c.text())
+                    .map(str::to_owned)
+            });
             if let Some(value) = value {
                 self.strings.insert(tag.to_string(), value);
             }
@@ -104,7 +120,12 @@ fn clean(value: &str) -> String {
         }
         out.push(c);
     }
-    out.split(' ').filter(|w| !w.is_empty()).collect::<Vec<_>>().join(" ").replace(" \n", "\n").replace("\n ", "\n")
+    out.split(' ')
+        .filter(|w| !w.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+        .replace(" \n", "\n")
+        .replace("\n ", "\n")
 }
 
 #[cfg(test)]
@@ -113,7 +134,10 @@ mod tests {
 
     #[test]
     fn strips_markup() {
-        assert_eq!(clean("+5 [ICON_Strength] Combat Strength."), "+5 Combat Strength.");
+        assert_eq!(
+            clean("+5 [ICON_Strength] Combat Strength."),
+            "+5 Combat Strength."
+        );
         assert_eq!(clean("Line one.[NEWLINE]Line two."), "Line one.\nLine two.");
     }
 }

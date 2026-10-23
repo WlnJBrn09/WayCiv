@@ -111,7 +111,8 @@ impl Player {
 
     /// Whether a tech or civic prerequisite (either may be absent) is met.
     pub fn meets(&self, rules: &Rules, tech: Option<&str>, civic: Option<&str>) -> bool {
-        tech.is_none_or(|t| self.has_tech(rules, t)) && civic.is_none_or(|c| self.has_civic(rules, c))
+        tech.is_none_or(|t| self.has_tech(rules, t))
+            && civic.is_none_or(|c| self.has_civic(rules, c))
     }
 }
 
@@ -172,7 +173,10 @@ impl City {
     }
 
     pub fn majority_religion(&self) -> Option<usize> {
-        let (religion, count) = self.followers.iter().max_by_key(|(r, c)| (**c, std::cmp::Reverse(**r)))?;
+        let (religion, count) = self
+            .followers
+            .iter()
+            .max_by_key(|(r, c)| (**c, std::cmp::Reverse(**r)))?;
         (*count * 2 > self.population).then_some(*religion)
     }
 }
@@ -287,7 +291,12 @@ impl Game {
     }
 
     pub fn notify(&mut self, player: PlayerId, text: impl Into<String>, pos: Option<Pos>) {
-        self.notifications.push(Notification { turn: self.turn, player, text: text.into(), pos });
+        self.notifications.push(Notification {
+            turn: self.turn,
+            player,
+            text: text.into(),
+            pos,
+        });
     }
 
     pub fn city_at(&self, pos: Pos) -> Option<&City> {
@@ -306,7 +315,9 @@ impl Game {
     /// Land and sea units on a tile; aircraft based there don't block
     /// movement, exert zone of control, or defend the tile.
     pub fn ground_units_at(&self, pos: Pos) -> impl Iterator<Item = &Unit> {
-        self.units.values().filter(move |u| u.pos == pos && !self.is_air(u))
+        self.units
+            .values()
+            .filter(move |u| u.pos == pos && !self.is_air(u))
     }
 
     pub fn is_air(&self, unit: &Unit) -> bool {
@@ -316,7 +327,12 @@ impl Game {
     /// Wars with majors and city-states (barbarians are always hostile and
     /// don't count).
     pub fn real_wars(&self, player: PlayerId) -> usize {
-        self.players[player].relations.iter().enumerate().filter(|(o, r)| r.at_war && !self.players[*o].is_barbarian()).count()
+        self.players[player]
+            .relations
+            .iter()
+            .enumerate()
+            .filter(|(o, r)| r.at_war && !self.players[*o].is_barbarian())
+            .count()
     }
 
     pub fn barbarian(&self) -> Option<PlayerId> {
@@ -360,6 +376,8 @@ impl Game {
     }
 
     pub fn alive_majors(&self) -> impl Iterator<Item = &Player> {
-        self.players.iter().filter(|p| p.alive && p.kind == PlayerKind::Major)
+        self.players
+            .iter()
+            .filter(|p| p.alive && p.kind == PlayerKind::Major)
     }
 }

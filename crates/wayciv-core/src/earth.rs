@@ -32,7 +32,9 @@ pub struct Projection {
 }
 
 fn miller(lat: f64) -> f64 {
-    1.25 * (std::f64::consts::FRAC_PI_4 + 0.4 * lat.to_radians()).tan().ln()
+    1.25 * (std::f64::consts::FRAC_PI_4 + 0.4 * lat.to_radians())
+        .tan()
+        .ln()
 }
 
 impl Projection {
@@ -68,9 +70,26 @@ fn source(size: MapSize) -> &'static str {
 }
 
 pub fn projection(size: MapSize) -> Projection {
-    let header: Vec<&str> = source(size).lines().next().unwrap_or_default().split_whitespace().collect();
-    let num = |i: usize| header.get(i).and_then(|v| v.parse::<f64>().ok()).unwrap_or(0.0);
-    Projection { grid: Grid { width: num(1) as i32, height: num(2) as i32 }, lat_top: num(3), lon_west: num(5) }
+    let header: Vec<&str> = source(size)
+        .lines()
+        .next()
+        .unwrap_or_default()
+        .split_whitespace()
+        .collect();
+    let num = |i: usize| {
+        header
+            .get(i)
+            .and_then(|v| v.parse::<f64>().ok())
+            .unwrap_or(0.0)
+    };
+    Projection {
+        grid: Grid {
+            width: num(1) as i32,
+            height: num(2) as i32,
+        },
+        lat_top: num(3),
+        lon_west: num(5),
+    }
 }
 
 /// Builds the Earth map at `size`: terrain from the map file, then natural
@@ -106,9 +125,17 @@ pub fn generate(rules: &Rules, size: MapSize, rng: &mut Rng) -> Map {
     let mut tiles = vec![Tile::default(); grid.len()];
     for y in 0..h {
         for x in 0..w {
-            let at = |block: usize| rows.get(block * h + y).and_then(|r| r.get(x)).copied().unwrap_or(b'.');
+            let at = |block: usize| {
+                rows.get(block * h + y)
+                    .and_then(|r| r.get(x))
+                    .copied()
+                    .unwrap_or(b'.')
+            };
             let tile = &mut tiles[y * w + x];
-            tile.terrain = rules.idx(terrain_id(at(0))).or_else(|| rules.idx("TERRAIN_OCEAN")).unwrap_or(0);
+            tile.terrain = rules
+                .idx(terrain_id(at(0)))
+                .or_else(|| rules.idx("TERRAIN_OCEAN"))
+                .unwrap_or(0);
             let base = rules.content.terrains[tile.terrain].id.as_str();
             let feature = match at(1) {
                 b'f' => Some("FEATURE_FOREST"),
@@ -171,20 +198,33 @@ const NATURAL_WONDERS: [(&str, f64, f64); 20] = [
 
 fn place_natural_wonders(rules: &Rules, map: &mut Map, proj: &Projection) {
     for (id, lat, lon) in NATURAL_WONDERS {
-        let (Some(feature), Some(target)) = (rules.idx(id), proj.tile_of(lat, lon)) else { continue };
-        let Some(f) = rules.content.features.get(feature).filter(|f| f.id == id) else { continue };
+        let (Some(feature), Some(target)) = (rules.idx(id), proj.tile_of(lat, lon)) else {
+            continue;
+        };
+        let Some(f) = rules.content.features.get(feature).filter(|f| f.id == id) else {
+            continue;
+        };
         // The nearest tile of a terrain the wonder can sit on; failing that,
         // the target's terrain becomes the wonder's first valid one.
         let valid = |map: &Map, p: Pos| {
             let tile = map.tile(p);
-            f.valid_terrains.contains(&rules.content.terrains[tile.terrain].id)
-                && tile.feature.is_none_or(|x| !rules.content.features[x].natural_wonder)
+            f.valid_terrains
+                .contains(&rules.content.terrains[tile.terrain].id)
+                && tile
+                    .feature
+                    .is_none_or(|x| !rules.content.features[x].natural_wonder)
         };
-        let spot = map.grid.within(target, 2).into_iter().find(|&p| valid(map, p));
+        let spot = map
+            .grid
+            .within(target, 2)
+            .into_iter()
+            .find(|&p| valid(map, p));
         let pos = match spot {
             Some(p) => p,
             None => {
-                let Some(terrain) = f.valid_terrains.first().and_then(|t| rules.idx(t)) else { continue };
+                let Some(terrain) = f.valid_terrains.first().and_then(|t| rules.idx(t)) else {
+                    continue;
+                };
                 map.tile_mut(target).terrain = terrain;
                 target
             }
@@ -287,20 +327,36 @@ const CITY_STATE_STARTS: [(&str, f64, f64); 42] = [
 
 /// The real-world location of a leader or city-state, by its Civ VI id.
 pub fn home(id: &str) -> Option<(f64, f64)> {
-    LEADER_STARTS.iter().chain(CITY_STATE_STARTS.iter()).find(|(k, _, _)| *k == id).map(|&(_, lat, lon)| (lat, lon))
+    LEADER_STARTS
+        .iter()
+        .chain(CITY_STATE_STARTS.iter())
+        .find(|(k, _, _)| *k == id)
+        .map(|&(_, lat, lon)| (lat, lon))
 }
 
 /// Starting tiles for each player, in order: the nearest good land tile to
 /// their historical home that keeps `min_distance` from earlier starts.
 /// Players without a known home get a fertile site elsewhere.
-pub fn starting_positions(rules: &Rules, map: &Map, size: MapSize, homes: &[Option<(f64, f64)>], min_distance: i32, rng: &mut Rng) -> Vec<Pos> {
+pub fn starting_positions(
+    rules: &Rules,
+    map: &Map,
+    size: MapSize,
+    homes: &[Option<(f64, f64)>],
+    min_distance: i32,
+    rng: &mut Rng,
+) -> Vec<Pos> {
     let proj = projection(size);
     let grid = map.grid;
     let usable = |p: Pos, chosen: &[Pos]| {
         map.is_land(rules, p)
             && !map.is_impassable(rules, p)
-            && map.tile(p).feature.is_none_or(|f| !rules.content.features[f].natural_wonder)
-            && chosen.iter().all(|c| c.x < 0 || grid.distance(*c, p) >= min_distance)
+            && map
+                .tile(p)
+                .feature
+                .is_none_or(|f| !rules.content.features[f].natural_wonder)
+            && chosen
+                .iter()
+                .all(|c| c.x < 0 || grid.distance(*c, p) >= min_distance)
     };
     let mut chosen: Vec<Pos> = Vec::new();
     let mut unplaced = Vec::new();
@@ -311,7 +367,9 @@ pub fn starting_positions(rules: &Rules, map: &Map, size: MapSize, homes: &[Opti
                 grid.within(t, radius)
                     .into_iter()
                     .filter(|&p| grid.distance(t, p) == radius && usable(p, &chosen))
-                    .max_by(|a, b| map::site_score(rules, map, *a).total_cmp(&map::site_score(rules, map, *b)))
+                    .max_by(|a, b| {
+                        map::site_score(rules, map, *a).total_cmp(&map::site_score(rules, map, *b))
+                    })
             })
         });
         match spot {
@@ -324,7 +382,14 @@ pub fn starting_positions(rules: &Rules, map: &Map, size: MapSize, homes: &[Opti
     }
     if !unplaced.is_empty() {
         let placed: Vec<Pos> = chosen.iter().copied().filter(|p| p.x >= 0).collect();
-        let extra = map::starting_positions_avoiding(rules, map, unplaced.len(), min_distance, &placed, rng);
+        let extra = map::starting_positions_avoiding(
+            rules,
+            map,
+            unplaced.len(),
+            min_distance,
+            &placed,
+            rng,
+        );
         for (slot, pos) in unplaced.into_iter().zip(extra) {
             chosen[slot] = pos;
         }
@@ -343,7 +408,10 @@ mod tests {
             let proj = projection(size);
             let rows = source(size).lines().skip(1).collect::<Vec<_>>();
             assert_eq!(rows.len(), proj.grid.height as usize * 3, "{size:?}");
-            assert!(rows.iter().all(|r| r.len() == proj.grid.width as usize), "{size:?}");
+            assert!(
+                rows.iter().all(|r| r.len() == proj.grid.width as usize),
+                "{size:?}"
+            );
         }
     }
 

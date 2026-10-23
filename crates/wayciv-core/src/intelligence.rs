@@ -30,10 +30,24 @@ impl Game {
 
     /// Compute a city's Datacenter produces per turn (0 without one).
     pub fn city_compute(&self, city: &City) -> f32 {
-        let Some(dc) = city.districts.iter().find(|d| self.is_datacenter(d.district)) else { return 0.0 };
+        let Some(dc) = city
+            .districts
+            .iter()
+            .find(|d| self.is_datacenter(d.district))
+        else {
+            return 0.0;
+        };
         let map = &self.map;
-        let adjacent_districts = map.grid.neighbors(dc.pos).filter(|&n| map.tile(n).district.is_some()).count() as f32;
-        let cooled = map.tile(dc.pos).river || map.grid.neighbors(dc.pos).any(|n| map.tile(n).river || map.is_water(&self.rules, n));
+        let adjacent_districts = map
+            .grid
+            .neighbors(dc.pos)
+            .filter(|&n| map.tile(n).district.is_some())
+            .count() as f32;
+        let cooled = map.tile(dc.pos).river
+            || map
+                .grid
+                .neighbors(dc.pos)
+                .any(|n| map.tile(n).river || map.is_water(&self.rules, n));
         let has = |id: &str| self.rules.idx(id).is_some_and(|b| city.has_building(b));
         let mut compute = 6.0 + 2.0 * adjacent_districts;
         if cooled {
@@ -53,7 +67,9 @@ impl Game {
 
     /// Compute per turn across the empire.
     pub fn compute(&self, player: PlayerId) -> f32 {
-        self.player_cities(player).map(|c| self.city_compute(c)).sum()
+        self.player_cities(player)
+            .map(|c| self.city_compute(c))
+            .sum()
     }
 
     /// AI tree items that unlock something: units and buildings need them
@@ -67,7 +83,8 @@ impl Game {
     }
 
     pub(crate) fn ai_requirement_met(&self, player: PlayerId, id: &str) -> bool {
-        self.ai_requirement(id).is_none_or(|req| self.has_ai_tech(player, req))
+        self.ai_requirement(id)
+            .is_none_or(|req| self.has_ai_tech(player, req))
     }
 
     pub fn is_drone(&self, unit: &crate::state::Unit) -> bool {
@@ -95,7 +112,11 @@ impl Game {
 
     /// Space race projects cost 30% less with Automated Science.
     pub(crate) fn project_cost_multiplier(&self, player: PlayerId) -> f32 {
-        if self.has_ai_tech(player, AI_AUTOMATED_SCIENCE) { 0.7 } else { 1.0 }
+        if self.has_ai_tech(player, AI_AUTOMATED_SCIENCE) {
+            0.7
+        } else {
+            1.0
+        }
     }
 
     /// End of turn: Compute goes into the AI tree; Research Agents hand out
@@ -110,7 +131,12 @@ impl Game {
             let p = &self.players[player];
             let target = (0..self.rules.content.techs.len())
                 .filter(|&i| !p.techs[i] && !p.tech_boosted[i])
-                .min_by_key(|&i| (!self.researchable(player, Tree::Tech, i), self.rules.content.techs[i].cost));
+                .min_by_key(|&i| {
+                    (
+                        !self.researchable(player, Tree::Tech, i),
+                        self.rules.content.techs[i].cost,
+                    )
+                });
             if let Some(i) = target {
                 self.boost(player, Tree::Tech, i, 50);
             }

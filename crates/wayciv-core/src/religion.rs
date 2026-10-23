@@ -7,7 +7,11 @@ pub const PANTHEON_COST: i32 = 25;
 
 impl Game {
     pub fn beliefs_of_class(&self, class: &str) -> Vec<usize> {
-        let taken: Vec<usize> = self.players.iter().flat_map(|p| p.beliefs.iter().copied().chain(p.pantheon)).collect();
+        let taken: Vec<usize> = self
+            .players
+            .iter()
+            .flat_map(|p| p.beliefs.iter().copied().chain(p.pantheon))
+            .collect();
         self.rules
             .content
             .beliefs
@@ -24,7 +28,11 @@ impl Game {
     }
 
     pub fn choose_pantheon(&mut self, player: PlayerId, belief: usize) -> Result<(), String> {
-        if !self.can_choose_pantheon(player) || !self.beliefs_of_class("BELIEF_CLASS_PANTHEON").contains(&belief) {
+        if !self.can_choose_pantheon(player)
+            || !self
+                .beliefs_of_class("BELIEF_CLASS_PANTHEON")
+                .contains(&belief)
+        {
             return Err("That pantheon can't be chosen.".into());
         }
         let p = &mut self.players[player];
@@ -43,20 +51,35 @@ impl Game {
             .religions
             .iter()
             .enumerate()
-            .filter(|(i, r)| !r.pantheon && !self.religions.contains_key(i) && r.id != "RELIGION_CUSTOM_1" && !r.id.starts_with("RELIGION_CUSTOM"))
+            .filter(|(i, r)| {
+                !r.pantheon
+                    && !self.religions.contains_key(i)
+                    && r.id != "RELIGION_CUSTOM_1"
+                    && !r.id.starts_with("RELIGION_CUSTOM")
+            })
             .map(|(i, _)| i)
             .collect()
     }
 
     pub fn default_beliefs(&self) -> (usize, usize) {
-        let founder = self.beliefs_of_class("BELIEF_CLASS_FOUNDER").first().copied().unwrap_or(0);
-        let follower = self.beliefs_of_class("BELIEF_CLASS_FOLLOWER").first().copied().unwrap_or(0);
+        let founder = self
+            .beliefs_of_class("BELIEF_CLASS_FOUNDER")
+            .first()
+            .copied()
+            .unwrap_or(0);
+        let follower = self
+            .beliefs_of_class("BELIEF_CLASS_FOLLOWER")
+            .first()
+            .copied()
+            .unwrap_or(0);
         (founder, follower)
     }
 
     /// A Great Prophet on a Holy Site its owner controls, with religions left.
     pub fn can_found_religion(&self, unit: UnitId) -> bool {
-        let Some(u) = self.units.get(&unit) else { return false };
+        let Some(u) = self.units.get(&unit) else {
+            return false;
+        };
         let rules = &self.rules;
         let tile = self.map.tile(u.pos);
         self.unit_type(u).found_religion
@@ -69,7 +92,13 @@ impl Game {
             && !self.free_religions().is_empty()
     }
 
-    pub fn found_religion(&mut self, unit: UnitId, religion: usize, founder: usize, follower: usize) -> Result<(), String> {
+    pub fn found_religion(
+        &mut self,
+        unit: UnitId,
+        religion: usize,
+        founder: usize,
+        follower: usize,
+    ) -> Result<(), String> {
         if !self.can_found_religion(unit) || !self.free_religions().contains(&religion) {
             return Err("A religion can't be founded here.".into());
         }
@@ -87,7 +116,11 @@ impl Game {
         let founder_name = self.players[u.owner].civ_name.clone();
         for p in 0..self.players.len() {
             if self.players[p].is_major() {
-                let text = if p == u.owner { format!("You founded {name}!") } else { format!("{founder_name} founded {name}.") };
+                let text = if p == u.owner {
+                    format!("You founded {name}!")
+                } else {
+                    format!("{founder_name} founded {name}.")
+                };
                 self.notify(p, text, None);
             }
         }
@@ -116,9 +149,20 @@ impl Game {
             .units
             .iter()
             .enumerate()
-            .filter(|(_, u)| u.purchase_yield.as_deref() == Some("YIELD_FAITH") && u.can_train && !u.found_religion && !u.id.starts_with("UNIT_GREAT_"))
+            .filter(|(_, u)| {
+                u.purchase_yield.as_deref() == Some("YIELD_FAITH")
+                    && u.can_train
+                    && !u.found_religion
+                    && !u.id.starts_with("UNIT_GREAT_")
+            })
             .filter(|(_, u)| u.religious_strength > 0 || u.spread_charges > 0)
-            .filter(|(_, u)| p.meets(&self.rules, u.prereq_tech.as_deref(), u.prereq_civic.as_deref()))
+            .filter(|(_, u)| {
+                p.meets(
+                    &self.rules,
+                    u.prereq_tech.as_deref(),
+                    u.prereq_civic.as_deref(),
+                )
+            })
             .filter(|(_, u)| u.unique_to.is_none())
             .map(|(i, _)| i)
             .collect()
@@ -188,7 +232,17 @@ impl Game {
         let sources: Vec<(crate::hex::Pos, usize, bool)> = self
             .cities
             .values()
-            .filter_map(|c| c.majority_religion().map(|r| (c.pos, r, self.religions.get(&r).is_some_and(|(_, holy)| *holy == c.id))))
+            .filter_map(|c| {
+                c.majority_religion().map(|r| {
+                    (
+                        c.pos,
+                        r,
+                        self.religions
+                            .get(&r)
+                            .is_some_and(|(_, holy)| *holy == c.id),
+                    )
+                })
+            })
             .collect();
         let ids: Vec<CityId> = self.cities.keys().copied().collect();
         for id in ids {
@@ -225,7 +279,12 @@ impl Game {
                     let total: i32 = c.followers.values().sum();
                     if total < c.population {
                         *c.followers.entry(religion).or_insert(0) += 1;
-                    } else if let Some((&other, _)) = c.followers.iter().filter(|(r, n)| **r != religion && **n > 0).max_by_key(|(_, n)| **n) {
+                    } else if let Some((&other, _)) = c
+                        .followers
+                        .iter()
+                        .filter(|(r, n)| **r != religion && **n > 0)
+                        .max_by_key(|(_, n)| **n)
+                    {
                         *c.followers.get_mut(&other).unwrap() -= 1;
                         *c.followers.entry(religion).or_insert(0) += 1;
                     }
@@ -235,7 +294,12 @@ impl Game {
             let pop = c.population;
             let mut total: i32 = c.followers.values().sum();
             while total > pop {
-                if let Some((_, n)) = c.followers.iter_mut().filter(|(_, n)| **n > 0).min_by_key(|(_, n)| **n) {
+                if let Some((_, n)) = c
+                    .followers
+                    .iter_mut()
+                    .filter(|(_, n)| **n > 0)
+                    .min_by_key(|(_, n)| **n)
+                {
                     *n -= 1;
                 }
                 total -= 1;
@@ -255,6 +319,9 @@ impl Game {
                 *counts.entry(r).or_insert(0) += 1;
             }
         }
-        counts.into_iter().find(|(_, n)| n * 2 > cities.len()).map(|(r, _)| r)
+        counts
+            .into_iter()
+            .find(|(_, n)| n * 2 > cities.len())
+            .map(|(r, _)| r)
     }
 }

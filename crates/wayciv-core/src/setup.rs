@@ -33,7 +33,15 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
     let content = &rules.content;
 
     // Majors: the human's chosen leader, then distinct civilizations.
-    let human = rules.idx(&settings.human_leader).filter(|&i| content.leaders.get(i).is_some_and(|l| l.id == settings.human_leader)).unwrap_or(0);
+    let human = rules
+        .idx(&settings.human_leader)
+        .filter(|&i| {
+            content
+                .leaders
+                .get(i)
+                .is_some_and(|l| l.id == settings.human_leader)
+        })
+        .unwrap_or(0);
     let mut leaders = vec![human];
     let mut pool: Vec<usize> = (0..content.leaders.len())
         .filter(|&i| content.leaders[i].civilization != content.leaders[human].civilization)
@@ -43,7 +51,10 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
         if leaders.len() > settings.opponents {
             break;
         }
-        if leaders.iter().all(|&l| content.leaders[l].civilization != content.leaders[leader].civilization) {
+        if leaders
+            .iter()
+            .all(|&l| content.leaders[l].civilization != content.leaders[leader].civilization)
+        {
             leaders.push(leader);
         }
     }
@@ -60,9 +71,20 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
             let homes: Vec<Option<(f64, f64)>> = leaders
                 .iter()
                 .map(|&l| crate::earth::home(&content.leaders[l].id))
-                .chain(states.iter().map(|&s| crate::earth::home(&content.city_states[s].id)))
+                .chain(
+                    states
+                        .iter()
+                        .map(|&s| crate::earth::home(&content.city_states[s].id)),
+                )
                 .collect();
-            crate::earth::starting_positions(&rules, &map, settings.size, &homes, crate::actions::MIN_CITY_DISTANCE, &mut rng)
+            crate::earth::starting_positions(
+                &rules,
+                &map,
+                settings.size,
+                &homes,
+                crate::actions::MIN_CITY_DISTANCE,
+                &mut rng,
+            )
         }
         map::MapType::Random => map::starting_positions(&rules, &map, total - 1, 9, &mut rng),
     };
@@ -71,7 +93,12 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
     let tech_count = content.techs.len();
     let civic_count = content.civics.len();
     let ai_count = rules.ai_tree.len();
-    let blank = |id: PlayerId, kind: PlayerKind, leader: usize, civ: usize, name: String, civ_name: String| Player {
+    let blank = |id: PlayerId,
+                 kind: PlayerKind,
+                 leader: usize,
+                 civ: usize,
+                 name: String,
+                 civ_name: String| Player {
         id,
         kind,
         leader,
@@ -124,7 +151,14 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
     for (i, &leader) in leaders.iter().enumerate() {
         let l = &content.leaders[leader];
         let civ = rules.idx(&l.civilization).unwrap_or(0);
-        let mut player = blank(i, PlayerKind::Major, leader, civ, l.name.clone(), content.civilizations[civ].name.clone());
+        let mut player = blank(
+            i,
+            PlayerKind::Major,
+            leader,
+            civ,
+            l.name.clone(),
+            content.civilizations[civ].name.clone(),
+        );
         player.human = i == 0;
         player.primary = l.primary_color;
         player.secondary = l.secondary_color;
@@ -133,7 +167,14 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
     for &state in &states {
         let cs = &content.city_states[state];
         let id = players.len();
-        let mut player = blank(id, PlayerKind::CityState, state, state, cs.name.clone(), cs.name.clone());
+        let mut player = blank(
+            id,
+            PlayerKind::CityState,
+            state,
+            state,
+            cs.name.clone(),
+            cs.name.clone(),
+        );
         player.city_state_category = cs.category.clone();
         let (primary, secondary) = city_state_colors(&cs.category);
         player.primary = primary;
@@ -141,7 +182,14 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
         players.push(player);
     }
     let barbarian_id = players.len();
-    let mut barbarians = blank(barbarian_id, PlayerKind::Barbarian, 0, 0, "Barbarians".into(), "Barbarians".into());
+    let mut barbarians = blank(
+        barbarian_id,
+        PlayerKind::Barbarian,
+        0,
+        0,
+        "Barbarians".into(),
+        "Barbarians".into(),
+    );
     barbarians.primary = [25, 25, 25];
     barbarians.secondary = [220, 50, 40];
     barbarians.gold = 0;
@@ -186,7 +234,12 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
             game.spawn(player, "UNIT_WARRIOR", start);
         } else {
             game.spawn(player, "UNIT_SETTLER", start);
-            let warrior_pos = game.map.grid.neighbors(start).find(|&n| game.map.is_land(&rules, n) && !game.map.is_impassable(&rules, n)).unwrap_or(start);
+            let warrior_pos = game
+                .map
+                .grid
+                .neighbors(start)
+                .find(|&n| game.map.is_land(&rules, n) && !game.map.is_impassable(&rules, n))
+                .unwrap_or(start);
             game.spawn(player, "UNIT_WARRIOR", warrior_pos);
         }
     }
@@ -194,7 +247,11 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
         game.update_visibility(player);
     }
     game.place_starting_camps();
-    game.notify(game.human(), "A new age begins. Found your capital with the Settler.", starts.first().copied());
+    game.notify(
+        game.human(),
+        "A new age begins. Found your capital with the Settler.",
+        starts.first().copied(),
+    );
     game
 }
 
@@ -220,13 +277,22 @@ fn distinct_colors(players: &mut [Player]) {
         if !players[i].is_major() {
             continue;
         }
-        let clashes = |c: [u8; 3], players: &[Player]| players[..i].iter().any(|p| p.is_major() && close(p.primary, c));
+        let clashes = |c: [u8; 3], players: &[Player]| {
+            players[..i]
+                .iter()
+                .any(|p| p.is_major() && close(p.primary, c))
+        };
         if (clashes(players[i].primary, players) || players[i].primary == [200, 200, 200])
-            && let Some(c) = FALLBACK.iter().copied().find(|&c| !clashes(c, players)) {
-                players[i].primary = c;
-                let lum = c[0] as i32 * 3 + c[1] as i32 * 6 + c[2] as i32;
-                players[i].secondary = if lum > 1500 { [30, 30, 30] } else { [255, 255, 255] };
-            }
+            && let Some(c) = FALLBACK.iter().copied().find(|&c| !clashes(c, players))
+        {
+            players[i].primary = c;
+            let lum = c[0] as i32 * 3 + c[1] as i32 * 6 + c[2] as i32;
+            players[i].secondary = if lum > 1500 {
+                [30, 30, 30]
+            } else {
+                [255, 255, 255]
+            };
+        }
     }
 }
 
@@ -234,10 +300,26 @@ impl Game {
     pub fn spawn(&mut self, owner: PlayerId, unit_id: &str, pos: Pos) -> Option<u32> {
         let rules = self.rules.clone();
         let p = &self.players[owner];
-        let civ_id = &rules.content.civilizations.get(p.civ).map(|c| c.id.clone()).unwrap_or_default();
-        let leader_id = rules.content.leaders.get(p.leader).map(|l| l.id.clone()).unwrap_or_default();
-        let actual = if !p.is_major() { unit_id.to_string() } else { rules.unit_for(unit_id, civ_id, &leader_id) };
-        let kind = rules.idx(&actual).filter(|&i| rules.content.units.get(i).is_some_and(|u| u.id == actual))?;
+        let civ_id = &rules
+            .content
+            .civilizations
+            .get(p.civ)
+            .map(|c| c.id.clone())
+            .unwrap_or_default();
+        let leader_id = rules
+            .content
+            .leaders
+            .get(p.leader)
+            .map(|l| l.id.clone())
+            .unwrap_or_default();
+        let actual = if !p.is_major() {
+            unit_id.to_string()
+        } else {
+            rules.unit_for(unit_id, civ_id, &leader_id)
+        };
+        let kind = rules
+            .idx(&actual)
+            .filter(|&i| rules.content.units.get(i).is_some_and(|u| u.id == actual))?;
         let ty = &rules.content.units[kind];
         let id = self.next_unit;
         self.next_unit += 1;

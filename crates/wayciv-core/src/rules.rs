@@ -5,8 +5,8 @@ use civ6_data::content::{Content, Leader, Trait};
 use std::collections::HashMap;
 
 pub use civ6_data::content::{
-    Building, CityState, Civilization, District, Feature, Improvement, Research, Resource, Terrain, Unit, YIELDS,
-    Yields, yield_index,
+    Building, CityState, Civilization, District, Feature, Improvement, Research, Resource, Terrain,
+    Unit, YIELDS, Yields, yield_index,
 };
 
 pub const FOOD: usize = 0;
@@ -62,7 +62,11 @@ impl Rules {
         add!(content.great_people);
         add!(content.projects);
         add!(ai_tree);
-        Self { content, ai_tree, index }
+        Self {
+            content,
+            ai_tree,
+            index,
+        }
     }
 
     /// Index of a content item by its Civ VI type id (`UNIT_WARRIOR`, ...).
@@ -72,39 +76,54 @@ impl Rules {
     }
 
     pub fn terrain(&self, id: &str) -> Option<&Terrain> {
-        self.idx(id).and_then(|i| self.content.terrains.get(i)).filter(|t| t.id == id)
+        self.idx(id)
+            .and_then(|i| self.content.terrains.get(i))
+            .filter(|t| t.id == id)
     }
 
     pub fn unit(&self, id: &str) -> Option<&Unit> {
-        self.idx(id).and_then(|i| self.content.units.get(i)).filter(|u| u.id == id)
+        self.idx(id)
+            .and_then(|i| self.content.units.get(i))
+            .filter(|u| u.id == id)
     }
 
     pub fn building(&self, id: &str) -> Option<&Building> {
-        self.idx(id).and_then(|i| self.content.buildings.get(i)).filter(|b| b.id == id)
+        self.idx(id)
+            .and_then(|i| self.content.buildings.get(i))
+            .filter(|b| b.id == id)
     }
 
     pub fn district(&self, id: &str) -> Option<&District> {
-        self.idx(id).and_then(|i| self.content.districts.get(i)).filter(|d| d.id == id)
+        self.idx(id)
+            .and_then(|i| self.content.districts.get(i))
+            .filter(|d| d.id == id)
     }
 
     pub fn tech(&self, id: &str) -> Option<usize> {
-        self.idx(id).filter(|&i| self.content.techs.get(i).is_some_and(|t| t.id == id))
+        self.idx(id)
+            .filter(|&i| self.content.techs.get(i).is_some_and(|t| t.id == id))
     }
 
     pub fn ai_tech(&self, id: &str) -> Option<usize> {
-        self.idx(id).filter(|&i| self.ai_tree.get(i).is_some_and(|t| t.id == id))
+        self.idx(id)
+            .filter(|&i| self.ai_tree.get(i).is_some_and(|t| t.id == id))
     }
 
     pub fn civic(&self, id: &str) -> Option<usize> {
-        self.idx(id).filter(|&i| self.content.civics.get(i).is_some_and(|t| t.id == id))
+        self.idx(id)
+            .filter(|&i| self.content.civics.get(i).is_some_and(|t| t.id == id))
     }
 
     pub fn leader(&self, id: &str) -> Option<&Leader> {
-        self.idx(id).and_then(|i| self.content.leaders.get(i)).filter(|l| l.id == id)
+        self.idx(id)
+            .and_then(|i| self.content.leaders.get(i))
+            .filter(|l| l.id == id)
     }
 
     pub fn civilization(&self, id: &str) -> Option<&Civilization> {
-        self.idx(id).and_then(|i| self.content.civilizations.get(i)).filter(|c| c.id == id)
+        self.idx(id)
+            .and_then(|i| self.content.civilizations.get(i))
+            .filter(|c| c.id == id)
     }
 
     pub fn text(&self, key: &str) -> String {
@@ -112,7 +131,11 @@ impl Rules {
     }
 
     pub fn era_index(&self, era: &str) -> usize {
-        self.content.eras.iter().position(|e| e.id == era).unwrap_or(0)
+        self.content
+            .eras
+            .iter()
+            .position(|e| e.id == era)
+            .unwrap_or(0)
     }
 
     /// The unit a civilization/leader actually builds for `unit` (its unique
@@ -123,7 +146,9 @@ impl Rules {
             .iter()
             .find(|u| {
                 u.replaces.as_deref() == Some(unit)
-                    && u.unique_to.as_deref().is_some_and(|owner| owner == civ || owner == leader)
+                    && u.unique_to
+                        .as_deref()
+                        .is_some_and(|owner| owner == civ || owner == leader)
             })
             .map(|u| u.id.clone())
             .unwrap_or_else(|| unit.to_string())
@@ -136,8 +161,14 @@ impl Rules {
 fn apply_overrides(content: &mut Content) {
     // Not in WayCiv: Teddy Roosevelt's alternate persona (Reagan replaces him)
     // and Gandhi.
-    content.leaders.retain(|l| l.id != "LEADER_T_ROOSEVELT_ROUGHRIDER" && l.id != "LEADER_GANDHI");
-    if let Some(leader) = content.leaders.iter_mut().find(|l| l.id == "LEADER_T_ROOSEVELT") {
+    content
+        .leaders
+        .retain(|l| l.id != "LEADER_T_ROOSEVELT_ROUGHRIDER" && l.id != "LEADER_GANDHI");
+    if let Some(leader) = content
+        .leaders
+        .iter_mut()
+        .find(|l| l.id == "LEADER_T_ROOSEVELT")
+    {
         leader.id = REAGAN.to_string();
         leader.name = "Ronald Reagan".to_string();
         leader.traits = vec![Trait {

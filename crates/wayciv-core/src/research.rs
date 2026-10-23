@@ -48,7 +48,9 @@ impl Game {
     }
 
     pub fn has_ai_tech(&self, player: PlayerId, id: &str) -> bool {
-        self.rules.ai_tech(id).is_some_and(|i| self.players[player].ai_techs[i])
+        self.rules
+            .ai_tech(id)
+            .is_some_and(|i| self.players[player].ai_techs[i])
     }
 
     /// Whether the player has discovered Artificial Intelligence, which
@@ -65,7 +67,10 @@ impl Game {
         let items = self.tree_items(tree);
         !self.known(player, tree, i)
             && items[i].prereqs.iter().all(|id| {
-                items.iter().position(|x| &x.id == id).is_some_and(|j| self.known(player, tree, j))
+                items
+                    .iter()
+                    .position(|x| &x.id == id)
+                    .is_some_and(|j| self.known(player, tree, j))
             })
     }
 
@@ -124,7 +129,9 @@ impl Game {
 
     /// Adds science, culture, or compute to the current research; completes it.
     pub(crate) fn advance(&mut self, player: PlayerId, tree: Tree, amount: f32) {
-        let Some(i) = self.current_research(player, tree) else { return };
+        let Some(i) = self.current_research(player, tree) else {
+            return;
+        };
         let cost = self.research_cost(tree, i);
         let progress = self.progress_mut(player, tree, i);
         *progress += amount.round() as i32;
@@ -133,7 +140,10 @@ impl Game {
             self.complete(player, tree, i);
             // Overflow goes to the next item chosen; keep it on the same tree.
             *self.current_mut(player, tree) = None;
-            if let Some(next) = self.ai_pick_research(player, tree).filter(|_| !self.players[player].human) {
+            if let Some(next) = self
+                .ai_pick_research(player, tree)
+                .filter(|_| !self.players[player].human)
+            {
                 let _ = self.set_research(player, tree, next);
             }
             if let Some(next) = self.current_research(player, tree) {
@@ -160,15 +170,26 @@ impl Game {
         };
         self.notify(player, format!("{what}: {name}."), None);
         if tree == Tree::Tech && self.rules.content.techs[i].id == crate::additions::TECH_AI {
-            self.notify(player, "The AI tree is open. Build Datacenters to produce Compute for it.", None);
+            self.notify(
+                player,
+                "The AI tree is open. Build Datacenters to produce Compute for it.",
+                None,
+            );
         }
         if tree == Tree::Civic {
             // Civics that unlock a government or more policies prompt a review.
             let civic_id = self.rules.content.civics[i].id.clone();
-            if self.rules.content.governments.iter().any(|g| g.prereq_civic.as_deref() == Some(civic_id.as_str())) {
+            if self
+                .rules
+                .content
+                .governments
+                .iter()
+                .any(|g| g.prereq_civic.as_deref() == Some(civic_id.as_str()))
+            {
                 self.notify(player, "A new government is available.", None);
             }
-            self.players[player].envoys_available += i32::from(self.rules.content.civics[i].era != "ERA_ANCIENT" || i.is_multiple_of(2));
+            self.players[player].envoys_available +=
+                i32::from(self.rules.content.civics[i].era != "ERA_ANCIENT" || i.is_multiple_of(2));
         }
         self.check_boosts(player, Trigger::Poll);
     }
@@ -253,21 +274,41 @@ impl Game {
         let cities: Vec<_> = self.player_cities(player).collect();
         match (b.class.as_str(), event) {
             ("BOOST_TRIGGER_TRAIN_UNIT", Trigger::Trained(u)) => is(&b.unit, u, "unit"),
-            ("BOOST_TRIGGER_CONSTRUCT_BUILDING", Trigger::Built(x)) => is(&b.building, x, "building"),
-            ("BOOST_TRIGGER_KILL_WITH", Trigger::Killed { with }) => b.unit.is_none() || is(&b.unit, with, "unit"),
+            ("BOOST_TRIGGER_CONSTRUCT_BUILDING", Trigger::Built(x)) => {
+                is(&b.building, x, "building")
+            }
+            ("BOOST_TRIGGER_KILL_WITH", Trigger::Killed { with }) => {
+                b.unit.is_none() || is(&b.unit, with, "unit")
+            }
             ("BOOST_TRIGGER_MEET_CIV", Trigger::MetCiv) => true,
             ("BOOST_TRIGGER_CLEAR_CAMP", Trigger::ClearedCamp) => true,
-            ("BOOST_TRIGGER_NUM_BARBS_KILLED", _) => self.players[player].barbarians_killed as usize >= count,
-            ("BOOST_TRIGGER_MAINTAIN_X_TRADE_ROUTES", _) => self.trade_routes_of(player).count() >= count,
+            ("BOOST_TRIGGER_NUM_BARBS_KILLED", _) => {
+                self.players[player].barbarians_killed as usize >= count
+            }
+            ("BOOST_TRIGGER_MAINTAIN_X_TRADE_ROUTES", _) => {
+                self.trade_routes_of(player).count() >= count
+            }
             ("BOOST_TRIGGER_CREATE_PANTHEON", Trigger::Pantheon) => true,
             ("BOOST_TRIGGER_FOUND_RELIGION", Trigger::Religion) => true,
             ("BOOST_TRIGGER_SETTLE_COAST", Trigger::SettledCoast) => true,
-            ("BOOST_TRIGGER_RECEIVE_DOW" | "BOOST_TRIGGER_DOW_CASUS_BELLI", Trigger::DeclaredWarOn) => true,
+            (
+                "BOOST_TRIGGER_RECEIVE_DOW" | "BOOST_TRIGGER_DOW_CASUS_BELLI",
+                Trigger::DeclaredWarOn,
+            ) => true,
             ("BOOST_TRIGGER_HAVE_X_BUILDINGS", _) => {
-                cities.iter().filter(|c| c.buildings.iter().any(|&x| is(&b.building, x, "building"))).count() >= count
+                cities
+                    .iter()
+                    .filter(|c| c.buildings.iter().any(|&x| is(&b.building, x, "building")))
+                    .count()
+                    >= count
             }
             ("BOOST_TRIGGER_HAVE_X_DISTRICTS", _) => {
-                cities.iter().flat_map(|c| &c.districts).filter(|d| is(&b.district, d.district, "district")).count() >= count
+                cities
+                    .iter()
+                    .flat_map(|c| &c.districts)
+                    .filter(|d| is(&b.district, d.district, "district"))
+                    .count()
+                    >= count
             }
             ("BOOST_TRIGGER_HAVE_X_UNIQUE_SPECIALTY_DISTRICTS", _) => {
                 let mut kinds: Vec<usize> = cities
@@ -281,36 +322,89 @@ impl Game {
                 kinds.len() >= count
             }
             ("BOOST_TRIGGER_OWN_X_UNITS_OF_TYPE", _) => {
-                self.player_units(player).filter(|u| is(&b.unit, u.kind, "unit")).count() >= count
+                self.player_units(player)
+                    .filter(|u| is(&b.unit, u.kind, "unit"))
+                    .count()
+                    >= count
             }
             ("BOOST_TRIGGER_HAVE_X_LAND_UNITS", _) => {
-                self.player_units(player).filter(|u| self.is_military(u) && self.unit_type(u).domain == "DOMAIN_LAND").count() >= count
+                self.player_units(player)
+                    .filter(|u| self.is_military(u) && self.unit_type(u).domain == "DOMAIN_LAND")
+                    .count()
+                    >= count
             }
-            ("BOOST_TRIGGER_HAVE_X_IMPROVEMENTS" | "BOOST_TRIGGER_IMPROVE_SPECIFIC_RESOURCE" | "BOOST_TRIGGER_HAVE_UNIT_AND_IMPROVEMENT", _) => {
+            (
+                "BOOST_TRIGGER_HAVE_X_IMPROVEMENTS"
+                | "BOOST_TRIGGER_IMPROVE_SPECIFIC_RESOURCE"
+                | "BOOST_TRIGGER_HAVE_UNIT_AND_IMPROVEMENT",
+                _,
+            ) => {
                 self.map
                     .tiles
                     .iter()
-                    .filter(|t| t.owner == Some(player) && t.improvement.is_some_and(|i| b.improvement.as_ref() == Some(&content.improvements[i].id)))
-                    .filter(|t| b.resource.as_ref().is_none_or(|r| t.resource.is_some_and(|x| &content.resources[x].id == r)))
+                    .filter(|t| {
+                        t.owner == Some(player)
+                            && t.improvement.is_some_and(|i| {
+                                b.improvement.as_ref() == Some(&content.improvements[i].id)
+                            })
+                    })
+                    .filter(|t| {
+                        b.resource.as_ref().is_none_or(|r| {
+                            t.resource.is_some_and(|x| &content.resources[x].id == r)
+                        })
+                    })
                     .count()
                     >= count
             }
             ("BOOST_TRIGGER_NUM_IMPROVED_TILES", _) => {
-                self.map.tiles.iter().filter(|t| t.owner == Some(player) && t.improvement.is_some()).count() >= count
+                self.map
+                    .tiles
+                    .iter()
+                    .filter(|t| t.owner == Some(player) && t.improvement.is_some())
+                    .count()
+                    >= count
             }
-            ("BOOST_TRIGGER_CITY_POPULATION", _) => cities.iter().any(|c| c.population as usize >= count),
-            ("BOOST_TRIGGER_EMPIRE_POPULATION", _) => cities.iter().map(|c| c.population as usize).sum::<usize>() >= count,
+            ("BOOST_TRIGGER_CITY_POPULATION", _) => {
+                cities.iter().any(|c| c.population as usize >= count)
+            }
+            ("BOOST_TRIGGER_EMPIRE_POPULATION", _) => {
+                cities.iter().map(|c| c.population as usize).sum::<usize>() >= count
+            }
             ("BOOST_TRIGGER_HAVE_X_WONDERS", _) => {
-                cities.iter().flat_map(|c| &c.buildings).filter(|&&x| content.buildings[x].wonder).count() >= count
+                cities
+                    .iter()
+                    .flat_map(|c| &c.buildings)
+                    .filter(|&&x| content.buildings[x].wonder)
+                    .count()
+                    >= count
             }
             ("BOOST_TRIGGER_MEET_X_CITY_STATES", _) => {
-                self.players[player].relations.iter().enumerate().filter(|(i, r)| r.met && self.players[*i].is_city_state()).count() >= count
+                self.players[player]
+                    .relations
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, r)| r.met && self.players[*i].is_city_state())
+                    .count()
+                    >= count
             }
-            ("BOOST_TRIGGER_RESEARCH_TECH", _) => b.boosting_tech.as_deref().is_some_and(|t| self.players[player].has_tech(rules, t)),
-            ("BOOST_TRIGGER_CULTURVATE_CIVIC", _) => b.boosting_civic.as_deref().is_some_and(|c| self.players[player].has_civic(rules, c)),
-            ("BOOST_TRIGGER_HAVE_X_POLICY_SLOTS", _) => self.policy_slots(player).iter().map(|(_, n)| *n).sum::<i32>() as usize >= count,
+            ("BOOST_TRIGGER_RESEARCH_TECH", _) => b
+                .boosting_tech
+                .as_deref()
+                .is_some_and(|t| self.players[player].has_tech(rules, t)),
+            ("BOOST_TRIGGER_CULTURVATE_CIVIC", _) => b
+                .boosting_civic
+                .as_deref()
+                .is_some_and(|c| self.players[player].has_civic(rules, c)),
+            ("BOOST_TRIGGER_HAVE_X_POLICY_SLOTS", _) => {
+                self.policy_slots(player)
+                    .iter()
+                    .map(|(_, n)| *n)
+                    .sum::<i32>() as usize
+                    >= count
+            }
             ("BOOST_TRIGGER_HAVE_X_GREAT_PEOPLE", _) => {
-                self.great_people_taken.len() >= count && self.player_units(player).any(|u| u.great_person.is_some())
+                self.great_people_taken.len() >= count
+                    && self.player_units(player).any(|u| u.great_person.is_some())
             }
             _ => false,
         }
@@ -330,7 +424,8 @@ impl Game {
             .filter(|&i| self.researchable(player, tree, i))
             .min_by_key(|&i| {
                 let jitter = ((player * 31 + i * 17) % 7) as i32;
-                items[i].cost * 10 - if boosted(i) { items[i].cost * 5 } else { 0 } + jitter * items[i].cost / 4
+                items[i].cost * 10 - if boosted(i) { items[i].cost * 5 } else { 0 }
+                    + jitter * items[i].cost / 4
             })
     }
 
@@ -348,7 +443,13 @@ impl Game {
     pub fn available_governments(&self, player: PlayerId) -> Vec<usize> {
         let p = &self.players[player];
         (0..self.rules.content.governments.len())
-            .filter(|&g| p.meets(&self.rules, None, self.rules.content.governments[g].prereq_civic.as_deref()))
+            .filter(|&g| {
+                p.meets(
+                    &self.rules,
+                    None,
+                    self.rules.content.governments[g].prereq_civic.as_deref(),
+                )
+            })
             .collect()
     }
 
@@ -360,7 +461,17 @@ impl Game {
                 let policy = &content.policies[i];
                 p.meets(&self.rules, None, policy.prereq_civic.as_deref())
                     && !policy.obsoleted_by.as_deref().is_some_and(|o| {
-                        content.policies.iter().position(|x| x.id == o).is_some_and(|j| p.meets(&self.rules, None, content.policies[j].prereq_civic.as_deref()))
+                        content
+                            .policies
+                            .iter()
+                            .position(|x| x.id == o)
+                            .is_some_and(|j| {
+                                p.meets(
+                                    &self.rules,
+                                    None,
+                                    content.policies[j].prereq_civic.as_deref(),
+                                )
+                            })
                     })
             })
             .collect()
@@ -398,13 +509,23 @@ impl Game {
     }
 
     /// Which slot a policy of `kind` fits: its own kind, or a wildcard slot.
-    fn slot_for(&self, kind: &str, slots: &[(String, i32)], used: &[(String, i32)]) -> Option<usize> {
+    fn slot_for(
+        &self,
+        kind: &str,
+        slots: &[(String, i32)],
+        used: &[(String, i32)],
+    ) -> Option<usize> {
         let fits = |slot: &str| slot == kind || slot == "SLOT_WILDCARD";
         slots
             .iter()
             .enumerate()
             .filter(|(_, (slot, _))| slot == kind)
-            .chain(slots.iter().enumerate().filter(|(_, (slot, _))| slot == "SLOT_WILDCARD"))
+            .chain(
+                slots
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, (slot, _))| slot == "SLOT_WILDCARD"),
+            )
             .find(|(i, (slot, n))| fits(slot) && used[*i].1 < *n)
             .map(|(i, _)| i)
     }
@@ -420,11 +541,20 @@ impl Game {
         let content = &self.rules.content;
         let mut used: Vec<(String, i32)> = slots.iter().map(|(s, _)| (s.clone(), 0)).collect();
         for &policy in &policies {
-            let slot = self.slot_for(&content.policies[policy].slot, &slots, &used).ok_or("Not enough policy slots.")?;
+            let slot = self
+                .slot_for(&content.policies[policy].slot, &slots, &used)
+                .ok_or("Not enough policy slots.")?;
             used[slot].1 += 1;
         }
-        let changed = policies.iter().filter(|p| !self.players[player].policies.contains(p)).count() as i32;
-        let cost = if self.players[player].policy_change_free { 0 } else { changed * 25 };
+        let changed = policies
+            .iter()
+            .filter(|p| !self.players[player].policies.contains(p))
+            .count() as i32;
+        let cost = if self.players[player].policy_change_free {
+            0
+        } else {
+            changed * 25
+        };
         if self.players[player].gold < cost {
             return Err(format!("Changing policies now costs {cost} Gold."));
         }

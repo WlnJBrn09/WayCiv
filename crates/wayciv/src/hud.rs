@@ -30,15 +30,23 @@ pub struct Session {
     pub message: Option<(String, std::time::Instant)>,
     pub notifications_seen: usize,
     pub icons: crate::icons::Icons,
+    pub art: crate::render::Art,
 }
 
 impl Session {
     pub fn new(game: Game) -> Self {
         let human = game.human();
-        let start = game.player_units(human).next().map(|u| u.pos).unwrap_or_default();
+        let start = game
+            .player_units(human)
+            .next()
+            .map(|u| u.pos)
+            .unwrap_or_default();
         let mut s = Session {
             game,
-            cam: Camera { center: map_view::world(start), zoom: 34.0 },
+            cam: Camera {
+                center: map_view::world(start),
+                zoom: 34.0,
+            },
             selected_unit: None,
             selected_city: None,
             hover: None,
@@ -51,8 +59,13 @@ impl Session {
             message: None,
             notifications_seen: 0,
             icons: crate::icons::Icons::new(crate::portraits::assets_dir()),
+            art: crate::render::Art::new(crate::portraits::assets_dir()),
         };
-        let first = s.game.player_units(human).find(|u| s.game.unit_type(u).found_city).map(|u| u.id);
+        let first = s
+            .game
+            .player_units(human)
+            .find(|u| s.game.unit_type(u).found_city)
+            .map(|u| u.id);
         s.select_unit(first);
         s
     }
@@ -89,20 +102,31 @@ impl Session {
     }
 
     pub fn refresh_selection(&mut self) {
-        if self.selected_unit.is_some_and(|id| !self.game.units.contains_key(&id)) {
+        if self
+            .selected_unit
+            .is_some_and(|id| !self.game.units.contains_key(&id))
+        {
             self.selected_unit = None;
         }
-        self.reachable = self.selected_unit.and_then(|id| self.game.units.get(&id)).map(|u| self.game.reachable(u)).unwrap_or_default();
+        self.reachable = self
+            .selected_unit
+            .and_then(|id| self.game.units.get(&id))
+            .map(|u| self.game.reachable(u))
+            .unwrap_or_default();
         self.update_path_preview();
     }
 
     pub fn update_path_preview(&mut self) {
         self.path_preview.clear();
-        if let (Some(unit), Some(goal)) = (self.selected_unit.and_then(|id| self.game.units.get(&id)), self.hover)
-            && unit.owner == self.me() && goal != unit.pos
-                && let Some(path) = self.game.find_path(unit, goal) {
-                    self.path_preview = path;
-                }
+        if let (Some(unit), Some(goal)) = (
+            self.selected_unit.and_then(|id| self.game.units.get(&id)),
+            self.hover,
+        ) && unit.owner == self.me()
+            && goal != unit.pos
+            && let Some(path) = self.game.find_path(unit, goal)
+        {
+            self.path_preview = path;
+        }
     }
 
     pub fn left_click(&mut self, pos: Pos) {
@@ -128,15 +152,33 @@ impl Session {
             self.city_targeting = false;
             return;
         }
-        if let Some(city) = self.game.city_at(pos).filter(|c| c.owner == me).map(|c| c.id) {
+        if let Some(city) = self
+            .game
+            .city_at(pos)
+            .filter(|c| c.owner == me)
+            .map(|c| c.id)
+        {
             // Clicking an own city again (or a city with no own units) opens it.
-            let units: Vec<UnitId> = self.game.units_at(pos).filter(|u| u.owner == me).map(|u| u.id).collect();
-            if units.is_empty() || self.selected_city.is_none() && self.selected_unit.is_some_and(|u| units.contains(&u)) {
+            let units: Vec<UnitId> = self
+                .game
+                .units_at(pos)
+                .filter(|u| u.owner == me)
+                .map(|u| u.id)
+                .collect();
+            if units.is_empty()
+                || self.selected_city.is_none()
+                    && self.selected_unit.is_some_and(|u| units.contains(&u))
+            {
                 self.select_city(Some(city));
                 return;
             }
         }
-        let mut units: Vec<UnitId> = self.game.units_at(pos).filter(|u| u.owner == me).map(|u| u.id).collect();
+        let mut units: Vec<UnitId> = self
+            .game
+            .units_at(pos)
+            .filter(|u| u.owner == me)
+            .map(|u| u.id)
+            .collect();
         units.sort();
         if units.is_empty() {
             if let Some(city) = self.game.city_at(pos).map(|c| c.id) {
@@ -149,7 +191,10 @@ impl Session {
             }
             return;
         }
-        let next = match self.selected_unit.and_then(|s| units.iter().position(|&u| u == s)) {
+        let next = match self
+            .selected_unit
+            .and_then(|s| units.iter().position(|&u| u == s))
+        {
             Some(i) => units[(i + 1) % units.len()],
             None => units[0],
         };
@@ -158,7 +203,9 @@ impl Session {
 
     pub fn right_click(&mut self, pos: Pos) {
         self.placing = None;
-        let Some(unit) = self.selected_unit else { return };
+        let Some(unit) = self.selected_unit else {
+            return;
+        };
         let r = self.game.move_unit(unit, pos);
         self.result(r);
         self.refresh_selection();
@@ -171,9 +218,18 @@ impl Session {
             .game
             .blockers(me)
             .into_iter()
-            .filter_map(|b| if let Blocker::UnitNeedsOrders(u) = b { Some(u) } else { None })
+            .filter_map(|b| {
+                if let Blocker::UnitNeedsOrders(u) = b {
+                    Some(u)
+                } else {
+                    None
+                }
+            })
             .collect();
-        let next = match self.selected_unit.and_then(|s| waiting.iter().position(|&u| u == s)) {
+        let next = match self
+            .selected_unit
+            .and_then(|s| waiting.iter().position(|&u| u == s))
+        {
             Some(i) => waiting.get(i + 1).or(waiting.first()).copied(),
             None => waiting.first().copied(),
         };
@@ -229,7 +285,11 @@ fn year(turn: u32) -> String {
             _ => 1,
         };
     }
-    if y < 0 { format!("{} BC", -y) } else { format!("{y} AD") }
+    if y < 0 {
+        format!("{} BC", -y)
+    } else {
+        format!("{y} AD")
+    }
 }
 
 pub fn tile_tooltip(s: &Session, pos: Pos) -> String {
@@ -239,7 +299,13 @@ pub fn tile_tooltip(s: &Session, pos: Pos) -> String {
     let tile = game.map.tile(pos);
     let terrain = &content.terrains[tile.terrain];
     let mut lines = vec![];
-    let relief = if terrain.mountain { " (Mountains)" } else if terrain.hills { " (Hills)" } else { "" };
+    let relief = if terrain.mountain {
+        " (Mountains)"
+    } else if terrain.hills {
+        " (Hills)"
+    } else {
+        ""
+    };
     lines.push(format!("{}{relief}", palette::biome_name(&terrain.id)));
     if let Some(f) = tile.feature {
         lines.push(content.features[f].name.clone());
@@ -253,12 +319,19 @@ pub fn tile_tooltip(s: &Session, pos: Pos) -> String {
     if let Some(r) = tile.resource {
         let res = &content.resources[r];
         if game.players[me].meets(&game.rules, res.prereq_tech.as_deref(), None) {
-            let class = res.class.trim_start_matches("RESOURCECLASS_").to_lowercase();
+            let class = res
+                .class
+                .trim_start_matches("RESOURCECLASS_")
+                .to_lowercase();
             lines.push(format!("{} ({class} resource)", res.name));
         }
     }
     if let Some(i) = tile.improvement {
-        lines.push(format!("{}{}", content.improvements[i].name, if tile.pillaged { " (pillaged)" } else { "" }));
+        lines.push(format!(
+            "{}{}",
+            content.improvements[i].name,
+            if tile.pillaged { " (pillaged)" } else { "" }
+        ));
     }
     if let Some(d) = tile.district.filter(|&d| !content.districts[d].city_center) {
         lines.push(content.districts[d].name.clone());
@@ -267,75 +340,119 @@ pub fn tile_tooltip(s: &Session, pos: Pos) -> String {
         lines.push(content.buildings[w].name.clone());
     }
     let y = game.tile_yields(me, pos);
-    let yields: Vec<String> = (0..6).filter(|&i| y[i] != 0).map(|i| format!("{} {}", y[i], YIELD_NAMES[i])).collect();
+    let yields: Vec<String> = (0..6)
+        .filter(|&i| y[i] != 0)
+        .map(|i| format!("{} {}", y[i], YIELD_NAMES[i]))
+        .collect();
     if !yields.is_empty() {
         lines.push(yields.join(", "));
     }
     if let Some(owner) = tile.owner {
-        let city = tile.owning_city.and_then(|c| game.cities.get(&c)).map(|c| c.name.clone()).unwrap_or_default();
-        lines.push(format!("Territory of {} ({city})", game.players[owner].civ_name));
+        let city = tile
+            .owning_city
+            .and_then(|c| game.cities.get(&c))
+            .map(|c| c.name.clone())
+            .unwrap_or_default();
+        lines.push(format!(
+            "Territory of {} ({city})",
+            game.players[owner].civ_name
+        ));
     }
     if game.players[me].visible[game.map.grid.index(pos)] {
         for u in game.units_at(pos) {
             let ty = game.unit_type(u);
             if game.is_military(u) {
-                let strength = if ty.ranged_combat > 0 { format!("{} / ranged {}", ty.combat, ty.ranged_combat) } else { ty.combat.to_string() };
-                lines.push(format!("{} {} - strength {strength}, {} HP", game.players[u.owner].civ_name, ty.name, u.hp));
+                let strength = if ty.ranged_combat > 0 {
+                    format!("{} / ranged {}", ty.combat, ty.ranged_combat)
+                } else {
+                    ty.combat.to_string()
+                };
+                lines.push(format!(
+                    "{} {} - strength {strength}, {} HP",
+                    game.players[u.owner].civ_name, ty.name, u.hp
+                ));
             } else {
-                lines.push(format!("{} {} (civilian: one attack kills it)", game.players[u.owner].civ_name, ty.name));
+                lines.push(format!(
+                    "{} {} (civilian: one attack kills it)",
+                    game.players[u.owner].civ_name, ty.name
+                ));
             }
         }
     }
     if let Some(unit) = s.selected_unit
-        && game.units.get(&unit).is_some_and(|u| game.can_attack(u, pos))
-            && let Some(p) = game.preview(unit, pos) {
-                lines.push(format!("Attack: {} vs {}. Expected damage dealt {}, taken {}.", p.attack, p.defense, p.damage_to_defender, p.damage_to_attacker));
-            }
+        && game
+            .units
+            .get(&unit)
+            .is_some_and(|u| game.can_attack(u, pos))
+        && let Some(p) = game.preview(unit, pos)
+    {
+        lines.push(format!(
+            "Attack: {} vs {}. Expected damage dealt {}, taken {}.",
+            p.attack, p.defense, p.damage_to_defender, p.damage_to_attacker
+        ));
+    }
     lines.join("\n")
 }
 
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let ctx = ui.ctx().clone();
-    let crate::Stage::Playing(session) = &mut app.stage else { return };
+    let crate::Stage::Playing(session) = &mut app.stage else {
+        return;
+    };
     let s: &mut super::hud::Session = session;
     let me = s.me();
 
     // Pop-ups queued by the engine (first meetings, declarations of war...).
-    if s.popup.is_none()
-        && !s.game.popups.is_empty() {
-            s.popup = Some(s.game.popups.remove(0));
-        }
+    if s.popup.is_none() && !s.game.popups.is_empty() {
+        s.popup = Some(s.game.popups.remove(0));
+    }
 
     shortcuts(s, &ctx);
     top_bar(s, &mut app.portraits, ui);
-    egui::Panel::bottom("bottom_bar").exact_size(150.0).frame(egui::Frame::new().fill(PANEL).inner_margin(8)).show(ui, |ui| {
-        ui.horizontal(|ui| {
-            ui.vertical(|ui| {
-                ui.set_width((ui.available_width() - 330.0).max(300.0));
-                if s.selected_city.is_some() {
-                    city_summary(s, ui);
-                } else {
-                    unit_panel(s, ui);
-                }
+    egui::Panel::bottom("bottom_bar")
+        .exact_size(150.0)
+        .frame(egui::Frame::new().fill(PANEL).inner_margin(8))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    ui.set_width((ui.available_width() - 330.0).max(300.0));
+                    if s.selected_city.is_some() {
+                        city_summary(s, ui);
+                    } else {
+                        unit_panel(s, ui);
+                    }
+                });
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    end_turn_button(s, ui)
+                });
             });
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| end_turn_button(s, ui));
         });
-    });
     if s.selected_city.is_some() {
-        egui::Panel::left("city_panel").exact_size(360.0).frame(egui::Frame::new().fill(PANEL).inner_margin(8)).show(ui, |ui| city_panel(s, ui));
+        egui::Panel::left("city_panel")
+            .exact_size(360.0)
+            .frame(egui::Frame::new().fill(PANEL).inner_margin(8))
+            .show(ui, |ui| city_panel(s, ui));
     }
-    egui::Panel::right("notifications").exact_size(250.0).frame(egui::Frame::new().fill(PANEL).inner_margin(8)).show(ui, |ui| notifications(s, ui));
-    egui::CentralPanel::default().frame(egui::Frame::NONE).show(ui, |ui| {
-        map_view::show(s, ui);
-        legend(s, ui);
-    });
+    egui::Panel::right("notifications")
+        .exact_size(250.0)
+        .frame(egui::Frame::new().fill(PANEL).inner_margin(8))
+        .show(ui, |ui| notifications(s, ui));
+    egui::CentralPanel::default()
+        .frame(egui::Frame::NONE)
+        .show(ui, |ui| {
+            map_view::show(s, ui);
+            legend(s, ui);
+        });
 
     screens::windows(s, &mut app.portraits, &ctx);
     if let Some((text, at)) = &s.message {
         if at.elapsed().as_secs_f32() < 3.0 {
-            egui::Area::new(egui::Id::unique("toast")).anchor(Align2::CENTER_TOP, vec2(0.0, 90.0)).show(&ctx, |ui| {
-                egui::Frame::popup(ui.style()).show(ui, |ui| ui.label(RichText::new(text).size(16.0)));
-            });
+            egui::Area::new(egui::Id::unique("toast"))
+                .anchor(Align2::CENTER_TOP, vec2(0.0, 90.0))
+                .show(&ctx, |ui| {
+                    egui::Frame::popup(ui.style())
+                        .show(ui, |ui| ui.label(RichText::new(text).size(16.0)));
+                });
             ctx.request_repaint();
         } else {
             s.message = None;
@@ -486,9 +603,15 @@ fn end_turn_button(s: &mut Session, ui: &mut egui::Ui) {
     ui.vertical(|ui| {
         if let Some((winner, victory)) = &s.game.winner {
             let name = s.game.players[*winner].civ_name.clone();
-            ui.label(RichText::new(format!("{name} won a {victory:?} victory!")).color(GOLD).size(18.0));
+            ui.label(
+                RichText::new(format!("{name} won a {victory:?} victory!"))
+                    .color(GOLD)
+                    .size(18.0),
+            );
         }
-        let button = egui::Button::new(RichText::new(text).size(22.0).strong()).fill(color).min_size(vec2(300.0, 70.0));
+        let button = egui::Button::new(RichText::new(text).size(22.0).strong())
+            .fill(color)
+            .min_size(vec2(300.0, 70.0));
         if ui.add(button).on_hover_text("Enter").clicked() {
             s.end_turn_clicked();
         }
@@ -496,8 +619,15 @@ fn end_turn_button(s: &mut Session, ui: &mut egui::Ui) {
             if ui.button("Next Unit").clicked() {
                 s.next_unit();
             }
-            if !blockers.is_empty() && ui.button("End Turn Anyway").on_hover_text("Skips remaining unit orders").clicked() {
-                let only_units = blockers.iter().all(|b| matches!(b, Blocker::UnitNeedsOrders(_)));
+            if !blockers.is_empty()
+                && ui
+                    .button("End Turn Anyway")
+                    .on_hover_text("Skips remaining unit orders")
+                    .clicked()
+            {
+                let only_units = blockers
+                    .iter()
+                    .all(|b| matches!(b, Blocker::UnitNeedsOrders(_)));
                 if only_units {
                     s.end_turn();
                 } else {
@@ -513,21 +643,37 @@ fn unit_panel(s: &mut Session, ui: &mut egui::Ui) {
         ui.label(RichText::new("Left-click a unit or city to select it. Right-click to move or attack. Drag or WASD to scroll; mouse wheel to zoom.").color(Color32::from_gray(170)));
         return;
     };
-    let Some(unit) = s.game.units.get(&id).cloned() else { return };
+    let Some(unit) = s.game.units.get(&id).cloned() else {
+        return;
+    };
     let ty = s.game.unit_type(&unit).clone();
     let owner = &s.game.players[unit.owner];
     ui.horizontal(|ui| {
         let (swatch, _) = ui.allocate_exact_size(vec2(16.0, 16.0), Sense::hover());
         ui.painter().rect_filled(swatch, 3.0, rgb(owner.primary));
-        ui.painter().rect_stroke(swatch, 3.0, egui::Stroke::new(1.5, rgb(owner.secondary)), egui::StrokeKind::Inside);
-        ui.label(RichText::new(&ty.name).size(20.0).strong().color(Color32::WHITE));
+        ui.painter().rect_stroke(
+            swatch,
+            3.0,
+            egui::Stroke::new(1.5, rgb(owner.secondary)),
+            egui::StrokeKind::Inside,
+        );
+        ui.label(
+            RichText::new(&ty.name)
+                .size(20.0)
+                .strong()
+                .color(Color32::WHITE),
+        );
         ui.label(RichText::new(format!("({})", owner.civ_name)).color(Color32::from_gray(160)));
         if let Some(gp) = unit.great_person {
             ui.label(RichText::new(&s.game.rules.content.great_people[gp].name).color(GOLD));
         }
     });
     // Civilians have no health: they are alive or dead.
-    let health = if s.game.is_military(&unit) { format!("   HP {}/100", unit.hp) } else { "   Civilian".to_string() };
+    let health = if s.game.is_military(&unit) {
+        format!("   HP {}/100", unit.hp)
+    } else {
+        "   Civilian".to_string()
+    };
     let mut stats = format!("Moves {}/{}{health}", unit.moves, ty.moves);
     if ty.combat > 0 {
         stats += &format!("   Strength {}", ty.combat);
@@ -549,7 +695,10 @@ fn unit_panel(s: &mut Session, ui: &mut egui::Ui) {
         ui.label(RichText::new(format!("Operation range {}. Right-click a target in range to strike, or another Aerodrome to rebase.", ty.range)).italics());
     }
     if ty.make_trade_route && s.game.trade_destinations(id).is_empty() {
-        ui.label(RichText::new("Move this Trader into one of your cities to start a trade route.").italics());
+        ui.label(
+            RichText::new("Move this Trader into one of your cities to start a trade route.")
+                .italics(),
+        );
     }
     if unit.owner != s.me() {
         return;
@@ -561,7 +710,13 @@ fn unit_panel(s: &mut Session, ui: &mut egui::Ui) {
                 let r = s.game.perform(id, &action);
                 s.result(r);
                 s.refresh_selection();
-                if !s.game.units.contains_key(&id) || matches!(action, wayciv_core::actions::UnitAction::Skip | wayciv_core::actions::UnitAction::Fortify) {
+                if !s.game.units.contains_key(&id)
+                    || matches!(
+                        action,
+                        wayciv_core::actions::UnitAction::Skip
+                            | wayciv_core::actions::UnitAction::Fortify
+                    )
+                {
                     s.next_unit();
                 }
             }
@@ -573,10 +728,17 @@ fn city_summary(s: &mut Session, ui: &mut egui::Ui) {
     let Some(id) = s.selected_city else { return };
     let report = s.game.city_report(id);
     let c = &s.game.cities[&id];
-    ui.label(RichText::new(format!("{} (population {})", c.name, c.population)).size(20.0).strong());
+    ui.label(
+        RichText::new(format!("{} (population {})", c.name, c.population))
+            .size(20.0)
+            .strong(),
+    );
     ui.horizontal(|ui| {
         for i in 0..6 {
-            ui.label(RichText::new(format!("{} {:.1}", YIELD_NAMES[i], report.yields[i])).color(YIELD_COLORS[i]));
+            ui.label(
+                RichText::new(format!("{} {:.1}", YIELD_NAMES[i], report.yields[i]))
+                    .color(YIELD_COLORS[i]),
+            );
         }
     });
     if s.placing.is_some() {
@@ -606,24 +768,62 @@ fn city_panel(s: &mut Session, ui: &mut egui::Ui) {
         return;
     }
     let surplus = report.yields[0] - report.food_consumed;
-    let grow = report.turns_to_grow.map(|t| format!("grows in {t} turns")).unwrap_or_else(|| if surplus < 0.0 { "starving!".into() } else { "not growing".into() });
-    ui.label(format!("Population {} - food {}/{} ({surplus:+.1}), {grow}", c.population, c.food, report.growth_threshold));
-    ui.label(format!("Housing {}   Amenities {}/{}   HP {}/200   Walls {}", report.housing, report.amenities, report.amenities_needed, c.hp, c.wall_hp));
+    let grow = report
+        .turns_to_grow
+        .map(|t| format!("grows in {t} turns"))
+        .unwrap_or_else(|| {
+            if surplus < 0.0 {
+                "starving!".into()
+            } else {
+                "not growing".into()
+            }
+        });
+    ui.label(format!(
+        "Population {} - food {}/{} ({surplus:+.1}), {grow}",
+        c.population, c.food, report.growth_threshold
+    ));
+    ui.label(format!(
+        "Housing {}   Amenities {}/{}   HP {}/200   Walls {}",
+        report.housing, report.amenities, report.amenities_needed, c.hp, c.wall_hp
+    ));
     if s.game.loyalty_applies(id) {
         let loyalty = s.game.loyalty_report(id);
-        let breakdown: Vec<String> = loyalty.lines.iter().map(|(name, v)| format!("{name}: {v:+}")).collect();
-        let color = if c.loyalty > 50 { Color32::from_rgb(190, 150, 240) } else if c.loyalty > 25 { GOLD } else { Color32::from_rgb(240, 90, 80) };
-        ui.label(RichText::new(format!("Loyalty {}/100 ({:+}/turn)", c.loyalty, loyalty.per_turn)).color(color)).on_hover_text(format!(
+        let breakdown: Vec<String> = loyalty
+            .lines
+            .iter()
+            .map(|(name, v)| format!("{name}: {v:+}"))
+            .collect();
+        let color = if c.loyalty > 50 {
+            Color32::from_rgb(190, 150, 240)
+        } else if c.loyalty > 25 {
+            GOLD
+        } else {
+            Color32::from_rgb(240, 90, 80)
+        };
+        ui.label(
+            RichText::new(format!(
+                "Loyalty {}/100 ({:+}/turn)",
+                c.loyalty, loyalty.per_turn
+            ))
+            .color(color),
+        )
+        .on_hover_text(format!(
             "At 0 the city joins the civilization pulling on it hardest.\n{}",
             breakdown.join("\n")
         ));
     }
     let compute = s.game.city_compute(&c);
     if compute > 0.0 {
-        ui.label(RichText::new(format!("Datacenter: +{compute:.0} Compute")).color(crate::palette::COMPUTE));
+        ui.label(
+            RichText::new(format!("Datacenter: +{compute:.0} Compute"))
+                .color(crate::palette::COMPUTE),
+        );
     }
     if let Some(r) = c.majority_religion() {
-        ui.label(format!("Religion: {}", s.game.rules.content.religions[r].name));
+        ui.label(format!(
+            "Religion: {}",
+            s.game.rules.content.religions[r].name
+        ));
     }
     if s.game.max_walls(id) > 0 && !c.has_attacked && ui.button("City Ranged Attack").clicked() {
         s.city_targeting = true;
@@ -631,16 +831,35 @@ fn city_panel(s: &mut Session, ui: &mut egui::Ui) {
     ui.separator();
     if let Some(item) = &c.production {
         let cost = s.game.production_cost(me, item);
-        let done = c.progress.get(&Game::production_key(item)).copied().unwrap_or(0);
+        let done = c
+            .progress
+            .get(&Game::production_key(item))
+            .copied()
+            .unwrap_or(0);
         let rate = s.game.production_toward(id, item).max(0.1);
-        ui.label(RichText::new(format!("Producing: {} ({}/{}, {} turns)", s.game.item_name(item), done, cost, ((cost - done) as f32 / rate).ceil())).color(YIELD_COLORS[1]).strong());
+        ui.label(
+            RichText::new(format!(
+                "Producing: {} ({}/{}, {} turns)",
+                s.game.item_name(item),
+                done,
+                cost,
+                ((cost - done) as f32 / rate).ceil()
+            ))
+            .color(YIELD_COLORS[1])
+            .strong(),
+        );
         if let Some(price) = s.game.purchase_cost(id, item)
-            && ui.button(format!("Buy now for {price} Gold")).clicked() {
-                let r = s.game.purchase(id, item.clone());
-                s.result(r);
-            }
+            && ui.button(format!("Buy now for {price} Gold")).clicked()
+        {
+            let r = s.game.purchase(id, item.clone());
+            s.result(r);
+        }
     } else {
-        ui.label(RichText::new("Choose what to produce:").color(GOLD).strong());
+        ui.label(
+            RichText::new("Choose what to produce:")
+                .color(GOLD)
+                .strong(),
+        );
     }
     egui::ScrollArea::vertical().show(ui, |ui| {
         let options = s.game.available_production(id);
@@ -669,7 +888,11 @@ fn city_panel(s: &mut Session, ui: &mut egui::Ui) {
             for item in items {
                 let cost = s.game.production_cost(me, item);
                 let rate = s.game.production_toward(id, item).max(0.1);
-                let done = c.progress.get(&Game::production_key(item)).copied().unwrap_or(0);
+                let done = c
+                    .progress
+                    .get(&Game::production_key(item))
+                    .copied()
+                    .unwrap_or(0);
                 let turns = ((cost - done).max(0) as f32 / rate).ceil();
                 let name = s.game.item_name(item);
                 let price = s.game.purchase_cost(id, item);
@@ -687,7 +910,10 @@ fn city_panel(s: &mut Session, ui: &mut egui::Ui) {
                     })
                     .inner;
                 let tip = match price {
-                    Some(p) => format!("{}\n\nRight-click to buy now for {p} Gold.", item_tooltip(&s.game, item)),
+                    Some(p) => format!(
+                        "{}\n\nRight-click to buy now for {p} Gold.",
+                        item_tooltip(&s.game, item)
+                    ),
                     None => item_tooltip(&s.game, item),
                 };
                 let response = response.on_hover_text(tip);
@@ -713,24 +939,52 @@ fn city_panel(s: &mut Session, ui: &mut egui::Ui) {
         }
         let faith_units = s.game.faith_units(id);
         if !faith_units.is_empty() {
-            ui.label(RichText::new("Buy with Faith").strong().color(YIELD_COLORS[5]));
+            ui.label(
+                RichText::new("Buy with Faith")
+                    .strong()
+                    .color(YIELD_COLORS[5]),
+            );
             for unit in faith_units {
                 let cost = s.game.faith_cost(unit);
-                if ui.button(format!("{} - {cost} Faith", s.game.rules.content.units[unit].name)).clicked() {
+                if ui
+                    .button(format!(
+                        "{} - {cost} Faith",
+                        s.game.rules.content.units[unit].name
+                    ))
+                    .clicked()
+                {
                     let r = s.game.buy_with_faith(id, unit);
                     s.result(r);
                 }
             }
         }
-        let routes: Vec<_> = s.game.trade_routes.iter().filter(|r| r.origin == id).cloned().collect();
+        let routes: Vec<_> = s
+            .game
+            .trade_routes
+            .iter()
+            .filter(|r| r.origin == id)
+            .cloned()
+            .collect();
         if !routes.is_empty() {
             ui.separator();
             ui.label(RichText::new("Trade routes").strong());
             for r in routes {
                 let y = s.game.route_yields(r.owner, r.destination);
-                let parts: Vec<String> = (0..6).filter(|&i| y[i] > 0.0).map(|i| format!("+{:.0} {}", y[i], YIELD_NAMES[i])).collect();
-                let dest = s.game.cities.get(&r.destination).map(|c| c.name.clone()).unwrap_or_default();
-                ui.label(format!("  to {dest}: {} ({} turns left)", parts.join(", "), r.turns_left));
+                let parts: Vec<String> = (0..6)
+                    .filter(|&i| y[i] > 0.0)
+                    .map(|i| format!("+{:.0} {}", y[i], YIELD_NAMES[i]))
+                    .collect();
+                let dest = s
+                    .game
+                    .cities
+                    .get(&r.destination)
+                    .map(|c| c.name.clone())
+                    .unwrap_or_default();
+                ui.label(format!(
+                    "  to {dest}: {} ({} turns left)",
+                    parts.join(", "),
+                    r.turns_left
+                ));
             }
         }
         ui.separator();
@@ -752,11 +1006,17 @@ fn item_tooltip(game: &Game, item: &Production) -> String {
     match item {
         Production::Unit(i) => {
             let u = &content.units[*i];
-            format!("{}\nStrength {}  Ranged {}  Moves {}\n{}", u.name, u.combat, u.ranged_combat, u.moves, u.description)
+            format!(
+                "{}\nStrength {}  Ranged {}  Moves {}\n{}",
+                u.name, u.combat, u.ranged_combat, u.moves, u.description
+            )
         }
         Production::Building(i) | Production::Wonder(i, _) => {
             let b = &content.buildings[*i];
-            let y: Vec<String> = (0..6).filter(|&k| b.yields[k] != 0).map(|k| format!("+{} {}", b.yields[k], YIELD_NAMES[k])).collect();
+            let y: Vec<String> = (0..6)
+                .filter(|&k| b.yields[k] != 0)
+                .map(|k| format!("+{} {}", b.yields[k], YIELD_NAMES[k]))
+                .collect();
             format!("{}\n{}\n{}", b.name, y.join(", "), b.description)
         }
         Production::District(i, _) => {
@@ -774,21 +1034,49 @@ fn notifications(s: &mut Session, ui: &mut egui::Ui) {
     let me = s.me();
     ui.label(RichText::new("Notifications").strong().color(GOLD));
     egui::ScrollArea::vertical().show(ui, |ui| {
-        let items: Vec<_> = s.game.notifications.iter().rev().filter(|n| n.player == me).take(40).cloned().collect();
+        let items: Vec<_> = s
+            .game
+            .notifications
+            .iter()
+            .rev()
+            .filter(|n| n.player == me)
+            .take(40)
+            .cloned()
+            .collect();
         for n in items {
             let current = n.turn + 1 >= s.game.turn;
-            let text = RichText::new(format!("T{}: {}", n.turn, n.text)).color(if current { Color32::WHITE } else { Color32::from_gray(140) });
+            let text = RichText::new(format!("T{}: {}", n.turn, n.text)).color(if current {
+                Color32::WHITE
+            } else {
+                Color32::from_gray(140)
+            });
             let response = ui.add(egui::Label::new(text).sense(Sense::click()));
             if let Some(pos) = n.pos
-                && response.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
-                    map_view::center_on(s, pos);
-                }
+                && response
+                    .on_hover_cursor(egui::CursorIcon::PointingHand)
+                    .clicked()
+            {
+                map_view::center_on(s, pos);
+            }
         }
     });
 }
 
 fn legend(s: &mut Session, ui: &mut egui::Ui) {
     let rect = ui.max_rect();
+    let art = std::cell::RefCell::new(std::mem::replace(
+        &mut s.art,
+        crate::render::Art::new(Default::default()),
+    ));
+    let swatch = |p: &egui::Painter, r: egui::Rect, terrain: &str, feature: Option<&str>| {
+        crate::render::terrain::legend_swatch(
+            &mut art.borrow_mut().terrain,
+            p,
+            terrain,
+            feature,
+            r,
+        );
+    };
     egui::Area::new(egui::Id::unique("legend")).fixed_pos(rect.left_bottom() + vec2(8.0, -8.0)).pivot(Align2::LEFT_BOTTOM).show(ui.ctx(), |ui| {
         egui::Frame::new().fill(palette::with_alpha(PANEL_LIGHT, 230)).corner_radius(6.0).inner_margin(6).show(ui, |ui| {
             if ui.small_button(if s.windows.legend { "Hide map key" } else { "Map key" }).clicked() {
@@ -809,20 +1097,17 @@ fn legend(s: &mut Session, ui: &mut egui::Ui) {
                         }
                     };
                     for (id, name) in palette::LEGEND {
-                        cell(ui, &|p, r| { p.rect_filled(r, 3.0, palette::biome(id)); }, name);
+                        cell(ui, &|p, r| swatch(p, r, id, None), name);
                     }
                     for (feature, terrain, name) in palette::LEGEND_FEATURES {
-                        cell(ui, &|p, r| {
-                            p.rect_filled(r, 3.0, palette::biome(terrain));
-                            map_view::draw_feature(p, r.center(), 10.0, feature, false, None);
-                        }, name);
+                        cell(ui, &|p, r| swatch(p, r, terrain, Some(feature)), name);
                     }
                     cell(ui, &|p, r| {
-                        p.rect_filled(r, 3.0, palette::biome("TERRAIN_GRASS"));
+                        swatch(p, r, "TERRAIN_GRASS", None);
                         p.line_segment([r.left_bottom() + vec2(2.0, -3.0), r.right_bottom() + vec2(-2.0, -3.0)], egui::Stroke::new(3.0, Color32::from_rgb(92, 78, 66)));
                     }, "Cliffs");
                     cell(ui, &|p, r| {
-                        p.rect_filled(r, 3.0, palette::biome("TERRAIN_PLAINS"));
+                        swatch(p, r, "TERRAIN_PLAINS", None);
                         p.line_segment([r.left_center(), r.right_center()], egui::Stroke::new(2.5, Color32::from_rgb(60, 130, 220)));
                     }, "River");
                 });
@@ -834,6 +1119,7 @@ fn legend(s: &mut Session, ui: &mut egui::Ui) {
             }
         });
     });
+    s.art = art.into_inner();
 }
 
 impl Session {
@@ -846,7 +1132,8 @@ impl Session {
             Tree::Ai => self.game.compute(me),
         }
         .max(0.1);
-        let left = (self.game.research_cost(tree, i) - self.game.progress(me, tree, i)).max(0) as f32;
+        let left =
+            (self.game.research_cost(tree, i) - self.game.progress(me, tree, i)).max(0) as f32;
         format!("{}t", (left / rate).ceil())
     }
 }
@@ -858,7 +1145,13 @@ mod tests {
 
     fn session() -> Option<Session> {
         let rules = wayciv_core::load_rules().ok()?;
-        let game = wayciv_core::new_game(rules, wayciv_core::Settings { seed: 3, ..Default::default() });
+        let game = wayciv_core::new_game(
+            rules,
+            wayciv_core::Settings {
+                seed: 3,
+                ..Default::default()
+            },
+        );
         Some(Session::new(game))
     }
 
@@ -880,10 +1173,17 @@ mod tests {
         assert!(blockers.contains(&Blocker::ChooseResearch));
         assert!(blockers.contains(&Blocker::ChooseProduction(city)));
         s.end_turn_clicked();
-        assert!(s.windows.tech, "End Turn opens the tech tree when research is unset");
-        let tech = (0..s.game.rules.content.techs.len()).find(|&i| s.game.researchable(me, Tree::Tech, i)).unwrap();
+        assert!(
+            s.windows.tech,
+            "End Turn opens the tech tree when research is unset"
+        );
+        let tech = (0..s.game.rules.content.techs.len())
+            .find(|&i| s.game.researchable(me, Tree::Tech, i))
+            .unwrap();
         s.game.set_research(me, Tree::Tech, tech).unwrap();
-        let civic = (0..s.game.rules.content.civics.len()).find(|&i| s.game.researchable(me, Tree::Civic, i)).unwrap();
+        let civic = (0..s.game.rules.content.civics.len())
+            .find(|&i| s.game.researchable(me, Tree::Civic, i))
+            .unwrap();
         s.game.set_research(me, Tree::Civic, civic).unwrap();
 
         // Clicking the city tile selects it; choose a Warrior.
@@ -895,7 +1195,12 @@ mod tests {
         s.game.set_production(city, warrior).unwrap();
 
         // Right-click moves the starting warrior one tile.
-        let warrior_unit = s.game.player_units(me).find(|u| s.game.is_military(u)).map(|u| u.id).unwrap();
+        let warrior_unit = s
+            .game
+            .player_units(me)
+            .find(|u| s.game.is_military(u))
+            .map(|u| u.id)
+            .unwrap();
         s.select_unit(Some(warrior_unit));
         let target = *s.reachable.first().expect("warrior can move");
         s.right_click(target);
@@ -903,10 +1208,17 @@ mod tests {
 
         // Fortify, then End Turn advances the game.
         s.game.fortify(warrior_unit);
-        assert!(s.game.blockers(me).is_empty(), "no blockers left: {:?}", s.game.blockers(me));
+        assert!(
+            s.game.blockers(me).is_empty(),
+            "no blockers left: {:?}",
+            s.game.blockers(me)
+        );
         let turn = s.game.turn;
         s.end_turn_clicked();
         assert_eq!(s.game.turn, turn + 1);
-        assert!(s.game.cities[&city].progress.values().any(|&p| p > 0), "production progressed");
+        assert!(
+            s.game.cities[&city].progress.values().any(|&p| p > 0),
+            "production progressed"
+        );
     }
 }
