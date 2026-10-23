@@ -477,15 +477,15 @@ def _setup_lights(sc, mask):
     so = bpy.data.objects.new("sun", sun)
     sc.collection.objects.link(so)
     # light from the upper left (north-west), a bit toward the viewer's side
-    dirv = Vector((0.55, -0.45, -0.9)).normalized()
+    dirv = Vector((0.7, 0.15, -0.8)).normalized()
     so.rotation_euler = dirv.to_track_quat('-Z', 'Y').to_euler()
     fill = bpy.data.lights.new("fill", 'SUN')
-    fill.energy = 0.45
+    fill.energy = 1.0
     fill.angle = math.radians(40)
     fill.color = (0.75, 0.82, 1.0)
     fo = bpy.data.objects.new("fill", fill)
     sc.collection.objects.link(fo)
-    fo.rotation_euler = Vector((-0.5, 0.6, -0.6)).normalized().to_track_quat('-Z', 'Y').to_euler()
+    fo.rotation_euler = Vector((-0.2, 0.9, -0.55)).normalized().to_track_quat('-Z', 'Y').to_euler()
     for loc, color, power, size in _lights:
         pl = bpy.data.lights.new("pl", 'POINT')
         pl.energy = power

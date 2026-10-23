@@ -22,18 +22,6 @@ def trees_around(spots, kind='round', s=1.0, z=0.0):
         tree(x, y, s, kind, z)
 
 
-def sawtooth(x, y, z, w, d, rot=0.0, n=3, mat='slate'):
-    th = 0.1
-    with at(x, y, z, rot):
-        for i in range(n):
-            sx0 = -w / 2 + i * w / n
-            sx1 = sx0 + w / n
-            _face(M(mat), [(sx0, -d / 2, 0), (sx1, -d / 2, th), (sx1, d / 2, th), (sx0, d / 2, 0)])
-            _face(M('glass'), [(sx1, -d / 2, th), (sx1, -d / 2, 0), (sx1, d / 2, 0), (sx1, d / 2, th)])
-            for yy in (-d / 2, d / 2):
-                _face(M('brick'), [(sx0, yy, 0), (sx1, yy, 0), (sx1, yy, th)])
-
-
 # ---------------------------------------------------------------------------
 
 def campus(lvl):

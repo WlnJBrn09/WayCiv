@@ -277,3 +277,28 @@ def plane(x, y, z, rot=0.0, s=1.0, body='white', wing='red'):
         box(0.02, 0, 0, 0.07, 0.3, 0.008, M(wing))
         box(-0.12, 0, 0.0, 0.05, 0.12, 0.006, M(wing))
         box(-0.125, 0, 0.0, 0.05, 0.006, 0.07, M(wing))
+
+
+def sawtooth(x, y, z, w, d, rot=0.0, n=3, mat='slate'):
+    th = 0.1
+    with at(x, y, z, rot):
+        for i in range(n):
+            sx0 = -w / 2 + i * w / n
+            sx1 = sx0 + w / n
+            _face(M(mat), [(sx0, -d / 2, 0), (sx1, -d / 2, th), (sx1, d / 2, th), (sx0, d / 2, 0)])
+            _face(M('glass'), [(sx1, -d / 2, th), (sx1, -d / 2, 0), (sx1, d / 2, 0), (sx1, d / 2, th)])
+            for yy in (-d / 2, d / 2):
+                _face(M('brick'), [(sx0, yy, 0), (sx1, yy, 0), (sx1, yy, th)])
+
+
+def stepped(x, y, z, w, n, step_h, shrink, mat, d=None, rot=0.0, alt=None):
+    d = w if d is None else d
+    for i in range(n):
+        box(x, y, z + i * step_h, w - 2 * shrink * i, d - 2 * shrink * i, step_h, M(alt if (alt and i % 2) else mat), rot)
+
+
+def stair_ramp(x, y, z, w, length, rise, n, mat, rot=0.0):
+    """Stairs going up toward +y (local), starting at y=0."""
+    with at(x, y, z, rot):
+        for i in range(n):
+            box(0, length * (i + 0.5) / n, 0, w, length / n, rise * (i + 1) / n, M(mat))

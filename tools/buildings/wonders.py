@@ -11,19 +11,6 @@ from parts import *  # noqa: F401,F403
 # ---------------------------------------------------------------------------
 # helpers
 
-def stepped(x, y, z, w, n, step_h, shrink, mat, d=None, rot=0.0, alt=None):
-    d = w if d is None else d
-    for i in range(n):
-        box(x, y, z + i * step_h, w - 2 * shrink * i, d - 2 * shrink * i, step_h, M(alt if (alt and i % 2) else mat), rot)
-
-
-def stair_ramp(x, y, z, w, length, rise, n, mat, rot=0.0):
-    """Stairs going up toward +y (local), starting at y=0."""
-    with at(x, y, z, rot):
-        for i in range(n):
-            box(0, length * (i + 0.5) / n, 0, w, length / n, rise * (i + 1) / n, M(mat))
-
-
 def ring(cx, cy, z, r, n, fn):
     for k in range(n):
         a = 2 * math.pi * k / n
@@ -232,7 +219,7 @@ def colossus():
 
 def petra():
     g = wp('sand', side='sandD')
-    mountain(0, 0.5, g, 0.85, 0.9, 'rose', n=10, seed=3)
+    mountain(0, 0.5, g, 0.7, 0.85, 'rose', n=10, seed=3)
     box(0, 0.18, g, 0.55, 0.3, 0.7, M('rose'), taper=0.97)
     # carved facade
     box(0, 0.025, g, 0.5, 0.05, 0.35, M('terra'))
@@ -380,19 +367,23 @@ def chichen_itza():
 
 def mont_st_michel():
     g = wp('sand', side='sandD', top='sandD')
-    mountain(0, 0.0, g, 0.65, 0.55, 'rock', n=10, seed=5)
-    z = g + 0.5
-    box(0, 0, z, 0.3, 0.26, 0.12, M('stone'))
-    box(0, -0.0, z + 0.12, 0.2, 0.7 * 0.28, 0.2, M('cream'))
-    gable(0, 0, z + 0.32, 0.22, 0.2, 0.09, M('slate'))
-    cyl(0.0, 0.0, z + 0.41, 0.025, 0.1, M('stone'), n=8)
-    cone(0.0, 0.0, z + 0.51, 0.03, 0.36, M('slateL'), n=8)
-    cyl(0.0, 0.0, z + 0.87, 0.002, 0.04, M('gold'), n=4)
-    for (x, y, rot, h) in [(-0.3, -0.18, 20, 0.12), (0.3, -0.18, -20, 0.1), (-0.2, 0.2, 0, 0.1), (0.18, 0.24, 10, 0.12), (0.0, -0.3, 0, 0.1)]:
-        house(x, y, g + 0.2 + (0.0 if abs(x) < 0.3 else -0.05), 0.15, 0.1, h, wall='cream', roof='slate', rot=rot, rh=0.07, floors=1)
+    for (r, h0, h1) in [(0.7, 0.0, 0.14), (0.54, 0.14, 0.3), (0.38, 0.3, 0.46)]:
+        ext(_hex_pts(r * 1.0), g + h0, h1 - h0, M('rock'))
+    ext(_hex_pts(0.62), g + 0.14, 0.01, M('grassD'))
+    z = g + 0.46
+    for (x, y, rot, h) in [(-0.38, -0.3, 20, 0.12), (0.4, -0.28, -20, 0.1), (-0.42, 0.18, 0, 0.1), (0.38, 0.22, 10, 0.12), (0.0, -0.42, 0, 0.1)]:
+        house(x, y, g + 0.14, 0.16, 0.11, h, wall='cream', roof='slate', rot=rot, rh=0.08, floors=1)
+    for (x, y, rot) in [(-0.2, -0.22, 10), (0.2, -0.2, -10), (-0.24, 0.12, 0), (0.22, 0.14, 0)]:
+        house(x, y, g + 0.3, 0.14, 0.1, 0.1, wall='cream', roof='terra', rot=rot, rh=0.07, floors=1)
+    box(0, 0, z, 0.3, 0.26, 0.2, M('cream'))
+    gable(0, 0, z + 0.2, 0.3, 0.26, 0.1, M('slate'))
+    box(0, 0, z + 0.2, 0.14, 0.14, 0.14, M('cream'))
+    cyl(0.0, 0.0, z + 0.34, 0.04, 0.1, M('stone'), n=8)
+    cone(0.0, 0.0, z + 0.44, 0.045, 0.4, M('slateL'), n=8)
+    cyl(0.0, 0.0, z + 0.84, 0.003, 0.06, M('gold'), n=4)
     for k in range(10):
         a = 2 * math.pi * k / 10
-        wall_seg(0.72 * math.cos(a), 0.72 * math.sin(a), 0.72 * math.cos(a + 0.6), 0.72 * math.sin(a + 0.6), g, h=0.1, t=0.04, wall='stone2', crenel=False)
+        wall_seg(0.76 * math.cos(a), 0.76 * math.sin(a), 0.76 * math.cos(a + 0.6), 0.76 * math.sin(a + 0.6), g, h=0.1, t=0.04, wall='stone2', crenel=False)
 
 
 def venetian_arsenal():
@@ -515,7 +506,7 @@ def bolshoi_theatre():
     box(0, -0.12, g + 0.39, 0.82, 0.12, 0.03, M('marble'))
     gable(0, -0.12, g + 0.42, 0.82, 0.14, 0.12, M('marble'), mat_end=M('stone'))
     box(0, 0.15, g + 0.36, 0.92, 0.57, 0.03, M('marble'))
-    hip(0, 0.2, g + 0.39, 0.7, 0.4, 0.14, M('green'), ridge=0.7)
+    gable(0, 0.2, g + 0.39, 0.4, 0.7, 0.16, M('green'), rot=90, overhang=0.02)
     # quadriga on top
     for k in range(4):
         box(-0.045 + k * 0.03, -0.12, g + 0.54, 0.02, 0.04, 0.06, M('gold'))
@@ -643,10 +634,10 @@ def broadway():
 
 def cristo_redentor():
     g = wp('grass')
-    mountain(0, 0.0, g, 0.85, 0.6, 'rock', n=11, seed=11)
+    mountain(0, 0.0, g, 0.62, 0.55, 'rock', n=11, seed=11)
     for k in range(7):
         a = 2 * math.pi * k / 7
-        tree(0.5 * math.cos(a), 0.5 * math.sin(a) - 0.1, 0.8, 'round', z=g)
+        tree(0.68 * math.cos(a), 0.68 * math.sin(a) - 0.05, 0.8, 'round', z=g)
     z = g + 0.58
     box(0, 0, z, 0.2, 0.2, 0.18, M('stone'), taper=0.8)
     statue(0, 0, z + 0.18, 1.1, mat='white', arms='wide')
@@ -660,7 +651,7 @@ def maracana():
     for t in range(3):
         cyl(0, 0.0, g, R - 0.0 + 0.0, 0.0, M('white'))
     lathe(0, 0.0, g, [(R * 0.62, 0.02), (R * 0.84, 0.16), (R * 1.0, 0.3), (R * 1.0, 0.34)], M('white'), n=28, cap0=False, cap1=False)
-    lathe(0, 0.0, g, [(R * 1.0, 0.34), (R * 0.8, 0.36), (R * 0.58, 0.34)], M('blue'), n=28, cap0=False, cap1=False)
+    lathe(0, 0.0, g, [(R * 1.02, 0.34), (R * 0.86, 0.37), (R * 0.76, 0.35)], M('blue'), n=28, cap0=False, cap1=False)
     for k in range(n):
         a = 2 * math.pi * k / n
         box(R * 0.98 * math.cos(a), R * 0.98 * math.sin(a), g, 0.04, 0.04, 0.34, M('concrete'), rot=math.degrees(a))
@@ -707,8 +698,7 @@ def apadana():
     for i in range(6):
         for j in range(4):
             col(-0.4 + i * 0.16, -0.2 + j * 0.2, z, 0.025, 0.4 - 0.0, M('sand'), n=10)
-    box(0, 0.1, z + 0.4, 0.95, 0.75, 0.04, M('terra'))
-    box(0, 0.1, z + 0.44, 0.7, 0.55, 0.02, M('cream'))
+    box(0, 0.45, z + 0.4, 0.95, 0.3, 0.04, M('terra'))
     stair_ramp(0, -0.5, g, 0.3, 0.12, 0.1, 4, 'stone2')
     for sx in (-1, 1):
         box(sx * 0.62, -0.3, g, 0.1, 0.1, 0.3, M('sandD'))
@@ -728,7 +718,9 @@ def mausoleum():
     for j in range(1, 5):
         col(-0.34, -0.3 + j * 0.12, z, 0.02, 0.2, M('marble'))
         col(0.34, -0.3 + j * 0.12, z, 0.02, 0.2, M('marble'))
-    box(0, 0, z + 0.2, 0.82, 0.82, 0.03, M('marble'))
+    for (bx, by, bw, bd) in [(0, -0.34, 0.76, 0.06), (0, 0.34, 0.76, 0.06), (-0.34, 0, 0.06, 0.76), (0.34, 0, 0.06, 0.76)]:
+        box(bx, by, z + 0.2, bw, bd, 0.03, M('marble'))
+    box(0, 0, z + 0.2, 0.62, 0.62, 0.03, M('marble'))
     stepped(0, 0, z + 0.23, 0.6, 7, 0.045, 0.03, 'marble')
     box(0, 0, z + 0.545, 0.2, 0.12, 0.03, M('gold'))
     for k in range(4):
@@ -770,24 +762,24 @@ def angkor_wat():
 def statue_of_zeus():
     g = wp('paveL')
     for i in range(5):
-        col(-0.4 + i * 0.2, -0.38, g, 0.03, 0.55, M('marble'), n=12)
-        col(-0.4 + i * 0.2, 0.38, g, 0.03, 0.55, M('marble'), n=12)
+        col(-0.4 + i * 0.2, -0.4, g, 0.03, 0.5, M('marble'), n=12)
+        col(-0.4 + i * 0.2, 0.4, g, 0.03, 0.5, M('marble'), n=12)
     for j in range(1, 4):
-        col(-0.4, -0.38 + j * 0.19, g, 0.03, 0.55, M('marble'), n=12)
-        col(0.4, -0.38 + j * 0.19, g, 0.03, 0.55, M('marble'), n=12)
-    box(0, 0.0, g + 0.55, 0.95, 0.9, 0.03, M('marble'))
-    gable(0, 0.0, g + 0.58, 0.95, 0.9, 0.18, M('terra'), mat_end=M('marble'))
-    # throne and seated figure
-    box(0, 0.12, g, 0.34, 0.26, 0.2, M('woodL'))
-    box(0, 0.22, g + 0.2, 0.34, 0.06, 0.34, M('woodL'))
-    box(0, 0.0, g + 0.2, 0.2, 0.2, 0.06, M('gold'))
-    box(0, -0.07, g + 0.0, 0.16, 0.14, 0.2, M('gold'))
-    box(0, 0.12, g + 0.26, 0.2, 0.14, 0.2, M('gold'), taper=0.85)
-    sphere(0, 0.12, g + 0.46, 0.06, M('cream'), n=10, rings=6)
-    box(-0.13, 0.05, g + 0.34, 0.04, 0.12, 0.04, M('gold'))
-    box(0.13, 0.05, g + 0.34, 0.04, 0.12, 0.04, M('gold'))
-    cyl(0.18, 0.0, g, 0.01, 0.58, M('goldD'), n=5)
-    sphere(0.18, 0.0, g + 0.55, 0.025, M('gold'), n=8, rings=5)
+        col(-0.4, -0.4 + j * 0.2, g, 0.03, 0.5, M('marble'), n=12)
+        col(0.4, -0.4 + j * 0.2, g, 0.03, 0.5, M('marble'), n=12)
+    box(0, 0.4, g + 0.5, 0.95, 0.12, 0.04, M('marble'))
+    gable(0, 0.4, g + 0.54, 0.95, 0.14, 0.1, M('terra'), mat_end=M('marble'))
+    with at(0, 0.05, g, s=1.5):
+        box(0, 0.12, 0, 0.34, 0.26, 0.12, M('stone'))
+        box(0, 0.2, 0.12, 0.34, 0.06, 0.32, M('woodL'))
+        box(0, 0.0, 0.12, 0.2, 0.2, 0.06, M('gold'))
+        box(0, -0.07, 0.0, 0.16, 0.14, 0.12, M('gold'))
+        box(0, 0.12, 0.18, 0.2, 0.14, 0.2, M('gold'), taper=0.85)
+        sphere(0, 0.12, 0.38, 0.055, M('cream'), n=10, rings=6)
+        box(-0.13, 0.05, 0.26, 0.04, 0.12, 0.04, M('gold'))
+        box(0.13, 0.05, 0.26, 0.04, 0.12, 0.04, M('gold'))
+        cyl(0.18, 0.0, 0, 0.01, 0.5, M('goldD'), n=5)
+        sphere(0.18, 0.0, 0.47, 0.025, M('gold'), n=8, rings=5)
 
 
 def biosphere():
@@ -838,9 +830,12 @@ def generic():
     stepped(0, 0, g, 0.9, 3, 0.05, 0.06, 'stone')
     z = g + 0.15
     ring(0, 0, z, 0.32, 8, lambda x, y, a, k: col(x, y, z, 0.03, 0.35, M('marble')))
-    box(0, 0, z + 0.35, 0.8, 0.8, 0.04, M('marble'))
-    dome(0, 0, z + 0.39, 0.26, M('gold'), h=0.2, n=18)
-    cone(0, 0, z + 0.58, 0.012, 0.14, M('gold'), n=6)
+    cyl(0, 0, z, 0.2, 0.3, M('cream'), n=16)
+    for k in range(4):
+        a = math.pi / 2 * k + math.pi / 4
+        box(0.32 * math.cos(a), 0.32 * math.sin(a), z + 0.35, 0.22, 0.22, 0.03, M('marble'), rot=math.degrees(a))
+    dome(0, 0, z + 0.3, 0.26, M('gold'), h=0.24, n=18)
+    cone(0, 0, z + 0.54, 0.012, 0.14, M('gold'), n=6)
     for (x, y) in [(-0.62, -0.4), (0.62, -0.4)]:
         box(x, y, g, 0.07, 0.07, 0.3, M('stone'), taper=0.5)
         cone(x, y, g + 0.3, 0.05, 0.08, M('gold'), n=4)

@@ -36,22 +36,22 @@ def main():
         names = [n for n in names if any(n.startswith(p) for p in prefixes)]
     sw, sh = int(256 * scale), int(320 * scale)
     r = 1.0 * sw / 2.2  # hex circumradius in px
-    cellw, cellh = math.sqrt(3) * r, 1.5 * r
+    cellw, cellh = sw * 0.92, sh * 0.78
     rows = (len(names) + cols - 1) // cols
-    W = int(cellw * (cols + 1)) + 20
+    W = int(cellw * cols) + 50
     H = int(cellh * rows + sh) + 40
     img = Image.new('RGBA', (W, H), (40, 60, 40, 255))
     d = ImageDraw.Draw(img)
     tints = [(200, 40, 40), (40, 90, 200), (230, 170, 30), (60, 160, 70)]
     for k, n in enumerate(names):
         row, col = divmod(k, cols)
-        cx = 20 + cellw * (col + 0.5 + 0.5 * (row & 1)) + cellw / 2
+        cx = 20 + cellw * (col + 0.5) + cellw * 0.04
         cy = 20 + cellh * row + 0.6 * sh * 0.9
         cy = 30 + cellh * row + 0.6 * sh
         hexagon(d, cx, cy, r, (92, 140, 70, 255), (30, 50, 30, 255))
     for k, n in enumerate(names):
         row, col = divmod(k, cols)
-        cx = 20 + cellw * (col + 0.5 + 0.5 * (row & 1)) + cellw / 2
+        cx = 20 + cellw * (col + 0.5) + cellw * 0.04
         cy = 30 + cellh * row + 0.6 * sh
         im = Image.open(os.path.join(src, n + '.png')).convert('RGBA').resize((sw, sh), Image.LANCZOS)
         img.alpha_composite(im, (int(cx - sw / 2), int(cy - 0.6 * sh)))
