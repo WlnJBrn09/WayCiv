@@ -471,11 +471,13 @@ pub fn draw_resource(
         return;
     }
     let color = class_color(&res.class);
-    let corner = c + vec2(0.46 * z, -0.46 * z);
+    // Kept small and low-key: a little model on the tile and a small,
+    // slightly see-through badge tucked into the corner.
+    let corner = c + vec2(0.5 * z, -0.42 * z);
 
-    // Tiny zoom: just the class dot.
+    // Tiny zoom: just a small class dot.
     if z < 14.0 {
-        painter.circle(corner, z * 0.2, color, Stroke::new(1.0, Color32::BLACK));
+        painter.circle(corner, z * 0.12, color.gamma_multiply(0.85), Stroke::new(0.8, Color32::from_black_alpha(160)));
         return;
     }
 
@@ -486,10 +488,10 @@ pub fn draw_resource(
         tile.district.is_some() || tile.wonder.is_some() || game.city_at(t.pos).is_some();
     if !crowded {
         let (at, scale) = match improvement_of(t).map(|n| layout_of(&n)) {
-            None => (c + vec2(0.0, -0.02 * z), 1.0),
-            Some(Layout::Field) => (c + vec2(0.0, -0.04 * z), 0.8),
-            Some(Layout::Ring) => (c, 0.7),
-            Some(Layout::Side) => (c + vec2(0.2 * z, -0.12 * z), 0.64),
+            None => (c + vec2(0.0, 0.12 * z), 0.6),
+            Some(Layout::Field) => (c + vec2(0.0, 0.08 * z), 0.5),
+            Some(Layout::Ring) => (c + vec2(0.0, 0.1 * z), 0.45),
+            Some(Layout::Side) => (c + vec2(0.24 * z, -0.04 * z), 0.42),
         };
         if let Some(tex) = art.tex(&ctx, "sprites", &name) {
             blit(painter, tex, at, SPRITE * z * scale, Color32::WHITE, 0);
@@ -497,27 +499,28 @@ pub fn draw_resource(
     }
 
     // The class badge in the corner.
-    let radius = if z > 22.0 { z * 0.27 } else { z * 0.22 };
+    let radius = (z * 0.15).max(5.0);
     let badge = Rect::from_center_size(corner, vec2(radius * 2.0, radius * 2.0));
+    let tint = Color32::from_white_alpha(215);
     if let Some(tex) = art.tex(&ctx, "icons", &name) {
         painter.image(
             tex.handle.id(),
             badge,
             Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
-            Color32::WHITE,
+            tint,
         );
         return;
     }
     if z > 16.0 && icons.paint(painter, "resource", &res.id, badge) {
-        painter.circle_stroke(corner, radius, Stroke::new((z * 0.06).max(1.5), color));
+        painter.circle_stroke(corner, radius, Stroke::new((z * 0.035).max(1.0), color.gamma_multiply(0.8)));
     } else {
-        painter.circle(corner, z * 0.2, color, Stroke::new(1.0, Color32::BLACK));
+        painter.circle(corner, z * 0.12, color.gamma_multiply(0.85), Stroke::new(0.8, Color32::from_black_alpha(160)));
         if t.detail() {
             painter.text(
                 corner,
                 Align2::CENTER_CENTER,
                 abbreviation(&res.name),
-                FontId::proportional(z * 0.2),
+                FontId::proportional(z * 0.12),
                 Color32::WHITE,
             );
         }

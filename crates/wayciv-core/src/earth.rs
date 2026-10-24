@@ -402,6 +402,42 @@ pub fn starting_positions(
 mod tests {
     use super::*;
 
+    /// Land routes that exist in real life must exist in the game too
+    /// (tools/earth/passes.py carves them through the mountains).
+    #[test]
+    fn the_americas_are_connected_by_land() {
+        let Ok(rules) = crate::load_rules() else {
+            eprintln!("skipped: Civilization VI is not installed");
+            return;
+        };
+        for size in [MapSize::Small, MapSize::Standard, MapSize::Large] {
+            let map = generate(&rules, size, &mut Rng::new(1));
+            let proj = projection(size);
+            let walk = |a: (f64, f64), b: (f64, f64)| {
+                let (start, goal) = (proj.tile_of(a.0, a.1).unwrap(), proj.tile_of(b.0, b.1).unwrap());
+                let open = |p: Pos| !map.is_impassable(&rules, p) && !map.is_water(&rules, p);
+                let mut seen = std::collections::HashSet::from([start]);
+                let mut queue = std::collections::VecDeque::from([start]);
+                while let Some(at) = queue.pop_front() {
+                    if at == goal {
+                        return true;
+                    }
+                    for n in map.grid.neighbors(at) {
+                        if open(n) && seen.insert(n) {
+                            queue.push_back(n);
+                        }
+                    }
+                }
+                false
+            };
+            let (washington, mexico_city, guatemala, bogota) =
+                ((38.9, -77.0), (19.4, -99.1), (14.6, -90.5), (4.7, -74.1));
+            assert!(walk(washington, mexico_city), "{size:?}: Washington to Mexico City");
+            assert!(walk(mexico_city, guatemala), "{size:?}: Mexico City to Guatemala");
+            assert!(walk(guatemala, bogota), "{size:?}: Guatemala to Bogota");
+        }
+    }
+
     #[test]
     fn map_files_match_their_headers() {
         for size in [MapSize::Small, MapSize::Standard, MapSize::Large] {

@@ -28,6 +28,8 @@ struct Sprite {
     ortho: f32,
     /// Where the ground point sits in the canvas, 0 = top, 1 = bottom.
     anchor: f32,
+    /// The opaque part of the image, in 0..1 canvas coordinates.
+    bounds: Rect,
 }
 
 pub struct UnitArt {
@@ -35,6 +37,10 @@ pub struct UnitArt {
     /// `id -> (ortho, anchor)` from `assets/units/manifest.tsv`, read on first use.
     manifest: Option<HashMap<String, (f32, f32)>>,
     sprites: HashMap<String, Option<Sprite>>,
+    /// The Settler's visible height and width in hex radii: every unit is
+    /// drawn this tall (and at most a little wider) so none of them towers
+    /// over the tiles behind it.
+    settler_size: Option<(f32, f32)>,
 }
 
 impl UnitArt {
@@ -43,6 +49,7 @@ impl UnitArt {
             assets,
             manifest: None,
             sprites: HashMap::new(),
+            settler_size: None,
         }
     }
 
@@ -85,20 +92,22 @@ impl UnitArt {
         let read = |path: PathBuf, name: String| {
             let img = image::open(path).ok()?.to_rgba8();
             let size = [img.width() as usize, img.height() as usize];
-            Some(ctx.load_texture(
+            let texture = ctx.load_texture(
                 name,
                 egui::ColorImage::from_rgba_unmultiplied(size, img.as_raw()),
                 opts,
-            ))
+            );
+            Some((texture, opaque_bounds(&img)))
         };
-        let beauty = read(dir.join(format!("{id}.png")), format!("unit/{id}"))?;
-        let mask = read(dir.join(format!("{id}_mask.png")), format!("unit/{id}_mask"));
+        let (beauty, bounds) = read(dir.join(format!("{id}.png")), format!("unit/{id}"))?;
+        let mask = read(dir.join(format!("{id}_mask.png")), format!("unit/{id}_mask")).map(|m| m.0);
         let (ortho, anchor) = self.manifest().get(id).copied().unwrap_or((2.6, 0.78));
         Some(Sprite {
             beauty,
             mask,
             ortho,
             anchor,
+            bounds,
         })
     }
 }
@@ -183,6 +192,54 @@ fn dim(c: Color32, on: bool) -> Color32 {
 }
 
 /// Canvas size of a sprite in px for a unit slot of `radius`.
+/// The box around a sprite's visible pixels, in 0..1 canvas coordinates.
+fn opaque_bounds(img: &image::RgbaImage) -> Rect {
+    let (w, h) = img.dimensions();
+    let (mut x0, mut y0, mut x1, mut y1) = (w, h, 0, 0);
+    for (x, y, p) in img.enumerate_pixels() {
+        if p[3] > 24 {
+            x0 = x0.min(x);
+            y0 = y0.min(y);
+            x1 = x1.max(x + 1);
+            y1 = y1.max(y + 1);
+        }
+    }
+    if x1 <= x0 || y1 <= y0 {
+        return Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+    }
+    Rect::from_min_max(
+        pos2(x0 as f32 / w as f32, y0 as f32 / h as f32),
+        pos2(x1 as f32 / w as f32, y1 as f32 / h as f32),
+    )
+}
+
+/// Canvas size in pixels that makes `sprite` exactly `height` pixels tall
+/// above its ground point, but never wider than `max_width`.
+fn uniform_px(sprite: &Sprite, height: f32, max_width: f32) -> f32 {
+    let above = (sprite.anchor - sprite.bounds.top()).max(0.05);
+    let wide = sprite.bounds.width().max(0.05);
+    (height / above).min(max_width / wide)
+}
+
+impl UnitArt {
+    /// The Settler's visible (height, width) in radii, measured once from
+    /// its sprite (the width includes its baked-in ground shadow).
+    fn settler_size(&mut self, ctx: &egui::Context) -> (f32, f32) {
+        if let Some(size) = self.settler_size {
+            return size;
+        }
+        let size = self
+            .find(ctx, &["unit_settler".to_string()])
+            .map(|s| {
+                let px = canvas_px(1.0, s.ortho);
+                (px * (s.anchor - s.bounds.top()).max(0.05), px * s.bounds.width())
+            })
+            .unwrap_or((2.3, 4.2));
+        self.settler_size = Some(size);
+        size
+    }
+}
+
 fn canvas_px(radius: f32, ortho: f32) -> f32 {
     // Figures are drawn larger than the slot; big ships stay inside the tile.
     let boost = (1.35 - 0.06 * (ortho - 2.4)).clamp(1.0, 1.35);
@@ -254,9 +311,12 @@ pub fn draw_unit(
 
     let ground = at + vec2(0.0, radius * 0.55);
     let ids = sprite_ids(game, ty);
+    let (height, width) = art.settler_size(painter.ctx());
     let has_sprite = if let Some(s) = art.find(painter.ctx(), &ids) {
-        let px = canvas_px(radius, s.ortho);
-        let rx = (radius * (0.8 + 0.12 * s.ortho)).min(radius * 1.7);
+        // Every unit stands as tall as a Settler; long ships are kept to
+        // about a Settler's width.
+        let px = uniform_px(s, height * radius, width * radius * 1.1);
+        let rx = (radius * (0.8 + 0.12 * s.ortho)).min(radius * 1.7).min(px * s.bounds.width() * 0.5);
         if selected {
             selection_ring(painter, ground, rx);
         }
