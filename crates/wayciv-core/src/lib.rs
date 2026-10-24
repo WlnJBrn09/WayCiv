@@ -11,6 +11,7 @@ pub mod combat;
 pub mod diplomacy;
 pub mod earth;
 pub mod effects;
+pub mod events;
 pub mod great_people;
 pub mod hex;
 pub mod intelligence;

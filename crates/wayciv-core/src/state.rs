@@ -283,6 +283,8 @@ pub struct Game {
     pub camps: BTreeMap<Pos, u32>,
     /// Leader screens to show the human: (leader's player, what happened).
     pub popups: Vec<(PlayerId, crate::diplomacy::DiploEvent)>,
+    /// Animation events for the front end (see `events`).
+    pub events: Vec<crate::events::Event>,
 }
 
 impl Game {

@@ -1,5 +1,6 @@
 //! Unit orders other than moving and attacking.
 
+use crate::events::Event;
 use crate::hex::Pos;
 use crate::map::PlayerId;
 use crate::state::{Game, UnitId};
@@ -133,6 +134,10 @@ impl Game {
         tile.improvement = Some(improvement);
         tile.pillaged = false;
         let owner = u.owner;
+        self.emit(Event::Improved {
+            unit: Box::new(u.clone()),
+            pos: u.pos,
+        });
         let unit_ref = self.units.get_mut(&unit).unwrap();
         unit_ref.charges -= 1;
         unit_ref.moves = 0;

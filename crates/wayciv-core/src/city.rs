@@ -1,5 +1,6 @@
 //! Cities: founding, borders, worked tiles, yields, growth, and production.
 
+use crate::events::{Built, Event};
 use crate::hex::Pos;
 use crate::map::{CityId, PlayerId};
 use crate::rules::{CULTURE, FAITH, FOOD, GOLD, PRODUCTION, SCIENCE};
@@ -92,6 +93,11 @@ impl Game {
         self.claim(id, pos);
         self.players[owner].cities_founded += 1;
         self.assign_tiles(id);
+        self.emit(Event::CityFounded {
+            city: id,
+            owner,
+            pos,
+        });
         if self.players[owner].is_major() {
             self.notify(owner, format!("{name} has been founded."), Some(pos));
         }
@@ -984,6 +990,10 @@ impl Game {
                     c.wall_hp += content.buildings[*i].outer_defense;
                 }
                 self.on_built(owner, *i);
+                self.emit(Event::Built {
+                    pos,
+                    what: Built::Building,
+                });
                 self.notify(
                     owner,
                     format!("{name} built the {}.", content.buildings[*i].name),
@@ -1008,6 +1018,10 @@ impl Game {
                     }
                 }
                 self.on_built(owner, *i);
+                self.emit(Event::Built {
+                    pos: *at,
+                    what: Built::Wonder,
+                });
             }
             Production::District(i, at) => {
                 self.cities
@@ -1028,6 +1042,10 @@ impl Game {
                     tile.feature = None;
                 }
                 self.on_district(owner, *i);
+                self.emit(Event::Built {
+                    pos: *at,
+                    what: Built::District,
+                });
                 self.notify(
                     owner,
                     format!("{name} completed a {}.", content.districts[*i].name),
@@ -1036,6 +1054,10 @@ impl Game {
                 self.assign_tiles(city);
             }
             Production::Project(i) => {
+                self.emit(Event::Built {
+                    pos,
+                    what: Built::Project,
+                });
                 self.players[owner].space_projects.push(*i);
                 self.notify(
                     owner,
@@ -1087,6 +1109,7 @@ impl Game {
                 skipped: false,
             },
         );
+        self.emit(Event::Spawned { unit: id, pos });
         id
     }
 

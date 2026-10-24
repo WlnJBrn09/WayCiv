@@ -37,7 +37,29 @@ pub struct App {
     pub rules: Option<Arc<Rules>>,
     pub portraits: portraits::Portraits,
     /// Test hook: `WAYCIV_SNAPSHOT=out.png` saves a rendered frame and exits.
-    snapshot: Option<(String, u32)>,
+    snapshot: Option<Snapshot>,
+    /// Test hook: `WAYCIV_PERF=1` measures the frame cost (see `perf_hook`).
+    perf: Option<Perf>,
+}
+
+/// Frames to capture: `WAYCIV_SNAPSHOT_FRAMES=30,36,42` saves
+/// `out_30.png`, `out_36.png`, and (last, then exits) `out.png`.
+struct Snapshot {
+    path: String,
+    frames: Vec<u32>,
+    frame: u32,
+    /// `WAYCIV_ANIM_DEMO=name`, started on frame `DEMO_FRAME`.
+    demo: Option<String>,
+}
+
+/// The frame on which `WAYCIV_ANIM_DEMO` starts its scene.
+const DEMO_FRAME: u32 = 20;
+
+struct Perf {
+    frames: u32,
+    cpu: f32,
+    /// Seconds spent in `ui` (building the shapes) since the last report.
+    ui: f32,
 }
 
 impl App {
@@ -50,12 +72,23 @@ impl App {
             let _ = tx.send(result);
             ctx.request_repaint();
         });
-        let snapshot = std::env::var("WAYCIV_SNAPSHOT").ok().map(|p| (p, 0));
+        let snapshot = std::env::var("WAYCIV_SNAPSHOT").ok().map(|path| Snapshot {
+            path,
+            frames: std::env::var("WAYCIV_SNAPSHOT_FRAMES")
+                .ok()
+                .map(|f| f.split(',').filter_map(|n| n.trim().parse().ok()).collect())
+                .filter(|f: &Vec<u32>| !f.is_empty())
+                .unwrap_or(vec![30]),
+            frame: 0,
+            demo: std::env::var("WAYCIV_ANIM_DEMO").ok(),
+        });
+        let perf = std::env::var_os("WAYCIV_PERF").map(|_| Perf { frames: 0, cpu: 0.0, ui: 0.0 });
         Self {
             stage: Stage::Loading(rx),
             rules: None,
             portraits: portraits::Portraits::new(),
             snapshot,
+            perf,
         }
     }
 
@@ -73,6 +106,13 @@ impl App {
     /// diplomacy or popup. `WAYCIV_TOASTS=1` replays the last few
     /// notifications as new ones (toasts and the unread badge).
     /// `WAYCIV_FAITH=n` sets your Faith.
+    /// Animation tests: `WAYCIV_ANIM_DEMO=name` stages a scene on frame 20
+    /// (see `map_view::demo`: walk, fight, shoot, siege, found, build, pan,
+    /// turn, all), `WAYCIV_ANIM_STEP=ms` makes the animation clock advance
+    /// by that much per frame (reproducible captures), and
+    /// `WAYCIV_SNAPSHOT_FRAMES=30,36,42` saves several frames (`out_30.png`,
+    /// ..., and the last as `out.png`). `WAYCIV_PERF=1` repaints every frame
+    /// and prints the average frame cost.
     fn autostart(&mut self, rules: &Arc<Rules>) {
         let env = |k: &str| std::env::var(k).ok();
         let settings = wayciv_core::Settings {
@@ -200,16 +240,26 @@ impl App {
     }
 
     fn snapshot_hook(&mut self, ctx: &egui::Context) {
-        let Some((path, frames)) = &mut self.snapshot else {
+        let Some(snap) = &mut self.snapshot else {
             return;
         };
         if matches!(self.stage, Stage::Loading(_)) {
             ctx.request_repaint();
             return;
         }
-        *frames += 1;
-        if *frames == 30 {
-            let path = path.clone();
+        snap.frame += 1;
+        if snap.frame == DEMO_FRAME
+            && let (Some(name), Stage::Playing(s)) = (&snap.demo, &mut self.stage)
+        {
+            map_view::demo(s, name);
+        }
+        if snap.frames.contains(&snap.frame) {
+            let last = snap.frames.last() == Some(&snap.frame);
+            let path = if last {
+                snap.path.clone()
+            } else {
+                snap.path.replace(".png", &format!("_{}.png", snap.frame))
+            };
             let ctx2 = ctx.clone();
             let callback = egui::ScreenshotCallback::new(move |image| {
                 let [w, h] = image.size;
@@ -217,17 +267,44 @@ impl App {
                 if let Some(buffer) = image::RgbaImage::from_raw(w as u32, h as u32, pixels) {
                     let _ = buffer.save(&path);
                 }
-                ctx2.send_viewport_cmd(egui::ViewportCommand::Close);
+                if last {
+                    ctx2.send_viewport_cmd(egui::ViewportCommand::Close);
+                }
                 ctx2.request_repaint();
             });
             ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(callback));
         }
         ctx.request_repaint();
     }
+
+    /// Test hook: with `WAYCIV_PERF=1` the app repaints every frame and
+    /// prints the average CPU time per frame every 120 frames, then exits
+    /// after 480.
+    fn perf_hook(&mut self, ctx: &egui::Context, frame: &eframe::Frame) {
+        let (Some(perf), Stage::Playing(_)) = (&mut self.perf, &self.stage) else {
+            return;
+        };
+        perf.frames += 1;
+        perf.cpu += frame.info().cpu_usage.unwrap_or(0.0);
+        if perf.frames % 120 == 0 {
+            eprintln!(
+                "perf: {} frames, {:.2} ms cpu per frame ({:.2} ms in ui)",
+                perf.frames,
+                1000.0 * perf.cpu / 120.0,
+                1000.0 * perf.ui / 120.0
+            );
+            perf.cpu = 0.0;
+            perf.ui = 0.0;
+        }
+        if perf.frames >= 480 {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+        ctx.request_repaint();
+    }
 }
 
 fn map_view_center(s: &mut hud::Session, pos: wayciv_core::Pos) {
-    map_view::center_on(s, pos);
+    map_view::snap_to(s, pos);
 }
 
 impl eframe::App for App {
@@ -247,8 +324,19 @@ impl eframe::App for App {
         }
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         self.snapshot_hook(ui.ctx());
+        self.perf_hook(ui.ctx(), frame);
+        let started = std::time::Instant::now();
+        self.show(ui);
+        if let Some(perf) = &mut self.perf {
+            perf.ui += started.elapsed().as_secs_f32();
+        }
+    }
+}
+
+impl App {
+    fn show(&mut self, ui: &mut egui::Ui) {
         match &mut self.stage {
             Stage::Loading(_) => {
                 egui::CentralPanel::default().show(ui, |ui| {

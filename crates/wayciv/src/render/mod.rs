@@ -5,10 +5,13 @@
 //!   buildings — districts, wonders, city centers
 //!   units     — land, sea, and air units
 //!   banner    — city banners
+//!   anim, fx  — animation schedule (walks, fights, fades) and its effects
 //! `map_view` decides what to draw where and in which order.
 
+pub mod anim;
 pub mod banner;
 pub mod buildings;
+pub mod fx;
 pub mod hex;
 pub mod resources;
 pub mod terrain;

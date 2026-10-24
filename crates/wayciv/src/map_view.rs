@@ -1,12 +1,18 @@
 //! The hex map: what to draw where and in which order, plus mouse and
-//! keyboard input. The art itself lives in `render`.
+//! keyboard input. The art itself lives in `render`; what is moving or
+//! fading right now comes from `render::anim` (the `Anims` in the session).
 
 use crate::hud::Session;
 use crate::palette::{self, rgb, with_alpha};
+use crate::render::anim::{ease_out, ease_out_back, smooth};
 use crate::render::hex::{EDGES, SQRT3, corners, hex};
+use crate::render::units::UnitFx;
 use crate::render::{self, Art, TileCtx};
 use egui::{Align2, Color32, FontId, Pos2, Rect, Sense, Shape, Stroke, Vec2, vec2};
-use wayciv_core::{Pos, Production};
+use std::borrow::Cow;
+use std::collections::HashMap;
+use wayciv_core::state::Unit;
+use wayciv_core::{Game, Pos, Production};
 
 pub use crate::render::hex::world;
 
@@ -57,7 +63,15 @@ pub fn tile_at(s: &Session, rect: Rect, point: Pos2) -> Option<Pos> {
         .normalize(Pos::from_axial(rx as i32, rz as i32))
 }
 
+/// Eases the camera to `pos`.
 pub fn center_on(s: &mut Session, pos: Pos) {
+    let width = SQRT3 * s.game.map.grid.width as f32;
+    s.anim.pan_to(s.cam.center, world(pos), width);
+}
+
+/// Puts the camera on `pos` at once (a new game, test hooks).
+pub fn snap_to(s: &mut Session, pos: Pos) {
+    s.anim.cancel_pan();
     s.cam.center = world(pos);
 }
 
@@ -71,14 +85,122 @@ pub fn show(s: &mut Session, ui: &mut egui::Ui) {
     let painter = ui.painter_at(rect);
     painter.rect_filled(rect, 0.0, Color32::from_rgb(8, 10, 14));
 
+    // Advance the animation clock, learn what the engine did since the last
+    // frame, and let a camera pan move the view (input cancels it).
+    s.anim.begin();
+    s.anim.sync(&mut s.game);
+    if let Some(center) = s.anim.pan_center() {
+        s.cam.center = center;
+    }
     handle_input(s, ui, rect, &response);
+    let started = std::time::Instant::now();
     let mut icons = std::mem::replace(&mut s.icons, crate::icons::Icons::new(Default::default()));
     let mut art = std::mem::replace(&mut s.art, Art::new(Default::default()));
-    draw(s, rect, &response, &painter, &mut icons, &mut art);
+    let alive = draw(s, rect, &response, &painter, &mut icons, &mut art);
     s.icons = icons;
     s.art = art;
+    s.anim.frame_cost = started.elapsed().as_secs_f32();
+
+    // Repaint while something plays; ambient life (water, rivers, idle
+    // breathing, drifting clouds) ticks at a modest rate that backs off
+    // when frames are slow.
+    let ctx = ui.ctx();
+    if s.anim.active() {
+        ctx.request_repaint();
+    } else if alive {
+        let gap = (4.0 * s.anim.frame_cost).clamp(AMBIENT_GAP, 0.25);
+        ctx.request_repaint_after(std::time::Duration::from_secs_f32(gap));
+    }
 }
 
+/// Seconds between ambient repaints at best (about 25 frames a second).
+const AMBIENT_GAP: f32 = 0.04;
+
+/// The rows of tiles that can be on screen, with a margin.
+fn visible_rows(s: &Session, rect: Rect) -> (i32, i32) {
+    let half = rect.height() / 2.0 / s.cam.zoom + 2.0;
+    let top = ((s.cam.center.y - half) / 1.5).floor() as i32 - 1;
+    let bottom = ((s.cam.center.y + half) / 1.5).ceil() as i32 + 1;
+    (top.max(0), bottom.min(s.game.map.grid.height - 1))
+}
+
+/// Where a unit stands on its tile: the offset of its center from the tile
+/// center and its size, both in hex radii.
+#[derive(Clone, Copy)]
+struct Slot {
+    off: Vec2,
+    radius: f32,
+    air: bool,
+}
+
+/// The slots of the units on one tile, in order: the military unit in the
+/// middle, civilians along the bottom, aircraft across the top.
+fn slots(game: &Game, units: &[&Unit]) -> Vec<Slot> {
+    let (mut civilians, mut aircraft) = (0, 0);
+    units
+        .iter()
+        .map(|u| {
+            if game.is_air(u) {
+                let off = vec2(-0.45 + 0.3 * aircraft as f32, -0.62);
+                aircraft += 1;
+                Slot {
+                    off,
+                    radius: 0.22,
+                    air: true,
+                }
+            } else if game.is_military(u) {
+                Slot {
+                    off: vec2(0.0, -0.05),
+                    radius: 0.42,
+                    air: false,
+                }
+            } else {
+                civilians += 1;
+                Slot {
+                    off: vec2(-0.45 + 0.25 * ((civilians - 1) % 4) as f32, 0.4),
+                    radius: 0.3,
+                    air: false,
+                }
+            }
+        })
+        .collect()
+}
+
+/// Soft shadows of clouds drifting over the land: one coarse mesh over the
+/// view, so the cost doesn't depend on how many tiles are showing.
+fn cloud_shadows(s: &Session, rect: Rect, painter: &egui::Painter) {
+    const CELL: f32 = 70.0;
+    let (cols, rows) = (
+        (rect.width() / CELL).ceil() as usize + 1,
+        (rect.height() / CELL).ceil() as usize + 1,
+    );
+    let t = s.anim.now as f32;
+    let z = s.cam.zoom;
+    let mut mesh = egui::epaint::Mesh::default();
+    for r in 0..=rows {
+        for c in 0..=cols {
+            let p = rect.min + vec2(c as f32, r as f32) * CELL;
+            let w = (p - rect.center()) / z + s.cam.center;
+            // Two crossing swells make blobs; the drift is slow.
+            let n = ((w.x * 0.17 - t * 0.09).sin() + (w.y * 0.23 + t * 0.05).sin()) * 0.5
+                + 0.45 * (w.x * 0.07 + w.y * 0.11 - t * 0.04).sin();
+            let a = smooth((n - 0.35) / 0.9);
+            mesh.colored_vertex(p, Color32::from_black_alpha((a * 46.0) as u8));
+        }
+    }
+    let stride = (cols + 1) as u32;
+    for r in 0..rows as u32 {
+        for c in 0..cols as u32 {
+            let i = r * stride + c;
+            mesh.add_triangle(i, i + 1, i + stride);
+            mesh.add_triangle(i + 1, i + stride + 1, i + stride);
+        }
+    }
+    painter.add(Shape::mesh(mesh));
+}
+
+/// Draws the whole map; returns whether anything ambient is on screen (so
+/// the caller keeps repainting at a low rate).
 fn draw(
     s: &Session,
     rect: Rect,
@@ -86,12 +208,15 @@ fn draw(
     painter: &egui::Painter,
     icons: &mut crate::icons::Icons,
     art: &mut Art,
-) {
+) -> bool {
     let game = &s.game;
+    let anim = &s.anim;
+    let now = anim.now as f32;
     let me = game.human();
     let player = &game.players[me];
     let grid = game.map.grid;
     let z = s.cam.zoom;
+    let ambient = z >= 10.0;
     let ctx = |pos: Pos, c: Pos2| TileCtx {
         game,
         viewer: me,
@@ -99,15 +224,20 @@ fn draw(
         c,
         z,
     };
+    art.terrain.set_clock(now, ambient);
 
     // 1. Terrain: biomes, relief, features, cliffs.
+    let (row0, row1) = visible_rows(s, rect);
     let mut tiles: Vec<(Pos, Pos2)> = Vec::new();
-    for pos in grid.all() {
-        if !player.revealed[grid.index(pos)] {
-            continue;
-        }
-        for c in screens(s, rect, pos) {
-            tiles.push((pos, c));
+    for y in row0..=row1 {
+        for x in 0..grid.width {
+            let pos = Pos::new(x, y);
+            if !player.revealed[grid.index(pos)] {
+                continue;
+            }
+            for c in screens(s, rect, pos) {
+                tiles.push((pos, c));
+            }
         }
     }
     for &(pos, c) in &tiles {
@@ -123,53 +253,90 @@ fn draw(
         render::resources::draw_road(&mut art.resources, painter, &ctx(pos, c));
     }
 
-    // 3. Territory: tint and borders.
+    // 3. Territory: tint and borders (new ones fade in).
     for &(pos, c) in &tiles {
         let tile = game.map.tile(pos);
         let Some(owner) = tile.owner else { continue };
         let o = &game.players[owner];
+        let claim = anim.claim(pos);
         let primary = rgb(o.primary);
-        painter.add(hex(c, z, with_alpha(primary, 46), Stroke::NONE));
+        painter.add(hex(
+            c,
+            z,
+            with_alpha(primary, (46.0 * claim) as u8),
+            Stroke::NONE,
+        ));
         let pts = corners(c, z * 0.93);
         for dir in 0..6 {
             let other = neighbor(s, pos, dir).and_then(|n| game.map.tile(n).owner);
             if other != Some(owner) {
                 let (a, b) = EDGES[dir];
-                painter.line_segment([pts[a], pts[b]], Stroke::new((z * 0.13).max(2.0), primary));
+                painter.line_segment(
+                    [pts[a], pts[b]],
+                    Stroke::new((z * 0.13).max(2.0), primary.gamma_multiply(claim)),
+                );
                 let inner = corners(c, z * 0.82);
                 painter.line_segment(
                     [inner[a], inner[b]],
-                    Stroke::new((z * 0.05).max(1.0), rgb(o.secondary)),
+                    Stroke::new((z * 0.05).max(1.0), rgb(o.secondary).gamma_multiply(claim)),
                 );
             }
         }
     }
 
-    // 4. Districts, wonders, improvements, resources; fog on top.
+    // 4. Districts, wonders, improvements, resources; fog on top. New
+    // districts and improvements pop in; fog and newly seen tiles fade.
     for &(pos, c) in &tiles {
         let t = ctx(pos, c);
-        render::buildings::draw_district(&mut art.buildings, painter, &t);
-        render::resources::draw_improvement(&mut art.resources, painter, &t);
+        let seen = player.visible[grid.index(pos)];
+        match anim.pop(pos) {
+            None => {
+                render::buildings::draw_district(&mut art.buildings, painter, &t);
+                render::resources::draw_improvement(&mut art.resources, painter, &t);
+            }
+            Some(p) => {
+                let k = ease_out_back(p);
+                if k > 0.04 {
+                    let scaled = TileCtx { z: z * k, ..t };
+                    render::buildings::draw_district(&mut art.buildings, painter, &scaled);
+                    render::resources::draw_improvement(&mut art.resources, painter, &scaled);
+                }
+            }
+        }
         render::resources::draw_resource(&mut art.resources, icons, painter, &t);
-        if !player.visible[grid.index(pos)] {
+        let fog = anim.fog(pos, seen);
+        if fog > 0.01 {
             painter.add(hex(
                 c,
                 z,
-                Color32::from_rgba_unmultiplied(0, 0, 0, 120),
+                Color32::from_rgba_unmultiplied(0, 0, 0, (120.0 * fog) as u8),
+                Stroke::NONE,
+            ));
+        }
+        let shown = anim.reveal(pos);
+        if shown < 0.999 {
+            painter.add(hex(
+                c,
+                z * 1.03,
+                Color32::from_rgba_unmultiplied(8, 10, 14, (255.0 * (1.0 - shown)) as u8),
                 Stroke::NONE,
             ));
         }
     }
+    if ambient {
+        cloud_shadows(s, rect, painter);
+    }
 
     // 5. Highlights: reachable tiles, attack targets, district sites, path.
+    let pulse = 0.5 + 0.5 * (now * 3.0).sin();
     if let Some(unit) = s.selected_unit.and_then(|id| game.units.get(&id)) {
         for &pos in &s.reachable {
             for c in screens(s, rect, pos) {
                 painter.add(hex(
                     c,
                     z * 0.9,
-                    Color32::from_rgba_unmultiplied(120, 200, 255, 40),
-                    Stroke::new(1.0, Color32::from_rgba_unmultiplied(150, 220, 255, 120)),
+                    Color32::from_rgba_unmultiplied(120, 200, 255, 34 + (10.0 * pulse) as u8),
+                    Stroke::new(1.0, Color32::from_rgba_unmultiplied(150, 220, 255, 100 + (40.0 * pulse) as u8)),
                 ));
             }
         }
@@ -179,7 +346,7 @@ fn draw(
                     painter.add(hex(
                         c,
                         z * 0.9,
-                        Color32::from_rgba_unmultiplied(230, 50, 40, 60),
+                        Color32::from_rgba_unmultiplied(230, 50, 40, 44 + (40.0 * pulse) as u8),
                         Stroke::new(2.0, Color32::from_rgb(240, 60, 50)),
                     ));
                 }
@@ -214,7 +381,7 @@ fn draw(
                 painter.add(hex(
                     c,
                     z * 0.9,
-                    Color32::from_rgba_unmultiplied(80, 230, 120, 60),
+                    Color32::from_rgba_unmultiplied(80, 230, 120, 46 + (30.0 * pulse) as u8),
                     Stroke::new(2.0, Color32::from_rgb(90, 240, 130)),
                 ));
                 if extra > 0.0 {
@@ -243,72 +410,160 @@ fn draw(
 
     // 6. Cities, units, then city banners on top.
     for city in game.cities.values() {
-        if player.revealed[grid.index(city.pos)] {
-            for c in screens(s, rect, city.pos) {
-                render::buildings::draw_city(&mut art.buildings, painter, game, city, c, z);
-            }
+        if !player.revealed[grid.index(city.pos)] {
+            continue;
+        }
+        let k = anim.pop(city.pos).map_or(1.0, ease_out_back);
+        if k <= 0.04 {
+            continue;
+        }
+        for c in screens(s, rect, city.pos) {
+            render::buildings::draw_city(&mut art.buildings, painter, game, city, c, z * k);
         }
     }
-    for pos in grid.all() {
+    let mut by_tile: HashMap<Pos, Vec<&Unit>> = HashMap::new();
+    for u in game.units.values() {
+        by_tile.entry(u.pos).or_default().push(u);
+    }
+    let idle = UnitFx {
+        time: if ambient { now } else { 0.0 },
+        ..UnitFx::REST
+    };
+    let mut any_unit = false;
+    for &(pos, c) in &tiles {
         if !player.visible[grid.index(pos)] {
             continue;
         }
-        let units: Vec<_> = game.units_at(pos).collect();
-        if units.is_empty() {
+        let Some(units) = by_tile.get(&pos) else {
             continue;
-        }
-        for c in screens(s, rect, pos) {
-            let mut civilian_slot = 0;
-            let mut air_slot = 0;
-            for u in &units {
-                if game.is_air(u) {
-                    // Aircraft: small diamonds across the top of their base.
-                    let at = c + vec2(-0.45 * z + 0.3 * z * air_slot as f32, -0.62 * z);
-                    air_slot += 1;
-                    render::units::draw_aircraft(
-                        &mut art.units,
-                        icons,
-                        painter,
-                        game,
-                        u,
-                        at,
-                        z * 0.22,
-                        s.selected_unit == Some(u.id),
-                    );
-                    continue;
-                }
-                let military = game.is_military(u);
-                let (at, radius) = if military {
-                    (c + vec2(0.0, -0.05 * z), z * 0.42)
-                } else {
-                    civilian_slot += 1;
-                    (
-                        c + vec2(
-                            -0.45 * z + 0.25 * z * ((civilian_slot - 1) % 4) as f32,
-                            0.4 * z,
-                        ),
-                        z * 0.3,
-                    )
-                };
+        };
+        any_unit = true;
+        for (u, slot) in units.iter().zip(slots(game, units)) {
+            let selected = s.selected_unit == Some(u.id);
+            if slot.air {
+                // Aircraft: small diamonds across the top of their base.
+                render::units::draw_aircraft(
+                    &mut art.units,
+                    icons,
+                    painter,
+                    game,
+                    u,
+                    c + slot.off * z,
+                    z * slot.radius,
+                    selected,
+                );
+            } else if anim.pose(u.id).is_none() {
+                // (Units with a walk, lunge or fade playing are drawn below.)
                 render::units::draw_unit(
                     &mut art.units,
                     icons,
                     painter,
                     game,
                     u,
-                    at,
-                    radius,
-                    s.selected_unit == Some(u.id),
+                    c + slot.off * z,
+                    z * slot.radius,
+                    selected,
+                    &idle,
                 );
             }
         }
+    }
+    // 6a. Units in motion, front to back: walks, lunges, hits, deaths.
+    let mut moving: Vec<(f32, Cow<Unit>, Pos2, f32, UnitFx, bool)> = Vec::new();
+    for (id, pose) in anim.animated() {
+        let Some(unit) = game.units.get(&id).or_else(|| anim.ghosts.get(&id)) else {
+            continue;
+        };
+        if game.is_air(unit) {
+            continue;
+        }
+        let unit = match pose.hp {
+            Some(hp) => {
+                let mut u = unit.clone();
+                u.hp = hp;
+                Cow::Owned(u)
+            }
+            None => Cow::Borrowed(unit),
+        };
+        let here = by_tile.get(&pose.tile).map_or(&[][..], |v| v.as_slice());
+        let slot = match here.iter().position(|u| u.id == id) {
+            Some(i) => slots(game, here)[i],
+            None if game.is_military(&unit) => Slot {
+                off: vec2(0.0, -0.05),
+                radius: 0.42,
+                air: false,
+            },
+            None => Slot {
+                off: vec2(-0.45, 0.4),
+                radius: 0.3,
+                air: false,
+            },
+        };
+        let naval = game.unit_type(&unit).domain == "DOMAIN_SEA";
+        // A walking unit bobs with each step (ships ride the swell instead).
+        let step = match pose.stride {
+            Some(st) if !naval => 0.06 * (st * std::f32::consts::PI * 1.5).sin().abs(),
+            _ => 0.0,
+        };
+        let fx = UnitFx {
+            time: if ambient { now } else { 0.0 },
+            alpha: pose.alpha,
+            flash: pose.flash,
+            scale: pose.scale,
+            lift: (pose.lift + step) * z,
+        };
+        for c in screens(s, rect, pose.tile) {
+            let at = c + (slot.off + pose.offset) * z;
+            moving.push((
+                at.y,
+                unit.clone(),
+                at,
+                z * slot.radius,
+                fx,
+                s.selected_unit == Some(id),
+            ));
+        }
+    }
+    moving.sort_by(|a, b| a.0.total_cmp(&b.0));
+    for (_, unit, at, radius, fx, selected) in &moving {
+        any_unit = true;
+        render::units::draw_unit(
+            &mut art.units,
+            icons,
+            painter,
+            game,
+            unit,
+            *at,
+            *radius,
+            *selected,
+            fx,
+        );
     }
     for city in game.cities.values() {
         if !player.revealed[grid.index(city.pos)] {
             continue;
         }
+        let pop = anim.pop(city.pos);
+        // A new city's banner drops in once the city has risen.
+        let (offset, faded) = match pop {
+            Some(p) if p < 0.45 => continue,
+            Some(p) => {
+                let k = (p - 0.45) / 0.55;
+                (vec2(0.0, -(1.0 - ease_out(k)) * z * 0.7), smooth(k))
+            }
+            None => (Vec2::ZERO, 1.0),
+        };
+        let mut banner_painter = painter.clone();
+        banner_painter.set_opacity(faded);
         for c in screens(s, rect, city.pos) {
-            render::banner::draw_city_banner(painter, game, city, c, z, city.owner == me);
+            render::banner::draw_city_banner(
+                &banner_painter,
+                game,
+                city,
+                c + offset,
+                z,
+                city.owner == me,
+            );
         }
     }
     // 6b. Your trade routes: dashed gold lines between the cities.
@@ -334,6 +589,14 @@ fn draw(
             ));
         }
     }
+    // 6c. Effects: shots in flight, impacts, damage numbers, dust, sparkles.
+    for fx in &anim.fx {
+        if let Some(u) = fx.progress(anim.now) {
+            for c in screens(s, rect, fx.at) {
+                render::fx::draw(painter, fx, u, c, z);
+            }
+        }
+    }
 
     // 7. Hover outline and tooltip.
     if let Some(pos) = s.hover {
@@ -353,6 +616,7 @@ fn draw(
             });
         }
     }
+    ambient && (any_unit || art.terrain.animated())
 }
 
 /// The smallest zoom at which the map is still at least as wide as the view.
@@ -365,6 +629,7 @@ fn handle_input(s: &mut Session, ui: &egui::Ui, rect: Rect, response: &egui::Res
     // Pan: drag or keyboard. Zoom: wheel toward the pointer.
     if response.dragged() {
         s.cam.center -= response.drag_delta() / s.cam.zoom;
+        s.anim.cancel_pan();
     }
     let (scroll, keys) = ui.input(|i| {
         let mut keys = Vec2::ZERO;
@@ -389,9 +654,11 @@ fn handle_input(s: &mut Session, ui: &egui::Ui, rect: Rect, response: &egui::Res
     });
     if !ui.ctx().egui_wants_keyboard_input() && keys != Vec2::ZERO {
         s.cam.center += keys * 0.5;
+        s.anim.cancel_pan();
         ui.ctx().request_repaint();
     }
     if scroll != 0.0 {
+        s.anim.cancel_pan();
         let pointer = response.hover_pos().unwrap_or(rect.center());
         let before = (pointer - rect.center()) / s.cam.zoom + s.cam.center;
         s.cam.zoom = (s.cam.zoom * (1.0 + scroll * 0.0015)).clamp(min_zoom(s, rect), 70.0);
@@ -419,5 +686,132 @@ fn handle_input(s: &mut Session, ui: &egui::Ui, rect: Rect, response: &egui::Res
         && let Some(pos) = hover
     {
         s.right_click(pos);
+    }
+}
+
+/// Land tiles near `center` with nobody on them, nearest first.
+fn free_land(game: &Game, center: Pos, from: i32, to: i32) -> Vec<Pos> {
+    let grid = game.map.grid;
+    let mut tiles: Vec<Pos> = grid
+        .within(center, to)
+        .into_iter()
+        .filter(|&p| {
+            let d = grid.distance(center, p);
+            d >= from
+                && game.map.is_land(&game.rules, p)
+                && !game.map.is_impassable(&game.rules, p)
+                && game.units_at(p).next().is_none()
+                && game.city_at(p).is_none()
+        })
+        .collect();
+    tiles.sort_by_key(|&p| grid.distance(center, p));
+    tiles
+}
+
+/// Test hook (`WAYCIV_ANIM_DEMO=name`): stages a scene with the engine's own
+/// calls, so the animations can be screenshotted. Scenes: `walk`, `fight`
+/// (melee), `shoot` (archer), `siege` (catapult), `found` (the Settler
+/// founds a city), `build` (a Builder improves a tile), `pan` (camera moves
+/// to the nearest foreign city), `turn` (End Turn), and `all` (walk, shoot,
+/// siege and found at once).
+pub fn demo(s: &mut Session, name: &str) {
+    let me = s.game.human();
+    let Some(anchor) = s.game.player_units(me).next().map(|u| u.pos) else {
+        return;
+    };
+    let war = s.game.barbarian();
+    if let Some(bar) = war {
+        s.game.players[me].relations[bar].at_war = true;
+        s.game.players[bar].relations[me].at_war = true;
+    }
+    let warrior = s
+        .game
+        .player_units(me)
+        .find(|u| s.game.is_military(u))
+        .map(|u| u.id);
+    let settler = s
+        .game
+        .player_units(me)
+        .find(|u| s.game.unit_type(u).found_city)
+        .map(|u| u.id);
+    let free = free_land(&s.game, anchor, 1, 4);
+    let spawn = |s: &mut Session, owner, id: &str, pos| s.game.spawn(owner, id, pos);
+    let all = name == "all";
+    snap_to(s, anchor);
+    if (all || name == "walk")
+        && let Some(w) = warrior
+    {
+        s.select_unit(Some(w));
+        let from = s.game.units[&w].pos;
+        let goal = s
+            .game
+            .reachable(&s.game.units[&w])
+            .into_iter()
+            .max_by_key(|&p| s.game.map.grid.distance(from, p));
+        if let Some(goal) = goal {
+            s.right_click(goal);
+        }
+    }
+    if name == "fight"
+        && let (Some(w), Some(bar)) = (warrior, war)
+    {
+        let from = s.game.units[&w].pos;
+        if let Some(&at) = free_land(&s.game, from, 1, 1).first() {
+            spawn(s, bar, "UNIT_WARRIOR", at);
+            let r = s.game.attack(w, at);
+            s.result(r);
+        }
+    }
+    if let (true, Some(bar)) = (all || name == "shoot" || name == "siege", war) {
+        let kind = if name == "siege" || all { "UNIT_CATAPULT" } else { "UNIT_ARCHER" };
+        let spots: Vec<Pos> = free.iter().copied().filter(|p| s.game.units_at(*p).next().is_none()).collect();
+        if let Some(&shooter_at) = spots.first()
+            && let Some(&target_at) = free_land(&s.game, shooter_at, 2, 2)
+                .iter()
+                .find(|p| !spots.first().is_some_and(|f| f == *p) && s.game.units_at(**p).next().is_none())
+            && let Some(shooter) = spawn(s, me, kind, shooter_at)
+        {
+            spawn(s, bar, "UNIT_WARRIOR", target_at);
+            let r = s.game.attack(shooter, target_at);
+            s.result(r);
+        }
+    }
+    if (all || name == "found")
+        && let Some(st) = settler
+    {
+        let r = s.game.found_city(st);
+        s.result(r);
+    }
+    if name == "build" {
+        let cities: Vec<_> = s.game.player_cities(me).map(|c| c.pos).collect();
+        for city in cities {
+            for tile in s.game.map.grid.within(city, 2) {
+                let Some(imp) = s.game.valid_improvements(me, tile).first().copied() else {
+                    continue;
+                };
+                if let Some(b) = spawn(s, me, "UNIT_BUILDER", tile) {
+                    snap_to(s, tile);
+                    let r = s.game.build_improvement(b, imp);
+                    s.result(r);
+                    return;
+                }
+            }
+        }
+    }
+    if name == "pan" {
+        let far = s
+            .game
+            .cities
+            .values()
+            .filter(|c| c.owner != me)
+            .max_by_key(|c| s.game.map.grid.distance(anchor, c.pos))
+            .map(|c| c.pos);
+        if let Some(far) = far {
+            center_on(s, far);
+        }
+    }
+    if name == "turn" {
+        s.game.end_turn();
+        s.refresh_selection();
     }
 }

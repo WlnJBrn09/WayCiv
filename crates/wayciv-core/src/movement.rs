@@ -1,5 +1,6 @@
 //! Unit movement, pathfinding, visibility, and first contact.
 
+use crate::events::Event;
 use crate::hex::Pos;
 use crate::map::PlayerId;
 use crate::state::{Game, Unit, UnitId};
@@ -321,6 +322,13 @@ impl Game {
             }
             let zoc = self.zoc_applies(&unit) && self.zone_of_control(unit.owner, next);
             let owner = unit.owner;
+            if !self.is_air(&unit) {
+                self.emit(Event::Moved {
+                    unit: id,
+                    from: unit.pos,
+                    to: next,
+                });
+            }
             {
                 let u = self.units.get_mut(&id).unwrap();
                 u.pos = next;
@@ -357,6 +365,9 @@ impl Game {
             .collect();
         for victim in victims {
             if let Some(v) = self.units.remove(&victim) {
+                self.emit(Event::Died {
+                    unit: Box::new(v.clone()),
+                });
                 let name = self.unit_type(&v).name.clone();
                 self.notify(v.owner, format!("Your {name} was killed."), Some(pos));
                 self.check_elimination(v.owner);
