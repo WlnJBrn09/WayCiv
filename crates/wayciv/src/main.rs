@@ -40,7 +40,12 @@ pub struct App {
     snapshot: Option<(String, u32)>,
     /// `WAYCIV_SNAPSHOT_AT` and `WAYCIV_AT`: when the game started and the
     /// timed screenshots and actions still to come (milliseconds).
-    clock: Option<std::time::Instant>,
+    clock: Option<f64>,
+    /// Virtual time (seconds) while those hooks are set: 60 fps per frame, so
+    /// animations replay the same however slowly frames are rendered.
+    fake_time: Option<f64>,
+    /// `WAYCIV_POINTER=x,y`: a pointer parked there (to see hover states).
+    pointer: Option<egui::Pos2>,
     shots: Vec<u64>,
     actions: Vec<(u64, String)>,
 }
@@ -76,6 +81,11 @@ impl App {
             portraits: portraits::Portraits::new(),
             snapshot,
             clock: None,
+            pointer: std::env::var("WAYCIV_POINTER").ok().and_then(|p| {
+                let (x, y) = p.split_once(',')?;
+                Some(egui::pos2(x.parse().ok()?, y.parse().ok()?))
+            }),
+            fake_time: (!shots.is_empty() || !actions.is_empty()).then_some(0.0),
             shots,
             actions,
         }
@@ -98,7 +108,7 @@ impl App {
     /// saves frames at those milliseconds after the game starts (the last
     /// one to `WAYCIV_SNAPSHOT`, the others as `<name>_<ms>.png`), and
     /// `WAYCIV_AT=300:endturn,600:research` runs actions then (see
-    /// `ui::anim::demo`).
+    /// `ui::anim::demo`). `WAYCIV_POINTER=x,y` parks the pointer there.
     fn autostart(&mut self, rules: &Arc<Rules>) {
         let env = |k: &str| std::env::var(k).ok();
         let settings = wayciv_core::Settings {
@@ -234,7 +244,8 @@ impl App {
             return;
         }
         *frames += 1;
-        let ms = self.clock.get_or_insert_with(std::time::Instant::now).elapsed().as_millis() as u64;
+        let now = self.fake_time.unwrap_or(0.0);
+        let ms = ((now - *self.clock.get_or_insert(now)) * 1000.0) as u64;
         if let Stage::Playing(s) = &mut self.stage {
             while self.actions.first().is_some_and(|a| ms >= a.0) {
                 ui::anim::demo(s, &self.actions.remove(0).1);
@@ -273,6 +284,16 @@ fn map_view_center(s: &mut hud::Session, pos: wayciv_core::Pos) {
 }
 
 impl eframe::App for App {
+    fn raw_input_hook(&mut self, _ctx: &egui::Context, raw_input: &mut egui::RawInput) {
+        if let Some(t) = &mut self.fake_time {
+            *t += 1.0 / 60.0;
+            raw_input.time = Some(*t);
+        }
+        if let Some(p) = self.pointer {
+            raw_input.events.push(egui::Event::PointerMoved(p));
+        }
+    }
+
     fn logic(&mut self, _ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if let Stage::Loading(rx) = &self.stage {
             match rx.try_recv() {

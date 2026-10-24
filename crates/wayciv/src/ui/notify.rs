@@ -1,24 +1,27 @@
 //! Notifications: hidden by default. `N` opens the list; new ones also pop up
-//! as small toasts at the right edge that fade after a few seconds and stay
-//! clear of the middle of the map.
+//! as small toasts at the right edge that slide in, fade after a few seconds
+//! and stay clear of the middle of the map.
 
 use super::glyph::Glyph;
-use super::{MARGIN, TOP_BAR, glyph, theme};
+use super::{MARGIN, TOP_BAR, anim, glyph, theme};
 use crate::hud::Session;
 use crate::map_view;
 use crate::palette::{self, BAD, GOLD, GOLD_DIM, NAVY, NAVY_HOVER, NAVY_RAISED, TEXT, TEXT_DIM};
-use egui::{Align2, Color32, FontId, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
-use std::time::{Duration, Instant};
+use egui::{Align2, Color32, FontId, Id, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
+use std::time::Duration;
 use wayciv_core::Pos;
 
 const TOAST_LIFE: f32 = 6.0;
 const TOAST_FADE: f32 = 1.2;
+/// Seconds a toast takes to slide in.
+const TOAST_IN: f32 = 0.35;
 const MAX_TOASTS: usize = 4;
 
 pub struct Toast {
     pub text: String,
     pub pos: Option<Pos>,
-    pub at: Instant,
+    /// When it arrived, in `anim::now` seconds.
+    pub at: f64,
 }
 
 /// Where we are in `game.notifications` (which is trimmed from the front).
@@ -47,7 +50,7 @@ impl Cursor {
     }
 
     /// Picks up notifications that arrived since the last call.
-    pub fn ingest(&mut self, game: &wayciv_core::Game, me: usize) {
+    pub fn ingest(&mut self, game: &wayciv_core::Game, me: usize, now: f64) {
         let list = &game.notifications;
         let key = |n: &wayciv_core::state::Notification| (n.turn, n.player, n.text.clone());
         let start = if !self.initialized {
@@ -69,13 +72,13 @@ impl Cursor {
                 self.toasts.push(Toast {
                     text: n.text.clone(),
                     pos: n.pos,
-                    at: Instant::now(),
+                    at: now,
                 });
             }
         }
         self.marker = list.last().map(key).or(self.marker.take());
         self.toasts
-            .retain(|t| t.at.elapsed() < Duration::from_secs_f32(TOAST_LIFE));
+            .retain(|t| now - t.at < TOAST_LIFE as f64);
         let extra = self.toasts.len().saturating_sub(MAX_TOASTS * 2);
         self.toasts.drain(..extra);
     }
@@ -93,7 +96,7 @@ fn stack_origin(s: &Session, ctx: &egui::Context, width: f32) -> egui::Pos2 {
 }
 
 pub fn toasts(s: &mut Session, ctx: &egui::Context) {
-    s.notifications.ingest(&s.game, s.me());
+    s.notifications.ingest(&s.game, s.me(), anim::now(ctx));
     if s.notifications.toasts.is_empty() {
         return;
     }
@@ -101,51 +104,68 @@ pub fn toasts(s: &mut Session, ctx: &egui::Context) {
         s.notifications.toasts.clear();
         return;
     }
-    ctx.request_repaint_after(Duration::from_millis(50));
+    ctx.request_repaint_after(Duration::from_millis(anim::AMBIENT_MS));
     let width = 320.0;
     let origin = stack_origin(s, ctx, width);
-    let shown: Vec<(usize, String, Option<Pos>, f32)> = s
+    let shown: Vec<(usize, String, Option<Pos>, f64)> = s
         .notifications
         .toasts
         .iter()
         .enumerate()
         .rev()
         .take(MAX_TOASTS)
-        .map(|(i, t)| {
-            let age = t.at.elapsed().as_secs_f32();
-            let alpha = ((TOAST_LIFE - age) / TOAST_FADE).clamp(0.0, 1.0);
-            (i, t.text.clone(), t.pos, alpha)
-        })
+        .map(|(i, t)| (i, t.text.clone(), t.pos, t.at))
         .collect();
     let hidden = s.notifications.toasts.len().saturating_sub(MAX_TOASTS);
     let mut jump = None;
-    egui::Area::new(egui::Id::unique("toasts"))
+    egui::Area::new(Id::unique("toasts"))
         .fixed_pos(origin)
         .order(egui::Order::Middle)
         .show(ctx, |ui| {
-            ui.spacing_mut().item_spacing.y = 6.0;
-            for (i, text, pos, alpha) in &shown {
-                let font = FontId::proportional(14.5);
-                let galley = ui.painter().layout(
-                    text.clone(),
-                    font,
-                    TEXT.gamma_multiply(*alpha),
-                    width - 62.0,
-                );
-                let h = (galley.size().y + 18.0).max(44.0);
-                let (rect, response) = ui.allocate_exact_size(vec2(width, h), Sense::click());
+            // Lay the stack out first so each toast can glide to its slot.
+            let galleys: Vec<_> = shown
+                .iter()
+                .map(|(_, text, _, _)| {
+                    ui.painter()
+                        .layout(text.clone(), FontId::proportional(14.5), TEXT, width - 62.0)
+                })
+                .collect();
+            let heights: Vec<f32> = galleys.iter().map(|g| (g.size().y + 18.0).max(44.0)).collect();
+            let total: f32 = heights.iter().map(|h| h + 6.0).sum();
+            let (stack, _) = ui.allocate_exact_size(vec2(width, total), Sense::hover());
+            let mut slot = 0.0;
+            for (k, (i, text, pos, at)) in shown.iter().enumerate() {
+                let (h, galley) = (heights[k], galleys[k].clone());
+                let key = Id::unique(("toast", at.to_bits(), anim::hash(text)));
+                let age = (anim::now(ctx) - at) as f32;
+                let slide = anim::ease_out(age / TOAST_IN);
+                let alpha = ((TOAST_LIFE - age) / TOAST_FADE).clamp(0.0, 1.0);
+                let y = anim::smooth(ctx, key.with("y"), slot, 14.0);
+                slot += h + 6.0;
+                let dx = (1.0 - slide) * 80.0 + (1.0 - alpha) * 24.0;
+                let rect = Rect::from_min_size(stack.min + vec2(dx, y), vec2(width, h));
+                let response = ui.interact(rect, key, Sense::click());
+                let hot = anim::hover(ctx, key.with("hot"), response.hovered(), 0.12);
                 let painter = ui.painter();
-                let a = |c: Color32| c.gamma_multiply(*alpha);
-                painter.rect_filled(rect, 12.0, a(palette::with_alpha(NAVY, 235)));
+                let a = |c: Color32| c.gamma_multiply(alpha * slide.max(0.25));
+                // New toasts flash bright and settle to gold.
+                let fresh = (1.0 - age / 0.7).max(0.0);
+                theme::glow(painter, rect, 12.0, GOLD, (hot * 0.5 + fresh * 0.9) * alpha);
+                painter.rect_filled(rect, 12.0, a(anim::mix(palette::with_alpha(NAVY, 235), NAVY_HOVER, hot)));
                 painter.rect_stroke(
                     rect,
                     12.0,
-                    Stroke::new(1.5, a(if response.hovered() { GOLD } else { GOLD_DIM })),
+                    Stroke::new(1.5 + 0.5 * hot, a(anim::mix(anim::mix(GOLD_DIM, GOLD, hot), Color32::WHITE, fresh * 0.6))),
                     StrokeKind::Inside,
                 );
-                glyph::paint(painter, Glyph::Bell, pos2(rect.left() + 24.0, rect.center().y), 9.0, a(GOLD));
-                painter.galley(pos2(rect.left() + 46.0, rect.center().y - galley.size().y / 2.0), galley, TEXT);
-                if response.clicked() {
+                let bell = 9.0 * (1.0 + 0.4 * (1.0 - anim::ease_out(age / 0.5)));
+                glyph::paint(painter, Glyph::Bell, pos2(rect.left() + 24.0, rect.center().y), bell, a(GOLD));
+                painter.galley(
+                    pos2(rect.left() + 46.0, rect.center().y - galley.size().y / 2.0),
+                    galley,
+                    a(TEXT),
+                );
+                if response.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
                     s_jump(&mut jump, *pos, *i);
                 }
             }
@@ -194,7 +214,7 @@ pub fn panel(s: &mut Session, ctx: &egui::Context) {
     let turn = s.game.turn;
     let mut jump = None;
     let mut close = false;
-    egui::Area::new(egui::Id::unique("notifications_panel"))
+    let shown = egui::Area::new(Id::unique("notifications_panel"))
         .fixed_pos(origin)
         .order(egui::Order::Middle)
         .show(ctx, |ui| {
@@ -229,12 +249,15 @@ pub fn panel(s: &mut Session, ctx: &egui::Context) {
                         let h = galley.size().y + 14.0;
                         let (rect, response) =
                             ui.allocate_exact_size(vec2(ui.available_width(), h), Sense::click());
-                        let painter = ui.painter();
-                        painter.rect_filled(
-                            rect,
-                            9.0,
-                            if response.hovered() && n.pos.is_some() { NAVY_HOVER } else { NAVY_RAISED },
+                        let hot = anim::hover(
+                            ui.ctx(),
+                            response.id.with("hot"),
+                            response.hovered() && n.pos.is_some(),
+                            0.12,
                         );
+                        let painter = ui.painter();
+                        painter.rect_filled(rect, 9.0, anim::mix(NAVY_RAISED, NAVY_HOVER, hot));
+                        theme::glow(painter, rect, 9.0, GOLD, hot * 0.35);
                         if current {
                             painter.rect_filled(
                                 Rect::from_min_size(rect.min + vec2(0.0, 6.0), vec2(4.0, h - 12.0)),
@@ -245,7 +268,7 @@ pub fn panel(s: &mut Session, ctx: &egui::Context) {
                         theme::text(painter, pos2(rect.left() + 12.0, rect.top() + 7.0), Align2::LEFT_TOP, format!("T{}", n.turn), 12.5, GOLD_DIM);
                         painter.galley(pos2(rect.left() + 46.0, rect.top() + 7.0), galley, color);
                         if n.pos.is_some() {
-                            glyph::paint(painter, Glyph::Arrow, pos2(rect.right() - 16.0, rect.center().y), 7.0, GOLD);
+                            glyph::paint(painter, Glyph::Arrow, pos2(rect.right() - 16.0 + 3.0 * hot, rect.center().y), 7.0, GOLD);
                         }
                         if n.pos.is_some() && response.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
                             jump = n.pos;
@@ -254,11 +277,13 @@ pub fn panel(s: &mut Session, ctx: &egui::Context) {
                 });
             });
         });
+    anim::window_fx(ctx, Id::unique("notifications_panel_fx"), shown.response.layer_id, shown.response.rect);
     if let Some(pos) = jump {
         map_view::center_on(s, pos);
     }
     if close {
         s.windows.close_all();
+        ctx.request_repaint();
     }
     let _ = BAD;
 }

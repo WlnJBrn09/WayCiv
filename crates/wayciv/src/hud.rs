@@ -463,7 +463,7 @@ fn banners(s: &mut Session, ctx: &egui::Context) {
     };
     let mut y = ui::TOP_BAR + ui::MARGIN;
     if let Some(text) = hint {
-        egui::Area::new(egui::Id::unique("hint_banner"))
+        let shown = egui::Area::new(egui::Id::unique("hint_banner"))
             .anchor(Align2::CENTER_TOP, vec2(0.0, y))
             .order(egui::Order::Middle)
             .interactable(false)
@@ -472,11 +472,13 @@ fn banners(s: &mut Session, ctx: &egui::Context) {
                     ui.label(RichText::new(text).size(16.0).color(GOLD));
                 });
             });
+        let (layer, rect) = (shown.response.layer_id, shown.response.rect);
+        ui::anim::window_fx(ctx, egui::Id::unique("hint_banner_fx"), layer, rect);
         y += 56.0;
     }
     if let Some((text, at)) = &s.message {
         if at.elapsed().as_secs_f32() < 3.5 {
-            egui::Area::new(egui::Id::unique("toast"))
+            let shown = egui::Area::new(egui::Id::unique("toast"))
                 .anchor(Align2::CENTER_TOP, vec2(0.0, y))
                 .order(egui::Order::Tooltip)
                 .interactable(false)
@@ -485,6 +487,8 @@ fn banners(s: &mut Session, ctx: &egui::Context) {
                         ui.label(RichText::new(text).size(16.0));
                     });
                 });
+            let (layer, rect) = (shown.response.layer_id, shown.response.rect);
+            ui::anim::window_fx(ctx, egui::Id::unique("toast_fx"), layer, rect);
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
         } else {
             s.message = None;
