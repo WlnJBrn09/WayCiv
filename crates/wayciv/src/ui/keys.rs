@@ -6,8 +6,8 @@
 //! window's key again, or `Esc`, closes it; opening one closes the others.
 //!
 //! Units and turns: `Enter` next turn / resolve the next blocker, `Space`
-//! skip, `F` fortify, `Z` sleep, `B` found a city, `.` next unit.
-//! Arrow keys pan the map (see `map_view`).
+//! skip, `F` fortify, `Z` sleep, `B` found a city, `U` or `.` next unit.
+//! Arrow keys pan the map (see `map_view`); `+` and `-` zoom it.
 
 use crate::hud::Session;
 use crate::screens::Panel;
@@ -53,8 +53,14 @@ pub fn handle(s: &mut Session, ctx: &egui::Context) {
     if pressed(Key::Enter) {
         s.end_turn_clicked();
     }
-    if pressed(Key::Period) {
+    if pressed(Key::Period) || pressed(Key::U) {
         s.next_unit();
+    }
+    if pressed(Key::Plus) || pressed(Key::Equals) {
+        s.cam.zoom = (s.cam.zoom * 1.3).min(70.0);
+    }
+    if pressed(Key::Minus) {
+        s.cam.zoom /= 1.3;
     }
     if pressed(Key::Escape) {
         if s.placing.is_some() || s.city_targeting {

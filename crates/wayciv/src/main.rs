@@ -14,12 +14,20 @@ use std::sync::{Arc, mpsc};
 use wayciv_core::{Game, Rules};
 
 fn main() -> eframe::Result {
+    // Test hook: `WAYCIV_WINDOW=WxH` opens the window at that size.
+    let (width, height) = std::env::var("WAYCIV_WINDOW")
+        .ok()
+        .and_then(|s| {
+            let (w, h) = s.split_once('x')?;
+            Some((w.parse().ok()?, h.parse().ok()?))
+        })
+        .unwrap_or((1500.0, 920.0));
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("WayCiv")
             .with_app_id("wayciv")
-            .with_inner_size([1500.0, 920.0])
-            .with_min_inner_size([1100.0, 680.0]),
+            .with_inner_size([width, height])
+            .with_min_inner_size([width.min(1100.0), height.min(680.0)]),
         ..Default::default()
     };
     eframe::run_native("WayCiv", options, Box::new(|cc| Ok(Box::new(App::new(cc)))))
@@ -72,7 +80,13 @@ impl App {
     /// victory, great_people, city_states, leaders, notifications, legend,
     /// diplomacy or popup. `WAYCIV_TOASTS=1` replays the last few
     /// notifications as new ones (toasts and the unread badge).
-    /// `WAYCIV_FAITH=n` sets your Faith.
+    /// `WAYCIV_FAITH=n` sets your Faith. `WAYCIV_GOLD=n` sets your Gold.
+    /// `WAYCIV_SETTLE=1` founds the capital with the starting Settler.
+    /// `WAYCIV_SELECT=<unit>` selects a unit of that type (`builder`,
+    /// `UNIT_TRADER`, `great_engineer`...), spawning one in the capital (a
+    /// Builder goes on the owned tile with the most improvements) when you
+    /// have none. `WAYCIV_CITY_TAB=n` picks the city panel tab.
+    /// `WAYCIV_WINDOW=WxH` opens the window at that size.
     fn autostart(&mut self, rules: &Arc<Rules>) {
         let env = |k: &str| std::env::var(k).ok();
         let settings = wayciv_core::Settings {
@@ -112,6 +126,20 @@ impl App {
             let human = game.human();
             game.players[human].faith = faith;
         }
+        if let Some(gold) = env("WAYCIV_GOLD").and_then(|f| f.parse().ok()) {
+            let human = game.human();
+            game.players[human].gold = gold;
+        }
+        if env("WAYCIV_SETTLE").is_some() {
+            let human = game.human();
+            let settler = game
+                .player_units(human)
+                .find(|u| game.unit_type(u).found_city)
+                .map(|u| u.id);
+            if let Some(id) = settler {
+                let _ = game.found_city(id);
+            }
+        }
         if env("WAYCIV_REVEAL").is_some() {
             let human = game.human();
             game.players[human]
@@ -134,6 +162,12 @@ impl App {
                 }
             }
             use screens::Panel;
+            if let Some(tab) = env("WAYCIV_CITY_TAB").and_then(|t| t.parse().ok()) {
+                s.city_tab = tab;
+            }
+            if let Some(kind) = env("WAYCIV_SELECT") {
+                select_hook(s, &kind, first_city.map(|c| c.1));
+            }
             if env("WAYCIV_TOASTS").is_some() {
                 s.notifications.replay(&s.game, 5);
             }
@@ -223,6 +257,60 @@ impl App {
             ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(callback));
         }
         ctx.request_repaint();
+    }
+}
+
+/// `WAYCIV_SELECT`: selects (spawning if needed) one of your units.
+fn select_hook(s: &mut hud::Session, kind: &str, city: Option<wayciv_core::Pos>) {
+    let me = s.game.human();
+    let want = kind.to_uppercase().trim_start_matches("UNIT_").to_string();
+    let matches = |id: &str| id.trim_start_matches("UNIT_") == want || id == kind;
+    let found = s
+        .game
+        .player_units(me)
+        .find(|u| matches(&s.game.unit_type(u).id))
+        .map(|u| u.id);
+    let id = found.or_else(|| {
+        let full = format!("UNIT_{want}");
+        let base = city.or_else(|| s.game.player_units(me).next().map(|u| u.pos))?;
+        let at = if want == "BUILDER" {
+            // The owned tile where a Builder has the most to build.
+            let grid = s.game.map.grid;
+            grid.all()
+                .filter(|&p| s.game.map.tile(p).owner == Some(me))
+                .max_by_key(|&p| s.game.valid_improvements(me, p).len())
+                .unwrap_or(base)
+        } else {
+            base
+        };
+        let id = s.game.spawn(me, &full, at)?;
+        if want.starts_with("GREAT_") && want != "GREAT_PROPHET" {
+            if let Some(u) = s.game.units.get_mut(&id) {
+                u.great_person = Some(0);
+            }
+        }
+        Some(id)
+    });
+    if let Some(id) = id {
+        // Fresh orders; a Builder goes where it has the most to build.
+        let best = (want == "BUILDER").then(|| {
+            let grid = s.game.map.grid;
+            grid.all()
+                .filter(|&p| s.game.map.tile(p).owner == Some(me))
+                .max_by_key(|&p| s.game.valid_improvements(me, p).len())
+        });
+        let moves = s.game.unit_type(&s.game.units[&id]).moves;
+        if let Some(u) = s.game.units.get_mut(&id) {
+            u.moves = moves;
+            if let Some(Some(p)) = best {
+                u.pos = p;
+            }
+        }
+        s.select_unit(Some(id));
+        if let Some(u) = s.game.units.get(&id) {
+            let pos = u.pos;
+            map_view_center(s, pos);
+        }
     }
 }
 

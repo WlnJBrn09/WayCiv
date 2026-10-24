@@ -449,30 +449,50 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
 }
 
 /// Instructions while placing a district or wonder, or aiming the city's
-/// ranged attack, and the short error toast.
+/// ranged attack (with a Cancel button), and the short error toast.
 fn banners(s: &mut Session, ctx: &egui::Context) {
     let hint = if let Some(item) = &s.placing {
         Some(format!(
-            "Place {}: click a highlighted tile (Esc to cancel). Numbers show adjacency bonuses.",
+            "Place {}: click a highlighted tile. Numbers show adjacency bonuses.",
             s.game.item_name(item)
         ))
     } else if s.city_targeting {
-        Some("Click an enemy unit within 2 tiles to bombard it (Esc to cancel).".to_string())
+        Some("Click an enemy unit within 2 tiles to bombard it.".to_string())
     } else {
         None
     };
+    let screen = ctx.content_rect();
+    // The middle column between the trackers on the left and the leader
+    // ribbon / city panel on the right.
+    let max_w = (screen.width() - 2.0 * (ui::MARGIN + 290.0 + 14.0)).clamp(380.0, 900.0);
     let mut y = ui::TOP_BAR + ui::MARGIN;
+    let mut cancel = false;
     if let Some(text) = hint {
-        egui::Area::new(egui::Id::unique("hint_banner"))
+        let r = egui::Area::new(egui::Id::unique("hint_banner"))
             .anchor(Align2::CENTER_TOP, vec2(0.0, y))
             .order(egui::Order::Middle)
-            .interactable(false)
             .show(ctx, |ui| {
                 ui::theme::plate_frame().show(ui, |ui| {
-                    ui.label(RichText::new(text).size(16.0).color(GOLD));
+                    ui.set_max_width(max_w);
+                    ui.horizontal(|ui| {
+                        ui.add(
+                            egui::Label::new(RichText::new(text).size(16.0).color(GOLD)).wrap(),
+                        );
+                        cancel = ui::widgets::pill(
+                            ui,
+                            ui::widgets::Btn::new("Cancel")
+                                .glyph(ui::glyph::Glyph::Cross, palette::BAD)
+                                .key(Some("Esc"))
+                                .tip("Stop and go back without choosing a tile."),
+                        );
+                    });
                 });
             });
-        y += 56.0;
+        y += r.response.rect.height() + 8.0;
+    }
+    if cancel {
+        s.placing = None;
+        s.city_targeting = false;
     }
     if let Some((text, at)) = &s.message {
         if at.elapsed().as_secs_f32() < 3.5 {
@@ -482,6 +502,7 @@ fn banners(s: &mut Session, ctx: &egui::Context) {
                 .interactable(false)
                 .show(ctx, |ui| {
                     ui::theme::plate_frame().show(ui, |ui| {
+                        ui.set_max_width(max_w);
                         ui.label(RichText::new(text).size(16.0));
                     });
                 });
@@ -534,6 +555,8 @@ fn legend(s: &mut Session, ctx: &egui::Context) {
                         }
                     });
                 });
+                let grid_h = (ctx.content_rect().height() - ui::TOP_BAR - ui::MARGIN - 330.0).max(180.0);
+                egui::ScrollArea::vertical().max_height(grid_h).auto_shrink([true, true]).show(ui, |ui| {
                 egui::Grid::new("legend_grid")
                     .num_columns(2)
                     .spacing([14.0, 4.0])
@@ -595,6 +618,7 @@ fn legend(s: &mut Session, ctx: &egui::Context) {
                 ] {
                     ui.label(RichText::new(line).size(13.5).color(palette::TEXT_DIM));
                 }
+                });
             });
         });
     s.art = art.into_inner();

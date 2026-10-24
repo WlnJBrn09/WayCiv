@@ -8,6 +8,9 @@ use crate::screens::Panel;
 use egui::{Align2, Color32, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use wayciv_core::PlayerId;
 
+/// Width of the research trackers on the left (see `trackers`).
+const TRACKERS_WIDTH: f32 = 290.0;
+
 /// How you stand with another leader.
 pub struct Relationship {
     pub status: &'static str,
@@ -77,27 +80,74 @@ pub fn met(s: &Session) -> Vec<PlayerId> {
         .collect()
 }
 
-/// Portraits of everyone you've met, top right. Click opens diplomacy.
+/// Portraits of everyone you've met, top right (left of the city panel while
+/// one is open). Click opens diplomacy. When there isn't room they shrink,
+/// and the rest fold into a "+N" button that opens the Leaders list.
 pub fn ribbon(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) {
     let list = met(s);
     if list.is_empty() {
         return;
     }
-    let d = 56.0;
+    let screen = ctx.content_rect();
+    let right_edge = screen.right()
+        - MARGIN
+        - if s.selected_city.is_some() {
+            super::city_panel::WIDTH + MARGIN
+        } else {
+            0.0
+        };
+    // Clear of the research trackers on the left.
+    let avail = right_edge - (MARGIN + TRACKERS_WIDTH + 14.0);
     let gap = 8.0;
-    let size = vec2(
-        list.len() as f32 * (d + gap) + gap + 6.0,
-        d + 20.0,
-    );
+    let plate_w = |n: usize, d: f32| n as f32 * (d + gap) + gap + 6.0;
+    let d = [56.0, 50.0, 44.0, 38.0]
+        .into_iter()
+        .find(|&d| plate_w(list.len(), d) <= avail)
+        .unwrap_or(38.0);
+    // Everyone fits at some size, or the newest show and the rest fold away.
+    let mut shown = list.len();
+    let mut more = 0;
+    if plate_w(list.len(), d) > avail {
+        shown = (((avail - gap - 6.0) / (d + gap)).floor() as usize)
+            .saturating_sub(1)
+            .max(1)
+            .min(list.len());
+        more = list.len() - shown;
+    }
+    let slots = shown + usize::from(more > 0);
+    let size = vec2(plate_w(slots, d), d + 20.0);
     egui::Area::new(egui::Id::unique("leader_ribbon"))
-        .anchor(Align2::RIGHT_TOP, vec2(-MARGIN, TOP_BAR + MARGIN))
+        .fixed_pos(pos2(right_edge - size.x, TOP_BAR + MARGIN))
         .order(egui::Order::Middle)
         .show(ctx, |ui| {
             let (rect, _) = ui.allocate_exact_size(size, Sense::hover());
             let painter = ui.painter().clone();
             theme::plate(&painter, rect, 14.0);
             let mut x = rect.left() + gap + 3.0 + d / 2.0;
-            for other in list.iter().rev() {
+            if more > 0 {
+                let c = pos2(x, rect.center().y);
+                let hit = Rect::from_center_size(c, vec2(d, d));
+                let response = ui.interact(hit, ui.scope_id().with("ribbon_more"), Sense::click());
+                theme::disc(
+                    &painter,
+                    c,
+                    d / 2.0 - 3.0,
+                    if response.hovered() { palette::NAVY_HOVER } else { NAVY_RAISED },
+                    if response.hovered() { GOLD } else { GOLD_DIM },
+                );
+                theme::text_bold(&painter, c, Align2::CENTER_CENTER, format!("+{more}"), d * 0.36, TEXT);
+                if response
+                    .on_hover_text(format!(
+                        "{more} more leader{} you have met.\nClick to open the Leaders list (L).",
+                        if more == 1 { "" } else { "s" }
+                    ))
+                    .clicked()
+                {
+                    s.windows.open(Panel::Leaders);
+                }
+                x += d + gap;
+            }
+            for other in list.iter().rev().take(shown) {
                 let other = *other;
                 let c = pos2(x, rect.center().y);
                 let (leader_id, leader_name, colors, civ, alive) = {
