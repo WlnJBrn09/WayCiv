@@ -2,11 +2,13 @@
 //! great people, city-states, victory, diplomacy, and leader pop-ups.
 
 use crate::hud::Session;
-use crate::palette::{self, GOLD, YIELD_COLORS};
+use crate::palette::{self, GOLD, TEXT, YIELD_COLORS};
 use crate::portraits::Portraits;
 use crate::ui::glyph::Glyph;
-use crate::ui::{self, TOP_BAR, theme};
-use egui::{Align2, Color32, FontId, Pos2, Rect, RichText, Sense, Stroke, StrokeKind, pos2, vec2};
+use crate::ui::{self, TOP_BAR, anim, theme};
+use egui::{
+    Align2, Color32, FontId, Id, Pos2, Rect, RichText, Sense, Stroke, StrokeKind, pos2, vec2,
+};
 use std::collections::HashMap;
 use wayciv_core::diplomacy::DiploEvent;
 use wayciv_core::research::Tree;
@@ -70,6 +72,11 @@ impl Windows {
             || self.diplomacy.is_some()
     }
 
+    /// A full window (not the Notifications panel or the map key) is open.
+    pub fn big_open(&self) -> bool {
+        self.any_open() && !self.notifications
+    }
+
     pub fn is_open(&self, panel: Panel) -> bool {
         match panel {
             Panel::Tech => self.tech,
@@ -116,6 +123,7 @@ impl Windows {
 
 /// A themed window: no title bar, our own header with an icon, the title, a
 /// hotkey hint and a close button. Returns false once it has been closed.
+/// It fades and scales in, and its remains fade out (see `anim::ghosts`).
 fn themed_window(
     ctx: &egui::Context,
     title: &str,
@@ -134,12 +142,13 @@ fn themed_window(
         TOP_BAR + (screen.height() - TOP_BAR - size.y) / 2.0,
     );
     let mut open = true;
-    egui::Window::new(title)
+    let shown = egui::Window::new(title)
         .title_bar(false)
         .frame(theme::plate_frame().inner_margin(16))
         .default_size(size)
         .default_pos(pos)
         .collapsible(false)
+        .fade_in(false)
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -177,10 +186,24 @@ fn themed_window(
             ui.add_space(8.0);
             add(ui);
         });
+    if let Some(r) = shown {
+        anim::window_fx(ctx, Id::unique(("window", title)), r.response.layer_id, r.response.rect);
+    }
     open
 }
 
 pub fn windows(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) {
+    let before = (s.windows.big_open(), s.popup.is_some());
+    anim::backdrop(ctx, before.0 || before.1, if before.1 { 120 } else { 90 });
+    windows_inner(s, portraits, ctx);
+    anim::ghosts(ctx);
+    // A window closed by a click needs one more frame to start fading out.
+    if before != (s.windows.big_open(), s.popup.is_some()) {
+        ctx.request_repaint();
+    }
+}
+
+fn windows_inner(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) {
     for tree in [Tree::Tech, Tree::Civic, Tree::Ai] {
         let is_open = match tree {
             Tree::Tech => s.windows.tech,
@@ -444,6 +467,12 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
             )
         };
         let painter = ui.painter().clone();
+        let ctx = ui.ctx().clone();
+        // The node under the pointer lights up its links to the items around it.
+        let pointer = ctx
+            .pointer_hover_pos()
+            .filter(|p| ui.clip_rect().contains(*p));
+        let hover_node = pointer.and_then(|p| (0..items.len()).find(|&i| node_rect(i).contains(p)));
         for (i, item) in items.iter().enumerate() {
             for p in &item.prereqs {
                 if let Some(j) = items.iter().position(|x| &x.id == p) {
@@ -451,11 +480,15 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                     let from = a.right_center();
                     let to = b.left_center();
                     let mid = Pos2::new((from.x + to.x) / 2.0, from.y);
-                    let line = if s.game.known(me, tree, j) {
+                    let lit = hover_node == Some(i) || hover_node == Some(j);
+                    let lit_t = anim::hover(&ctx, ui.scope_id().with(("link", i, j)), lit, 0.15);
+                    let mut line = if s.game.known(me, tree, j) {
                         Stroke::new(2.0, palette::GOLD_DIM)
                     } else {
                         Stroke::new(1.5, Color32::from_rgb(54, 66, 84))
                     };
+                    line.width += 1.2 * lit_t;
+                    line.color = anim::mix(line.color, GOLD, lit_t);
                     painter.add(egui::Shape::line(
                         vec![from, mid, Pos2::new(mid.x, to.y), to],
                         line,
@@ -464,7 +497,7 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
             }
         }
         for (i, item) in items.iter().enumerate() {
-            let rect = node_rect(i);
+            let base = node_rect(i);
             let known = s.game.known(me, tree, i);
             let available = s.game.researchable(me, tree, i);
             let boosted = match tree {
@@ -490,21 +523,48 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                     Color32::from_gray(130),
                 )
             };
-            let response = ui.interact(rect, ui.scope_id().with(("node", i)), Sense::click());
+            let response = ui.interact(base, ui.scope_id().with(("node", i)), Sense::click());
             let hovered = response.hovered() && (available || known);
-            painter.rect_filled(
-                rect,
-                14.0,
-                if hovered {
-                    fill.gamma_multiply(1.35)
-                } else {
-                    fill
-                },
+            let id = response.id;
+            let hot = anim::hover(&ctx, id.with("hot"), hovered, 0.13);
+            let down = anim::hover(
+                &ctx,
+                id.with("down"),
+                available && response.is_pointer_button_down_on(),
+                0.07,
             );
+            if response.clicked() && available {
+                anim::trigger(&ctx, id.with("pop"));
+            }
+            // Hovering lifts a node; the current one breathes a gold glow.
+            let rect = base
+                .translate(vec2(0.0, -1.5 * hot * (1.0 - down)))
+                .shrink(1.2 * down);
+            let on_screen = ui.is_rect_visible(rect);
+            if on_screen {
+                if is_current {
+                    anim::ambient(&ctx);
+                    theme::glow(&painter, rect, 14.0, GOLD, 0.3 + 0.55 * anim::wave(&ctx, 2.4));
+                }
+                theme::glow(&painter, rect, 14.0, edge, hot * 0.65);
+                if let Some(p) = anim::progress(&ctx, id.with("pop"), 0.35) {
+                    let e = anim::ease_out(p);
+                    painter.rect_stroke(
+                        rect.expand(1.0 + 10.0 * e),
+                        14.0 + 10.0 * e,
+                        Stroke::new(2.5, GOLD.gamma_multiply((1.0 - e) * 0.85)),
+                        StrokeKind::Outside,
+                    );
+                }
+            }
+            painter.rect_filled(rect, 14.0, anim::mix(fill, fill.gamma_multiply(1.35), hot));
             painter.rect_stroke(
                 rect,
                 14.0,
-                Stroke::new(if hovered || is_current { 2.5 } else { 1.5 }, edge),
+                Stroke::new(
+                    anim::lerp(1.5, 2.5, hot.max(if is_current { 1.0 } else { 0.0 })),
+                    anim::mix(edge, Color32::WHITE, hot * 0.3),
+                ),
                 StrokeKind::Inside,
             );
             let ic = rect.left_center() + vec2(h / 2.0, 0.0);
@@ -595,12 +655,11 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
             }
             let progress = s.game.progress(me, tree, i);
             if !known && progress > 0 {
+                let frac = (progress as f32 / cost.max(1) as f32).min(1.0);
+                let frac = anim::smooth(&ctx, id.with("bar"), frac, 8.0);
                 let bar = Rect::from_min_size(
                     rect.left_bottom() + vec2(16.0, -7.0),
-                    vec2(
-                        (w - 32.0) * (progress as f32 / cost.max(1) as f32).min(1.0),
-                        3.5,
-                    ),
+                    vec2((w - 32.0) * frac, 3.5),
                 );
                 painter.rect_filled(bar, 2.0, accent);
             }
@@ -773,8 +832,11 @@ fn leader_popup(
     let leader = s.game.rules.content.leaders[o.leader].clone();
     let line = s.game.dialogue(other, event);
     let mut close = false;
-    egui::Modal::new(egui::Id::unique("leader_popup"))
+    let key = Id::unique("leader_popup");
+    // `windows` dims the screen itself so the backdrop eases in and out.
+    let shown = egui::Modal::new(key)
         .frame(theme::plate_frame().inner_margin(20))
+        .backdrop_color(Color32::TRANSPARENT)
         .show(ctx, |ui| {
             ui.set_width(860.0);
             ui.horizontal(|ui| {
@@ -804,22 +866,22 @@ fn leader_popup(
                                 leader.name
                             ));
                             ui.horizontal(|ui| {
-                                if ui.button("Accept").clicked() {
+                                if theme::pill_button(ui, None, "Accept", TEXT, 120.0).clicked() {
                                     s.game.propose_friendship(other, me);
                                     close = true;
                                 }
-                                if ui.button("Decline").clicked() {
+                                if theme::pill_button(ui, None, "Decline", TEXT, 120.0).clicked() {
                                     close = true;
                                 }
                             });
                         }
                         DiploEvent::DeclareWarFromAi => {
-                            if ui.button(RichText::new("So be it.").size(16.0)).clicked() {
+                            if theme::pill_button(ui, None, "So be it.", TEXT, 140.0).clicked() {
                                 close = true;
                             }
                         }
                         _ => {
-                            if ui.button(RichText::new("Farewell").size(16.0)).clicked() {
+                            if theme::pill_button(ui, None, "Farewell", TEXT, 140.0).clicked() {
                                 close = true;
                             }
                         }
@@ -827,6 +889,7 @@ fn leader_popup(
                 });
             });
         });
+    anim::window_fx(ctx, key, shown.response.layer_id, shown.response.rect);
     if close {
         s.popup = None;
     }

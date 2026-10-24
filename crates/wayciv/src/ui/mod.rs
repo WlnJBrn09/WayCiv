@@ -1,6 +1,7 @@
 //! The Civ VI-on-Switch style HUD: shared drawing helpers plus one module per
 //! piece of screen furniture.
 //!
+//! * `anim`       easing, eased hover/value trackers, window open/close effects
 //! * `theme`      plates, rings, round buttons and other shared widgets
 //! * `glyph`      vector symbols
 //! * `topbar`     yields, population, turn, year, era and the menu buttons
@@ -14,6 +15,7 @@
 //! * `cards`      cards, grids and buttons the menus are built from
 //! * `menus`      Religion, Government, Great People, City-States, Victory
 
+pub mod anim;
 pub mod cards;
 pub mod city_panel;
 pub mod glyph;

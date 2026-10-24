@@ -3,8 +3,10 @@
 //! button. Every window uses these so they look and behave the same: a
 //! card that can be clicked lights up under the mouse, a chosen card has a
 //! gold frame, and a card you can't pick yet is dimmed with the reason in
-//! its tooltip.
+//! its tooltip. Cards ease their hover glow and lift, dip when pressed,
+//! flash when clicked, and chosen ones breathe a soft gold glow.
 
+use super::anim;
 use super::glyph::{self, Glyph};
 use super::theme;
 use crate::icons::Icons;
@@ -138,35 +140,88 @@ impl<'a> Card<'a> {
             State::Open | State::Chosen => Sense::click(),
             State::Locked | State::Info => Sense::hover(),
         };
-        let (rect, response) = ui.allocate_exact_size(vec2(width, height), sense);
+        let (base, response) = ui.allocate_exact_size(vec2(width, height), sense);
         let clickable = matches!(self.state, State::Open | State::Chosen);
-        let hovered = response.hovered() && clickable;
         let chosen = self.state == State::Chosen;
-        let fill = if chosen {
-            Color32::from_rgb(58, 48, 22)
-        } else if hovered {
-            NAVY_HOVER
-        } else if locked {
-            Color32::from_rgb(16, 24, 38)
-        } else {
-            NAVY_RAISED
-        };
+        let ctx = ui.ctx().clone();
+        let id = response.id;
+        let visible = ui.is_rect_visible(base.expand(8.0));
+        let hot = anim::hover(&ctx, id.with("hot"), response.hovered() && clickable, 0.14);
+        let down = anim::hover(
+            &ctx,
+            id.with("down"),
+            clickable && response.is_pointer_button_down_on(),
+            0.07,
+        );
+        let gold = anim::hover(&ctx, id.with("gold"), chosen, 0.25);
+        if response.clicked() && clickable {
+            anim::trigger(&ctx, id.with("pop"));
+        }
+        let pop = anim::progress(&ctx, id.with("pop"), 0.35);
+        // Hovering lifts the card; pressing pushes it back in.
+        let rect = base
+            .translate(vec2(0.0, -2.0 * hot * (1.0 - down)))
+            .shrink(1.4 * down);
+        if visible {
+            if hot > 0.01 {
+                let shadow = egui::Shadow {
+                    offset: [0, 3],
+                    blur: 10,
+                    spread: 0,
+                    color: Color32::from_black_alpha((90.0 * hot) as u8),
+                };
+                painter.add(shadow.as_shape(rect, 12.0));
+            }
+            if gold > 0.01 {
+                anim::ambient(&ctx);
+                theme::glow(&painter, rect, 12.0, GOLD, gold * (0.45 + 0.4 * anim::wave(&ctx, 2.6)));
+            } else {
+                theme::glow(&painter, rect, 12.0, GOLD, hot * 0.55);
+            }
+        }
+        let fill = anim::mix(
+            anim::mix(
+                if locked {
+                    Color32::from_rgb(16, 24, 38)
+                } else {
+                    NAVY_RAISED
+                },
+                NAVY_HOVER,
+                hot,
+            ),
+            Color32::from_rgb(58, 48, 22),
+            gold,
+        );
         painter.rect_filled(rect, 12.0, fill);
+        if let Some(p) = pop {
+            // A gold ring spreads out from the card.
+            let e = anim::ease_out(p);
+            painter.rect_stroke(
+                rect.expand(1.0 + 8.0 * e),
+                12.0 + 8.0 * e,
+                Stroke::new(2.5, GOLD.gamma_multiply((1.0 - e) * 0.85)),
+                StrokeKind::Outside,
+            );
+        }
         // The type strip on the left.
         painter.rect_filled(
             Rect::from_min_size(rect.min + vec2(0.0, 10.0), vec2(4.0, rect.height() - 20.0)),
             2.0,
             dim(self.accent),
         );
-        let edge = if chosen {
-            Stroke::new(2.5, GOLD)
-        } else if hovered {
-            Stroke::new(2.0, GOLD)
-        } else if locked {
+        let base_edge = if locked {
             Stroke::new(1.0, Color32::from_rgb(44, 56, 74))
         } else {
             Stroke::new(1.5, GOLD_DIM.gamma_multiply(0.8))
         };
+        let edge = Stroke::new(
+            anim::lerp(
+                anim::lerp(base_edge.width, 2.0, hot),
+                2.5,
+                gold,
+            ),
+            anim::mix(anim::mix(base_edge.color, GOLD, hot), GOLD, gold),
+        );
         painter.rect_stroke(rect, 12.0, edge, StrokeKind::Inside);
         let ic = pos2(
             rect.left() + pad + 6.0 + icon_d / 2.0,
@@ -190,7 +245,7 @@ impl<'a> Card<'a> {
         painter.circle_stroke(
             ic,
             icon_d / 2.0,
-            Stroke::new(1.5, if chosen { GOLD } else { dim(GOLD_DIM) }),
+            Stroke::new(1.5, anim::mix(dim(GOLD_DIM), GOLD, gold.max(hot * 0.6))),
         );
         let mut y = rect.top() + pad + 1.0;
         let x = rect.left() + text_x;
@@ -207,8 +262,9 @@ impl<'a> Card<'a> {
             painter.galley(pos2(x, y), f, TEXT_DIM);
         }
         if let Some((frac, color)) = self.bar {
-            theme::bar(
+            theme::bar_eased(
                 &painter,
+                id.with("bar"),
                 Rect::from_min_size(
                     pos2(rect.left() + pad + 6.0, rect.bottom() - pad - 6.0),
                     vec2(rect.width() - 2.0 * pad - 6.0, 7.0),
@@ -351,8 +407,9 @@ pub fn progress(
         14.5,
         color,
     );
-    theme::bar(
+    theme::bar_eased(
         painter,
+        response.id.with("bar"),
         Rect::from_min_size(
             pos2(rect.left() + 32.0, rect.top() + 26.0),
             vec2(width - 32.0, 8.0),
@@ -375,7 +432,7 @@ pub fn action_button(ui: &mut Ui, label: &str, enabled: bool, why_not: &str) -> 
         .painter()
         .layout_no_wrap(label.to_string(), FontId::proportional(18.0), TEXT);
     let w = (galley.size().x + 60.0).max(240.0);
-    let (rect, response) = ui.allocate_exact_size(
+    let (base, response) = ui.allocate_exact_size(
         vec2(w, 46.0),
         if enabled {
             Sense::click()
@@ -383,26 +440,56 @@ pub fn action_button(ui: &mut Ui, label: &str, enabled: bool, why_not: &str) -> 
             Sense::hover()
         },
     );
-    let hovered = response.hovered() && enabled;
+    let ctx = ui.ctx().clone();
+    let id = response.id;
+    let hot = anim::hover(&ctx, id.with("hot"), response.hovered() && enabled, 0.14);
+    let down = anim::hover(
+        &ctx,
+        id.with("down"),
+        enabled && response.is_pointer_button_down_on(),
+        0.07,
+    );
+    let on = anim::hover(&ctx, id.with("on"), enabled, 0.25);
+    if response.clicked() && enabled {
+        anim::trigger(&ctx, id.with("pop"));
+    }
+    let rect = base
+        .translate(vec2(0.0, -2.0 * hot * (1.0 - down)))
+        .shrink(1.8 * down);
     let painter = ui.painter();
-    let (fill, edge, text) = if enabled {
-        (
-            if hovered {
-                Color32::from_rgb(120, 92, 30)
-            } else {
-                Color32::from_rgb(92, 70, 24)
-            },
+    if on > 0.01 && ui.is_rect_visible(rect) {
+        // A ready button breathes a slow gold glow.
+        anim::ambient(&ctx);
+        theme::glow(
+            painter,
+            rect,
+            23.0,
             GOLD,
-            Color32::WHITE,
-        )
-    } else {
-        (
-            Color32::from_rgb(28, 36, 50),
-            Color32::from_rgb(60, 70, 86),
-            Color32::from_gray(130),
-        )
-    };
+            on * (0.25 + 0.3 * anim::wave(&ctx, 2.4) + 0.5 * hot),
+        );
+    }
+    if let Some(p) = anim::progress(&ctx, id.with("pop"), 0.35) {
+        let e = anim::ease_out(p);
+        painter.rect_stroke(
+            rect.expand(1.0 + 12.0 * e),
+            23.0 + 12.0 * e,
+            Stroke::new(3.0, GOLD.gamma_multiply((1.0 - e) * 0.85)),
+            StrokeKind::Outside,
+        );
+    }
+    let on_fill = anim::mix(Color32::from_rgb(92, 70, 24), Color32::from_rgb(120, 92, 30), hot);
+    let fill = anim::mix(Color32::from_rgb(28, 36, 50), on_fill, on);
+    let edge = anim::mix(Color32::from_rgb(60, 70, 86), GOLD, on);
+    let text = anim::mix(Color32::from_gray(130), Color32::WHITE, on);
     painter.rect_filled(rect, 23.0, fill);
+    if on > 0.01 {
+        // A soft sheen along the top edge.
+        painter.rect_filled(
+            Rect::from_min_size(rect.min + vec2(18.0, 3.0), vec2(rect.width() - 36.0, 9.0)),
+            4.5,
+            Color32::from_white_alpha((26.0 * on) as u8),
+        );
+    }
     painter.rect_stroke(rect, 23.0, Stroke::new(2.0, edge), StrokeKind::Inside);
     let galley = ui
         .painter()
@@ -424,27 +511,45 @@ pub fn choice(ui: &mut Ui, label: &str, color: Color32, selected: bool) -> bool 
     let galley = ui
         .painter()
         .layout_no_wrap(label.to_string(), FontId::proportional(15.5), TEXT);
-    let (rect, response) =
+    let (base, response) =
         ui.allocate_exact_size(vec2(galley.size().x + 44.0, 34.0), Sense::click());
+    let ctx = ui.ctx().clone();
+    let id = response.id;
+    let hot = anim::hover(&ctx, id.with("hot"), response.hovered(), 0.12);
+    let down = anim::hover(&ctx, id.with("down"), response.is_pointer_button_down_on(), 0.06);
+    let gold = anim::hover(&ctx, id.with("gold"), selected, 0.2);
+    if response.clicked() {
+        anim::trigger(&ctx, id.with("pop"));
+    }
+    let rect = base
+        .translate(vec2(0.0, -1.5 * hot * (1.0 - down)))
+        .shrink(1.2 * down);
     let painter = ui.painter();
-    let hovered = response.hovered();
+    theme::glow(painter, rect, 17.0, GOLD, (hot * 0.5).max(gold * 0.5));
+    if let Some(p) = anim::progress(&ctx, id.with("pop"), 0.3) {
+        let e = anim::ease_out(p);
+        painter.rect_stroke(
+            rect.expand(1.0 + 8.0 * e),
+            17.0 + 8.0 * e,
+            Stroke::new(2.0, GOLD.gamma_multiply((1.0 - e) * 0.8)),
+            StrokeKind::Outside,
+        );
+    }
     painter.rect_filled(
         rect,
         17.0,
-        if selected {
-            Color32::from_rgb(58, 48, 22)
-        } else if hovered {
-            NAVY_HOVER
-        } else {
-            NAVY_RAISED
-        },
+        anim::mix(
+            anim::mix(NAVY_RAISED, NAVY_HOVER, hot),
+            Color32::from_rgb(58, 48, 22),
+            gold,
+        ),
     );
     painter.rect_stroke(
         rect,
         17.0,
         Stroke::new(
-            if selected { 2.5 } else { 1.5 },
-            if selected || hovered { GOLD } else { GOLD_DIM },
+            anim::lerp(1.5, 2.5, gold),
+            anim::mix(GOLD_DIM, GOLD, hot.max(gold)),
         ),
         StrokeKind::Inside,
     );

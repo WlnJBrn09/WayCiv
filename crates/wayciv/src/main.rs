@@ -38,6 +38,11 @@ pub struct App {
     pub portraits: portraits::Portraits,
     /// Test hook: `WAYCIV_SNAPSHOT=out.png` saves a rendered frame and exits.
     snapshot: Option<(String, u32)>,
+    /// `WAYCIV_SNAPSHOT_AT` and `WAYCIV_AT`: when the game started and the
+    /// timed screenshots and actions still to come (milliseconds).
+    clock: Option<std::time::Instant>,
+    shots: Vec<u64>,
+    actions: Vec<(u64, String)>,
 }
 
 impl App {
@@ -51,11 +56,28 @@ impl App {
             ctx.request_repaint();
         });
         let snapshot = std::env::var("WAYCIV_SNAPSHOT").ok().map(|p| (p, 0));
+        let ms = |s: &str| s.trim().parse::<u64>().ok();
+        let mut shots: Vec<u64> = std::env::var("WAYCIV_SNAPSHOT_AT")
+            .map(|v| v.split(',').filter_map(ms).collect())
+            .unwrap_or_default();
+        shots.sort();
+        let mut actions: Vec<(u64, String)> = std::env::var("WAYCIV_AT")
+            .map(|v| {
+                v.split(',')
+                    .filter_map(|a| a.split_once(':'))
+                    .filter_map(|(t, a)| Some((ms(t)?, a.to_string())))
+                    .collect()
+            })
+            .unwrap_or_default();
+        actions.sort_by_key(|a| a.0);
         Self {
             stage: Stage::Loading(rx),
             rules: None,
             portraits: portraits::Portraits::new(),
             snapshot,
+            clock: None,
+            shots,
+            actions,
         }
     }
 
@@ -72,7 +94,11 @@ impl App {
     /// victory, great_people, city_states, leaders, notifications, legend,
     /// diplomacy or popup. `WAYCIV_TOASTS=1` replays the last few
     /// notifications as new ones (toasts and the unread badge).
-    /// `WAYCIV_FAITH=n` sets your Faith.
+    /// `WAYCIV_FAITH=n` sets your Faith. `WAYCIV_SNAPSHOT_AT=0,120,400`
+    /// saves frames at those milliseconds after the game starts (the last
+    /// one to `WAYCIV_SNAPSHOT`, the others as `<name>_<ms>.png`), and
+    /// `WAYCIV_AT=300:endturn,600:research` runs actions then (see
+    /// `ui::anim::demo`).
     fn autostart(&mut self, rules: &Arc<Rules>) {
         let env = |k: &str| std::env::var(k).ok();
         let settings = wayciv_core::Settings {
@@ -208,8 +234,22 @@ impl App {
             return;
         }
         *frames += 1;
-        if *frames == 30 {
-            let path = path.clone();
+        let ms = self.clock.get_or_insert_with(std::time::Instant::now).elapsed().as_millis() as u64;
+        if let Stage::Playing(s) = &mut self.stage {
+            while self.actions.first().is_some_and(|a| ms >= a.0) {
+                ui::anim::demo(s, &self.actions.remove(0).1);
+            }
+        }
+        let shot = if self.shots.is_empty() {
+            (*frames == 30).then(|| (path.clone(), true))
+        } else if ms >= self.shots[0] {
+            let at = self.shots.remove(0);
+            let last = self.shots.is_empty();
+            Some((if last { path.clone() } else { path.replace(".png", &format!("_{at}.png")) }, last))
+        } else {
+            None
+        };
+        if let Some((path, last)) = shot {
             let ctx2 = ctx.clone();
             let callback = egui::ScreenshotCallback::new(move |image| {
                 let [w, h] = image.size;
@@ -217,7 +257,9 @@ impl App {
                 if let Some(buffer) = image::RgbaImage::from_raw(w as u32, h as u32, pixels) {
                     let _ = buffer.save(&path);
                 }
-                ctx2.send_viewport_cmd(egui::ViewportCommand::Close);
+                if last {
+                    ctx2.send_viewport_cmd(egui::ViewportCommand::Close);
+                }
                 ctx2.request_repaint();
             });
             ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(callback));

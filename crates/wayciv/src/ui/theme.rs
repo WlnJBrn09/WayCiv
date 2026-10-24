@@ -1,10 +1,11 @@
 //! Shared HUD drawing: gold-trimmed plates, progress rings, round buttons,
 //! circular portraits.
 
+use super::anim;
 use super::glyph::{self, Glyph};
 use crate::palette::{self, GOLD, GOLD_DIM, NAVY, NAVY_HOVER, NAVY_RAISED, TEXT};
 use egui::{
-    Align2, Color32, CornerRadius, FontId, Mesh, Painter, Pos2, Rect, Response, Sense, Shape,
+    Align2, Color32, CornerRadius, FontId, Id, Mesh, Painter, Pos2, Rect, Response, Sense, Shape,
     Stroke, StrokeKind, Ui, epaint::Vertex, pos2, vec2,
 };
 use std::f32::consts::{PI, TAU};
@@ -96,13 +97,42 @@ pub fn text_bold(
     painter.text(pos, align, s, FontId::proportional(size), color)
 }
 
-/// A small filled badge with a number, e.g. the unread count.
+/// A small filled badge with a number, e.g. the unread count. It pops
+/// (scales up with a bounce and a ripple) when its number changes or when
+/// it reappears.
 pub fn badge(painter: &Painter, c: Pos2, label: &str, fill: Color32) {
-    let galley = painter.layout_no_wrap(label.to_string(), FontId::proportional(12.0), Color32::WHITE);
-    let w = (galley.size().x + 8.0).max(18.0);
-    let rect = Rect::from_center_size(c, vec2(w, 18.0));
-    painter.rect_filled(rect, 9.0, fill);
-    painter.rect_stroke(rect, 9.0, Stroke::new(1.5, NAVY), StrokeKind::Outside);
+    let ctx = painter.ctx();
+    let id = Id::unique(("badge", fill.to_array()));
+    let (frame, key) = (ctx.cumulative_frame_nr(), anim::hash(&label));
+    let prev = ctx.data(|d| d.get_temp::<(u64, u64)>(id));
+    ctx.data_mut(|d| d.insert_temp(id, (frame, key)));
+    if prev.is_some_and(|(f, k)| f + 1 < frame || k != key) {
+        anim::trigger(ctx, id.with("pop"));
+    }
+    let pop = anim::progress(ctx, id.with("pop"), 0.45);
+    let scale = pop.map_or(1.0, |p| 0.55 + 0.45 * anim::ease_out_back(p));
+    let galley = painter.layout_no_wrap(
+        label.to_string(),
+        FontId::proportional(12.0 * scale),
+        Color32::WHITE,
+    );
+    let w = (galley.size().x + 8.0).max(18.0 * scale);
+    let rect = Rect::from_center_size(c, vec2(w, 18.0 * scale));
+    if let Some(p) = pop {
+        let e = anim::ease_out(p);
+        painter.rect_stroke(
+            rect.expand(2.0 + 9.0 * e),
+            9.0 + 9.0 * e,
+            Stroke::new(2.0, fill.gamma_multiply((1.0 - e) * 0.9)),
+            StrokeKind::Outside,
+        );
+    }
+    let fill = match pop {
+        Some(p) => anim::mix(Color32::WHITE, fill, anim::ease_out((p * 2.5).min(1.0))),
+        None => fill,
+    };
+    painter.rect_filled(rect, 9.0 * scale, fill);
+    painter.rect_stroke(rect, 9.0 * scale, Stroke::new(1.5, NAVY), StrokeKind::Outside);
     painter.galley(c - galley.size() / 2.0, galley, Color32::WHITE);
 }
 
@@ -144,20 +174,36 @@ pub fn paint_round_button(
     enabled: bool,
     active: bool,
 ) {
+    let ctx = painter.ctx();
+    let id = response.id;
+    let hot = anim::hover(ctx, id.with("hot"), response.hovered() && enabled, 0.12);
+    let down = anim::hover(
+        ctx,
+        id.with("down"),
+        enabled && response.is_pointer_button_down_on(),
+        0.06,
+    );
+    if response.clicked() && enabled {
+        anim::trigger(ctx, id.with("pop"));
+    }
     let c = rect.center();
-    let r = rect.width() / 2.0;
-    let fill = if active {
-        palette::TEAL_DIM
-    } else if response.hovered() && enabled {
-        NAVY_HOVER
-    } else {
-        NAVY_RAISED
-    };
-    let rim = if response.hovered() && enabled || active {
-        GOLD
-    } else {
-        GOLD_DIM
-    };
+    let r = rect.width() / 2.0 * (1.0 + 0.05 * hot - 0.08 * down);
+    let lit = if active { 1.0 } else { hot };
+    let fill = anim::mix(
+        if active { palette::TEAL_DIM } else { NAVY_RAISED },
+        NAVY_HOVER,
+        if active { hot * 0.5 } else { hot },
+    );
+    let rim = anim::mix(GOLD_DIM, GOLD, lit);
+    glow_circle(painter, c, r - 1.0, GOLD, hot * 0.8);
+    if let Some(p) = anim::progress(ctx, id.with("pop"), 0.3) {
+        let e = anim::ease_out(p);
+        painter.circle_stroke(
+            c,
+            r + 2.0 + 10.0 * e,
+            Stroke::new(2.0, GOLD.gamma_multiply((1.0 - e) * 0.8)),
+        );
+    }
     disc(painter, c, r - 1.0, fill, rim);
     let color = if enabled {
         glyph_color
@@ -170,20 +216,66 @@ pub fn paint_round_button(
     }
 }
 
+/// A soft halo around a rounded rect: a few widening, fading strokes.
+pub fn glow(painter: &Painter, rect: Rect, radius: f32, color: Color32, strength: f32) {
+    if strength <= 0.01 {
+        return;
+    }
+    for (i, a) in [0.32, 0.2, 0.11, 0.05].into_iter().enumerate() {
+        let grow = 1.5 + i as f32 * 2.2;
+        painter.rect_stroke(
+            rect.expand(grow),
+            radius + grow,
+            Stroke::new(2.4, color.gamma_multiply(a * strength)),
+            StrokeKind::Middle,
+        );
+    }
+}
+
+/// A soft halo around a circle.
+pub fn glow_circle(painter: &Painter, c: Pos2, r: f32, color: Color32, strength: f32) {
+    if strength <= 0.01 {
+        return;
+    }
+    for (i, a) in [0.32, 0.2, 0.11, 0.05].into_iter().enumerate() {
+        let grow = 2.0 + i as f32 * 2.6;
+        painter.circle_stroke(c, r + grow, Stroke::new(2.6, color.gamma_multiply(a * strength)));
+    }
+}
+
 /// A pill-shaped button with optional glyph; returns the response.
 pub fn pill_button(ui: &mut Ui, g: Option<Glyph>, label: &str, color: Color32, min_width: f32) -> Response {
     let font = FontId::proportional(15.0);
     let galley = ui.painter().layout_no_wrap(label.to_string(), font, TEXT);
     let icon = if g.is_some() { 24.0 } else { 0.0 };
     let w = (galley.size().x + icon + 24.0).max(min_width);
-    let (rect, response) = ui.allocate_exact_size(vec2(w, 32.0), Sense::click());
+    let (base, response) = ui.allocate_exact_size(vec2(w, 32.0), Sense::click());
+    let ctx = ui.ctx().clone();
+    let id = response.id;
+    let hot = anim::hover(&ctx, id.with("hot"), response.hovered(), 0.12);
+    let down = anim::hover(&ctx, id.with("down"), response.is_pointer_button_down_on(), 0.06);
+    if response.clicked() {
+        anim::trigger(&ctx, id.with("pop"));
+    }
+    let rect = base
+        .translate(vec2(0.0, -1.5 * hot * (1.0 - down)))
+        .shrink(1.2 * down);
     let painter = ui.painter();
-    let fill = if response.hovered() { NAVY_HOVER } else { NAVY_RAISED };
-    painter.rect_filled(rect, 16.0, fill);
+    glow(painter, rect, 16.0, GOLD, hot * 0.7);
+    if let Some(p) = anim::progress(&ctx, id.with("pop"), 0.3) {
+        let e = anim::ease_out(p);
+        painter.rect_stroke(
+            rect.expand(1.0 + 7.0 * e),
+            16.0 + 7.0 * e,
+            Stroke::new(2.0, GOLD.gamma_multiply((1.0 - e) * 0.8)),
+            StrokeKind::Outside,
+        );
+    }
+    painter.rect_filled(rect, 16.0, anim::mix(NAVY_RAISED, NAVY_HOVER, hot));
     painter.rect_stroke(
         rect,
         16.0,
-        Stroke::new(1.5, if response.hovered() { GOLD } else { GOLD_DIM }),
+        Stroke::new(1.5 + 0.3 * hot, anim::mix(GOLD_DIM, GOLD, hot)),
         StrokeKind::Inside,
     );
     let mut x = rect.left() + 12.0;
@@ -262,6 +354,22 @@ pub fn bar(painter: &Painter, rect: Rect, frac: f32, color: Color32) {
     );
     if frac > 0.0 {
         painter.rect_filled(fill, rect.height() / 2.0, color);
+    }
+}
+
+/// Like `bar`, but the fill eases to new values (`id` must be stable) and
+/// carries a soft highlight along its top edge.
+pub fn bar_eased(painter: &Painter, id: Id, rect: Rect, frac: f32, color: Color32) {
+    let f = anim::smooth(painter.ctx(), id, frac.clamp(0.0, 1.0), 9.0);
+    bar(painter, rect, f, color);
+    if f > 0.0 {
+        let w = (rect.width() * f).max(rect.height());
+        let h = rect.height();
+        painter.rect_filled(
+            Rect::from_min_size(rect.min + vec2(h * 0.4, 1.0), vec2((w - h * 0.8).max(0.0), h * 0.32)),
+            h * 0.16,
+            Color32::from_white_alpha(46),
+        );
     }
 }
 
