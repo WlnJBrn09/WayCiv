@@ -258,6 +258,7 @@ fn panel(s: &mut Session, ui: &mut Ui, id: CityId) {
         }
     });
 
+    ui.spacing_mut().scroll = egui::style::ScrollStyle::solid();
     egui::ScrollArea::vertical()
         .id_salt("city_list")
         .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)

@@ -416,6 +416,7 @@ fn actions(s: &mut Session, ui: &mut Ui, id: wayciv_core::UnitId, col: f32, scre
         }
         ui.add_space(4.0);
         ui.label(RichText::new(format!("{title} ({})", items.len())).size(14.0).strong().color(GOLD));
+        ui.spacing_mut().scroll = egui::style::ScrollStyle::solid();
         egui::ScrollArea::vertical()
             .max_height(max_h)
             .id_salt(salt)

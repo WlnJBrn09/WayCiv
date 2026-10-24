@@ -14,20 +14,12 @@ use std::sync::{Arc, mpsc};
 use wayciv_core::{Game, Rules};
 
 fn main() -> eframe::Result {
-    // Test hook: `WAYCIV_WINDOW=WxH` opens the window at that size.
-    let (width, height) = std::env::var("WAYCIV_WINDOW")
-        .ok()
-        .and_then(|s| {
-            let (w, h) = s.split_once('x')?;
-            Some((w.parse().ok()?, h.parse().ok()?))
-        })
-        .unwrap_or((1500.0, 920.0));
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("WayCiv")
             .with_app_id("wayciv")
-            .with_inner_size([width, height])
-            .with_min_inner_size([width.min(1100.0), height.min(680.0)]),
+            .with_inner_size([1500.0, 920.0])
+            .with_min_inner_size([1100.0, 680.0]),
         ..Default::default()
     };
     eframe::run_native("WayCiv", options, Box::new(|cc| Ok(Box::new(App::new(cc)))))
@@ -46,6 +38,8 @@ pub struct App {
     pub portraits: portraits::Portraits,
     /// Test hook: `WAYCIV_SNAPSHOT=out.png` saves a rendered frame and exits.
     snapshot: Option<(String, u32)>,
+    /// Test hook: `WAYCIV_UI_SIZE=WxH`.
+    ui_size: Option<(f32, f32)>,
 }
 
 impl App {
@@ -64,6 +58,10 @@ impl App {
             rules: None,
             portraits: portraits::Portraits::new(),
             snapshot,
+            ui_size: std::env::var("WAYCIV_UI_SIZE").ok().and_then(|s| {
+                let (w, h) = s.split_once('x')?;
+                Some((w.parse().ok()?, h.parse().ok()?))
+            }),
         }
     }
 
@@ -81,12 +79,14 @@ impl App {
     /// diplomacy or popup. `WAYCIV_TOASTS=1` replays the last few
     /// notifications as new ones (toasts and the unread badge).
     /// `WAYCIV_FAITH=n` sets your Faith. `WAYCIV_GOLD=n` sets your Gold.
+    /// `WAYCIV_MEETALL=1` meets every other civilization.
     /// `WAYCIV_SETTLE=1` founds the capital with the starting Settler.
     /// `WAYCIV_SELECT=<unit>` selects a unit of that type (`builder`,
     /// `UNIT_TRADER`, `great_engineer`...), spawning one in the capital (a
     /// Builder goes on the owned tile with the most improvements) when you
     /// have none. `WAYCIV_CITY_TAB=n` picks the city panel tab.
-    /// `WAYCIV_WINDOW=WxH` opens the window at that size.
+    /// `WAYCIV_UI_SIZE=WxH` lays the HUD out as if the screen were at most
+    /// that big (the window is scaled to fit), to test small monitors.
     fn autostart(&mut self, rules: &Arc<Rules>) {
         let env = |k: &str| std::env::var(k).ok();
         let settings = wayciv_core::Settings {
@@ -138,6 +138,15 @@ impl App {
                 .map(|u| u.id);
             if let Some(id) = settler {
                 let _ = game.found_city(id);
+            }
+        }
+        if env("WAYCIV_MEETALL").is_some() {
+            let human = game.human();
+            for o in 0..game.players.len() {
+                if o != human && game.players[o].is_major() {
+                    game.players[human].relations[o].met = true;
+                    game.players[o].relations[human].met = true;
+                }
             }
         }
         if env("WAYCIV_REVEAL").is_some() {
@@ -336,6 +345,14 @@ impl eframe::App for App {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        if let Some((w, h)) = self.ui_size {
+            let ctx = ui.ctx();
+            let physical = ctx.content_rect().size() * ctx.pixels_per_point();
+            let ppp = (physical.x / w).max(physical.y / h);
+            if (ctx.pixels_per_point() - ppp).abs() > 0.001 {
+                ctx.set_pixels_per_point(ppp);
+            }
+        }
         self.snapshot_hook(ui.ctx());
         match &mut self.stage {
             Stage::Loading(_) => {

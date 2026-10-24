@@ -181,7 +181,9 @@ pub fn panel(s: &mut Session, ctx: &egui::Context) {
     let me = s.me();
     let width = 380.0;
     let origin = stack_origin(s, ctx, width);
-    let max_h = (ctx.content_rect().height() - origin.y - 170.0).clamp(220.0, 560.0);
+    // Layout only: end above the minimap and the Next Turn button.
+    let limit = super::city_panel::bottom_limit(s, ctx.content_rect());
+    let max_h = (limit - origin.y - 84.0).clamp(120.0, 560.0);
     let items: Vec<_> = s
         .game
         .notifications
