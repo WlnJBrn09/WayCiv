@@ -258,11 +258,14 @@ fn banner(s: &Session, ctx: &egui::Context) {
     let sweep = anim::ease_in_out((secs - 0.15) / 0.8);
     if sweep > 0.0 && sweep < 1.0 {
         let x = anim::lerp(plate.left() - 20.0, plate.right() + 20.0, sweep);
-        painter.with_clip_rect(plate).rect_filled(
-            Rect::from_min_size(pos2(x - 14.0, plate.top()), vec2(28.0, plate.height())),
-            0.0,
-            Color32::from_white_alpha((46.0 * a) as u8),
-        );
+        let clipped = painter.with_clip_rect(plate);
+        for (half, alpha) in [(34.0, 12.0), (20.0, 18.0), (8.0, 28.0)] {
+            clipped.rect_filled(
+                Rect::from_min_size(pos2(x - half, plate.top()), vec2(half * 2.0, plate.height())),
+                0.0,
+                Color32::from_white_alpha((alpha * a) as u8),
+            );
+        }
     }
     // Rules reaching out to both sides, fading away.
     for side in [-1.0f32, 1.0] {

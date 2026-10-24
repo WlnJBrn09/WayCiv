@@ -194,7 +194,7 @@ fn themed_window(
 
 pub fn windows(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) {
     let before = (s.windows.big_open(), s.popup.is_some());
-    anim::backdrop(ctx, before.0 || before.1, if before.1 { 120 } else { 90 });
+    anim::backdrop(ctx, before.0 || before.1, if before.1 { 120 } else { 90 }, before.1);
     windows_inner(s, portraits, ctx);
     anim::ghosts(ctx);
     // A window closed by a click needs one more frame to start fading out.

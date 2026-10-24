@@ -306,14 +306,17 @@ pub fn ghosts(ctx: &Context) {
     ctx.data_mut(|d| d.insert_temp(registry(), keep));
 }
 
-/// Dims everything under the windows (below the top bar), eased in and out.
-pub fn backdrop(ctx: &Context, on: bool, alpha: u8) {
+/// Dims everything under the windows (below the top bar unless `full`),
+/// eased in and out.
+pub fn backdrop(ctx: &Context, on: bool, alpha: u8, full: bool) {
     let t = hover(ctx, Id::unique("anim_backdrop"), on, 0.22);
     if t <= 0.0 {
         return;
     }
     let mut rect = ctx.content_rect();
-    rect.min.y += super::TOP_BAR;
+    if !full {
+        rect.min.y += super::TOP_BAR;
+    }
     ctx.layer_painter(LayerId::new(Order::Middle, Id::unique("anim_dim")))
         .rect_filled(rect, 0.0, Color32::from_black_alpha((alpha as f32 * t) as u8));
 }

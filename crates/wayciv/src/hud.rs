@@ -515,7 +515,7 @@ fn legend(s: &mut Session, ctx: &egui::Context) {
         );
     };
     let mut close = false;
-    egui::Area::new(egui::Id::unique("legend"))
+    let shown = egui::Area::new(egui::Id::unique("legend"))
         .fixed_pos(pos2(ui::MARGIN + 310.0, ui::TOP_BAR + ui::MARGIN))
         .order(egui::Order::Middle)
         .show(ctx, |ui| {
@@ -601,8 +601,11 @@ fn legend(s: &mut Session, ctx: &egui::Context) {
                 }
             });
         });
+    let (layer, rect) = (shown.response.layer_id, shown.response.rect);
+    ui::anim::window_fx(ctx, egui::Id::unique("legend_fx"), layer, rect);
     s.art = art.into_inner();
     if close {
+        ctx.request_repaint();
         s.windows.legend = false;
     }
 }

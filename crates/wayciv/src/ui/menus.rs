@@ -905,13 +905,17 @@ pub fn victory(s: &mut Session, ui: &mut Ui) -> bool {
             );
             let (bar, _) =
                 ui.allocate_exact_size(vec2(ui.available_width() - 60.0, 8.0), Sense::hover());
-            super::theme::bar(
+            let key = egui::Id::unique(("victory_score", x.id));
+            super::theme::bar_eased(
                 ui.painter(),
+                key.with("bar"),
                 bar,
                 score as f32 / top as f32,
                 rgb(x.primary).gamma_multiply(1.3),
             );
-            ui.label(RichText::new(score.to_string()).color(GOLD));
+            // The score ticks up to its new value.
+            let shown = super::anim::smooth(ui.ctx(), key, score as f32, 6.0);
+            ui.label(RichText::new((shown.round() as i32).to_string()).color(GOLD));
         });
     }
     false
