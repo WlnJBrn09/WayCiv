@@ -175,7 +175,7 @@ fn bar(s: &mut Session, ui: &mut Ui) {
     // The most readable layout in which every yield chip still fits: labelled
     // buttons with their hotkeys, labelled buttons, then icons alone.
     let (mut tier, mut with_era) = (Tier::Icons, false);
-    'pick: for t in [Tier::Labels, Tier::LabelsOnly, Tier::Icons] {
+    'pick: for t in [Tier::Labels, Tier::LabelsOnly, Tier::Captions, Tier::Icons] {
         for e in [true, false] {
             let sub = painter.layout_no_wrap(sub_text(e), FontId::proportional(13.0), TEXT_DIM);
             let block = turn_galley.size().x.max(sub.size().x);
@@ -194,7 +194,8 @@ fn bar(s: &mut Session, ui: &mut Ui) {
     let mut x = menu_left;
     for m in menu {
         let w = m.width(&painter, tier);
-        let r = Rect::from_min_size(pos2(x, cy - 18.0), vec2(w, 36.0));
+        let h = if tier == Tier::Captions { 46.0 } else { 36.0 };
+        let r = Rect::from_min_size(pos2(x, cy - h / 2.0 + if h > 40.0 { 1.0 } else { 0.0 }), vec2(w, h));
         let response = ui.interact(r, ui.scope_id().with(("menu", m.name)), Sense::click());
         let active = match m.panel {
             Some(p) => s.windows.is_open(p),
@@ -204,7 +205,11 @@ fn bar(s: &mut Session, ui: &mut Ui) {
         if m.panel == Some(Panel::Notifications) && unread > 0 {
             theme::badge(
                 &painter,
-                r.right_top() + vec2(-3.0, 4.0),
+                if tier == Tier::Captions {
+                    pos2(r.center().x + 14.0, r.top() + 6.0)
+                } else {
+                    r.right_top() + vec2(-3.0, 4.0)
+                },
                 &if unread > 99 {
                     "99+".into()
                 } else {
@@ -274,6 +279,8 @@ fn bar(s: &mut Session, ui: &mut Ui) {
 enum Tier {
     Labels,
     LabelsOnly,
+    /// Round button with its name underneath, in small type.
+    Captions,
     Icons,
 }
 
@@ -310,12 +317,30 @@ impl MenuItem {
     fn width(&self, painter: &egui::Painter, tier: Tier) -> f32 {
         match tier {
             Tier::Icons => 38.0,
+            Tier::Captions => {
+                let g = painter.layout_no_wrap(self.label.to_string(), FontId::proportional(11.5), TEXT);
+                (g.size().x + 10.0).max(38.0)
+            }
             Tier::LabelsOnly => 36.0 + self.label_width(painter) + 12.0,
             Tier::Labels => 36.0 + self.label_width(painter) + 8.0 + 18.0 + 10.0,
         }
     }
 
     fn paint(&self, painter: &egui::Painter, r: Rect, response: &egui::Response, tier: Tier, active: bool) {
+        if tier == Tier::Captions {
+            let c = pos2(r.center().x, r.top() + 17.0);
+            let circle = Rect::from_center_size(c, vec2(32.0, 32.0));
+            theme::paint_round_button(painter, circle, response, self.glyph, self.color, None, true, active);
+            theme::text(
+                painter,
+                pos2(r.center().x, r.bottom() - 6.0),
+                Align2::CENTER_CENTER,
+                self.label,
+                11.5,
+                if response.hovered() || active { GOLD } else { TEXT },
+            );
+            return;
+        }
         if tier == Tier::Icons {
             let d = r.height().min(r.width());
             let r = Rect::from_center_size(r.center(), vec2(d, d));

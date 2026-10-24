@@ -79,7 +79,8 @@ impl App {
     /// diplomacy or popup. `WAYCIV_TOASTS=1` replays the last few
     /// notifications as new ones (toasts and the unread badge).
     /// `WAYCIV_FAITH=n` sets your Faith. `WAYCIV_GOLD=n` sets your Gold.
-    /// `WAYCIV_MEETALL=1` meets every other civilization.
+    /// `WAYCIV_PLACE=district|bombard` starts placing a district or aiming
+    /// the city's ranged attack. `WAYCIV_MEETALL=1` meets every other civilization.
     /// `WAYCIV_SETTLE=1` founds the capital with the starting Settler.
     /// `WAYCIV_SELECT=<unit>` selects a unit of that type (`builder`,
     /// `UNIT_TRADER`, `great_engineer`...), spawning one in the capital (a
@@ -173,6 +174,21 @@ impl App {
             use screens::Panel;
             if let Some(tab) = env("WAYCIV_CITY_TAB").and_then(|t| t.parse().ok()) {
                 s.city_tab = tab;
+            }
+            match (env("WAYCIV_PLACE").as_deref(), first_city) {
+                (Some("district"), Some((id, _))) => {
+                    s.select_city(Some(id));
+                    s.placing = s
+                        .game
+                        .available_production(id)
+                        .into_iter()
+                        .find(|p| matches!(p, wayciv_core::Production::District(..)));
+                }
+                (Some("bombard"), Some((id, _))) => {
+                    s.select_city(Some(id));
+                    s.city_targeting = true;
+                }
+                _ => {}
             }
             if let Some(kind) = env("WAYCIV_SELECT") {
                 select_hook(s, &kind, first_city.map(|c| c.1));

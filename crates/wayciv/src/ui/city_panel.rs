@@ -31,6 +31,17 @@ const TABS: [(&str, Glyph); 7] = [
     ("Info", Glyph::Crown),
 ];
 
+/// What each tab lists, for its tooltip.
+const TAB_TIPS: [&str; 7] = [
+    "Units this city can train. Click one to build it, or Buy to pay Gold now.",
+    "Districts this city can build. Click one, then pick its tile on the map.",
+    "Buildings this city can construct. Click one to build it, or Buy to pay Gold now.",
+    "Wonders this city can build. Click one, then pick its tile on the map.",
+    "Projects this city can work on.",
+    "Religious units you can buy with Faith.",
+    "What this city has built and its trade routes.",
+];
+
 pub fn show(s: &mut Session, ctx: &egui::Context) {
     let Some(id) = s.selected_city else { return };
     if !s.game.cities.contains_key(&id) {
@@ -252,6 +263,9 @@ fn panel(s: &mut Session, ui: &mut Ui, id: CityId) {
                 galley,
                 TEXT,
             );
+            let response = response
+                .on_hover_text(TAB_TIPS[i])
+                .on_hover_cursor(egui::CursorIcon::PointingHand);
             if response.clicked() {
                 s.city_tab = i;
             }
@@ -468,7 +482,12 @@ fn status_rows(s: &mut Session, ui: &mut Ui, id: CityId, c: &wayciv_core::state:
     }
     if s.game.max_walls(id) > 0
         && !c.has_attacked
-        && theme::pill_button(ui, Some(Glyph::Bow), "City Ranged Attack", TEXT, 0.0).clicked()
+        && widgets::pill(
+            ui,
+            widgets::Btn::new("City Ranged Attack")
+                .glyph(Glyph::Bow, TEXT)
+                .tip("Bombard an enemy unit within 2 tiles, then click the target on the map. Once per turn."),
+        )
     {
         s.city_targeting = true;
     }
