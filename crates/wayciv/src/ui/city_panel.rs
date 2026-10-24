@@ -2,6 +2,7 @@
 //! current production with a progress ring, and what the city can build.
 
 use super::glyph::Glyph;
+use super::widgets::{self, Tool};
 use super::{MARGIN, TOP_BAR, glyph, theme};
 use crate::hud::Session;
 use crate::palette::{
@@ -14,6 +15,12 @@ use wayciv_core::{CityId, Game};
 
 pub const WIDTH: f32 = 400.0;
 
+/// The lowest edge of the panel: above the minimap and the Next Turn button.
+pub fn bottom_limit(s: &Session, screen: Rect) -> f32 {
+    (screen.bottom() - MARGIN - super::minimap::outer_size(s).y - 10.0)
+        .min(screen.bottom() - 170.0)
+}
+
 const TABS: [(&str, Glyph); 7] = [
     ("Units", Glyph::Swords),
     ("Districts", Glyph::Hex),
@@ -24,6 +31,17 @@ const TABS: [(&str, Glyph); 7] = [
     ("Info", Glyph::Crown),
 ];
 
+/// What each tab lists, for its tooltip.
+const TAB_TIPS: [&str; 7] = [
+    "Units this city can train. Click one to build it, or Buy to pay Gold now.",
+    "Districts this city can build. Click one, then pick its tile on the map.",
+    "Buildings this city can construct. Click one to build it, or Buy to pay Gold now.",
+    "Wonders this city can build. Click one, then pick its tile on the map.",
+    "Projects this city can work on.",
+    "Religious units you can buy with Faith.",
+    "What this city has built and its trade routes.",
+];
+
 pub fn show(s: &mut Session, ctx: &egui::Context) {
     let Some(id) = s.selected_city else { return };
     if !s.game.cities.contains_key(&id) {
@@ -31,13 +49,10 @@ pub fn show(s: &mut Session, ctx: &egui::Context) {
         return;
     }
     let screen = ctx.content_rect();
-    let ribbon = if super::leaders::met(s).is_empty() {
-        0.0
-    } else {
-        90.0
-    };
-    let top = TOP_BAR + MARGIN + ribbon;
-    let height = (screen.height() - top - 178.0).max(380.0);
+    // The leader ribbon sits to the left of the panel, so the panel gets the
+    // whole right edge from the top bar down to the minimap.
+    let top = TOP_BAR + MARGIN;
+    let height = (bottom_limit(s, screen) - top).max(300.0);
     egui::Area::new(egui::Id::unique("city_panel"))
         .fixed_pos(pos2(screen.right() - MARGIN - WIDTH, top))
         .order(egui::Order::Middle)
@@ -56,8 +71,25 @@ fn panel(s: &mut Session, ui: &mut Ui, id: CityId) {
     let me = s.me();
     ui.spacing_mut().item_spacing.y = 6.0;
 
-    // Header: name, capital star, close.
+    // Header: previous and next city, name, capital star, close.
+    let mut go: Option<CityId> = None;
     ui.horizontal(|ui| {
+        let mine: Vec<CityId> = {
+            let mut v: Vec<CityId> = s.game.player_cities(me).map(|c| c.id).collect();
+            v.sort();
+            v
+        };
+        let at = mine.iter().position(|&c| c == id).unwrap_or(0);
+        if mine.len() > 1 {
+            let prev = mine[(at + mine.len() - 1) % mine.len()];
+            let next = mine[(at + 1) % mine.len()];
+            if widgets::tool_button(ui, 30.0, Tool::Prev, false, "Previous city", &s.game.cities[&prev].name, None) {
+                go = Some(prev);
+            }
+            if widgets::tool_button(ui, 30.0, Tool::Next, false, "Next city", &s.game.cities[&next].name, None) {
+                go = Some(next);
+            }
+        }
         if c.capital {
             let (rect, _) = ui.allocate_exact_size(vec2(24.0, 24.0), Sense::hover());
             glyph::paint(ui.painter(), Glyph::Star, rect.center(), 11.0, GOLD);
@@ -65,14 +97,67 @@ fn panel(s: &mut Session, ui: &mut Ui, id: CityId) {
         ui.label(RichText::new(&c.name).size(25.0).strong().color(GOLD));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if theme::round_button(ui, 32.0, Glyph::Cross, TEXT, None, true)
-                .on_hover_text("Close (Esc)")
+                .on_hover_text("Close the city panel (Esc)")
                 .clicked()
             {
                 s.select_city(None);
             }
         });
     });
+    if let Some(next) = go {
+        s.select_city(Some(next));
+        let pos = s.game.cities[&next].pos;
+        crate::map_view::center_on(s, pos);
+        return;
+    }
 
+    // The details (growth, yields, status) fold away to leave room for the
+    // production list; short windows start folded.
+    let details_id = ui.scope_id().with("city_details");
+    let details = ui
+        .data(|d| d.get_temp::<bool>(details_id))
+        .unwrap_or(ui.available_height() > 620.0);
+    {
+        let galley_text = if details {
+            "Hide details".to_string()
+        } else {
+            format!(
+                "Show details: {} citizens, {:+.1} food, {:.1} production",
+                c.population,
+                report.yields[0] - report.food_consumed,
+                report.yields[1]
+            )
+        };
+        let (rect, response) =
+            ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::click());
+        let painter = ui.painter();
+        painter.rect_filled(
+            rect,
+            13.0,
+            if response.hovered() { NAVY_HOVER } else { Color32::from_white_alpha(12) },
+        );
+        let cx = rect.left() + 16.0;
+        // A chevron: down when folded, up when open.
+        let d = if details { -1.0 } else { 1.0 };
+        let p = |x: f32, y: f32| pos2(cx + x, rect.center().y + y * d);
+        painter.line_segment([p(-5.0, -2.5), p(0.0, 2.5)], Stroke::new(2.0, GOLD));
+        painter.line_segment([p(0.0, 2.5), p(5.0, -2.5)], Stroke::new(2.0, GOLD));
+        let text = super::trackers::fit(painter, &galley_text, 14.0, rect.width() - 40.0);
+        theme::text(painter, pos2(rect.left() + 30.0, rect.center().y), Align2::LEFT_CENTER, text, 14.0, TEXT_DIM);
+        if response
+            .on_hover_text(if details {
+                "Hide growth, yields and status to make room for the production list."
+            } else {
+                "Show growth, yields, housing, amenities and loyalty."
+            })
+            .on_hover_cursor(egui::CursorIcon::PointingHand)
+            .clicked()
+        {
+            ui.data_mut(|d| d.insert_temp(details_id, !details));
+        }
+    }
+
+    if details {
     growth_block(s, ui, id, &c, &report);
 
     // Yields: icon over number.
@@ -114,6 +199,7 @@ fn panel(s: &mut Session, ui: &mut Ui, id: CityId) {
     }
 
     status_rows(s, ui, id, &c);
+    }
 
     ui.add_space(2.0);
     production_block(s, ui, id, &c);
@@ -177,14 +263,19 @@ fn panel(s: &mut Session, ui: &mut Ui, id: CityId) {
                 galley,
                 TEXT,
             );
+            let response = response
+                .on_hover_text(TAB_TIPS[i])
+                .on_hover_cursor(egui::CursorIcon::PointingHand);
             if response.clicked() {
                 s.city_tab = i;
             }
         }
     });
 
+    ui.spacing_mut().scroll = egui::style::ScrollStyle::solid();
     egui::ScrollArea::vertical()
         .id_salt("city_list")
+        .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
         .auto_shrink([false, false])
         .max_height(ui.available_height())
         .show(ui, |ui| {
@@ -391,7 +482,12 @@ fn status_rows(s: &mut Session, ui: &mut Ui, id: CityId, c: &wayciv_core::state:
     }
     if s.game.max_walls(id) > 0
         && !c.has_attacked
-        && theme::pill_button(ui, Some(Glyph::Bow), "City Ranged Attack", TEXT, 0.0).clicked()
+        && widgets::pill(
+            ui,
+            widgets::Btn::new("City Ranged Attack")
+                .glyph(Glyph::Bow, TEXT)
+                .tip("Bombard an enemy unit within 2 tiles, then click the target on the map. Once per turn."),
+        )
     {
         s.city_targeting = true;
     }
@@ -454,7 +550,14 @@ fn item_icon(
 
 fn production_block(s: &mut Session, ui: &mut Ui, id: CityId, c: &wayciv_core::state::City) {
     let me = s.me();
-    let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 84.0), Sense::hover());
+    let buyable = c
+        .production
+        .as_ref()
+        .is_some_and(|item| s.game.purchase_cost(id, item).is_some());
+    let (rect, _) = ui.allocate_exact_size(
+        vec2(ui.available_width(), if buyable { 96.0 } else { 84.0 }),
+        Sense::hover(),
+    );
     let painter = ui.painter().clone();
     painter.rect_filled(
         rect,
@@ -467,7 +570,7 @@ fn production_block(s: &mut Session, ui: &mut Ui, id: CityId, c: &wayciv_core::s
         Stroke::new(1.5, palette::with_alpha(YIELD_COLORS[1], 150)),
         StrokeKind::Inside,
     );
-    let center = pos2(rect.left() + 46.0, rect.center().y);
+    let center = pos2(rect.left() + 46.0, rect.top() + 42.0);
     theme::disc(
         &painter,
         center,
@@ -486,7 +589,7 @@ fn production_block(s: &mut Session, ui: &mut Ui, id: CityId, c: &wayciv_core::s
         theme::ring(&painter, center, 35.0, 1.0, 5.0, GOLD);
         theme::text_bold(
             &painter,
-            pos2(rect.left() + 94.0, rect.center().y - 10.0),
+            pos2(rect.left() + 94.0, rect.top() + 32.0),
             Align2::LEFT_CENTER,
             "Choose production",
             18.0,
@@ -494,7 +597,7 @@ fn production_block(s: &mut Session, ui: &mut Ui, id: CityId, c: &wayciv_core::s
         );
         theme::text(
             &painter,
-            pos2(rect.left() + 94.0, rect.center().y + 12.0),
+            pos2(rect.left() + 94.0, rect.top() + 54.0),
             Align2::LEFT_CENTER,
             "Pick something from the list below",
             13.5,
@@ -546,35 +649,40 @@ fn production_block(s: &mut Session, ui: &mut Ui, id: CityId, c: &wayciv_core::s
         YIELD_COLORS[1],
     );
     if let Some(price) = s.game.purchase_cost(id, item) {
-        let btn = Rect::from_min_size(pos2(x, rect.bottom() - 30.0), vec2(150.0, 24.0));
+        let gold = s.game.players[me].gold;
+        let afford = gold >= price;
+        let btn = Rect::from_min_size(pos2(x, rect.bottom() - 40.0), vec2(190.0, 30.0));
         let response = ui.interact(btn, ui.scope_id().with("buy_now"), Sense::click());
-        painter.rect_filled(
-            btn,
-            12.0,
-            if response.hovered() { NAVY_HOVER } else { NAVY },
-        );
+        let hovered = response.hovered() && afford;
+        let fade = |c: Color32| if afford { c } else { c.gamma_multiply(0.5) };
+        painter.rect_filled(btn, 15.0, fade(if hovered { NAVY_HOVER } else { NAVY }));
         painter.rect_stroke(
             btn,
-            12.0,
-            Stroke::new(1.5, if response.hovered() { GOLD } else { GOLD_DIM }),
+            15.0,
+            Stroke::new(1.5, fade(if hovered { GOLD } else { GOLD_DIM })),
             StrokeKind::Inside,
         );
         glyph::paint(
             &painter,
             Glyph::Gold,
-            pos2(btn.left() + 14.0, btn.center().y),
-            8.0,
-            YIELD_COLORS[2],
+            pos2(btn.left() + 17.0, btn.center().y),
+            9.0,
+            fade(YIELD_COLORS[2]),
         );
         theme::text_bold(
             &painter,
-            pos2(btn.left() + 28.0, btn.center().y),
+            pos2(btn.left() + 34.0, btn.center().y),
             Align2::LEFT_CENTER,
-            format!("Buy for {price}"),
-            14.0,
-            TEXT,
+            format!("Buy now for {price}"),
+            15.0,
+            fade(TEXT),
         );
-        if response.on_hover_text("Buy the current item now").clicked() {
+        let tip = if afford {
+            format!("Buy {} now for {price} Gold (you have {gold}).", s.game.item_name(item))
+        } else {
+            format!("Not enough Gold: {price} needed, you have {gold}.")
+        };
+        if response.on_hover_text(tip).clicked() && afford {
             let item = item.clone();
             let r = s.game.purchase(id, item);
             s.result(r);
@@ -632,7 +740,8 @@ fn item_row(
         );
     }
     let x = rect.left() + 58.0;
-    let right_pad = if price.is_some() { 96.0 } else { 14.0 };
+    let right_pad = if price.is_some() { 104.0 } else { 14.0 };
+    let name_full = name.clone();
     let name = super::trackers::fit(&painter, &name, 16.0, rect.right() - x - right_pad);
     theme::text_bold(
         &painter,
@@ -657,39 +766,65 @@ fn item_row(
         13.5,
         TEXT_DIM,
     );
+    // A visible Buy button: the price in gold, dimmed when you can't pay.
+    let mut buy_clicked = false;
     if let Some(p) = price {
+        let gold = s.game.players[me].gold;
+        let afford = gold >= p;
+        let btn = Rect::from_min_size(
+            pos2(rect.right() - 92.0, rect.center().y - 15.0),
+            vec2(82.0, 30.0),
+        );
+        let br = ui.interact(btn, ui.scope_id().with(("buy", Game::production_key(item))), Sense::click());
+        let hovered = br.hovered() && afford;
+        let fade = |c: Color32| if afford { c } else { c.gamma_multiply(0.5) };
+        painter.rect_filled(btn, 15.0, fade(if hovered { NAVY_HOVER } else { NAVY }));
+        painter.rect_stroke(
+            btn,
+            15.0,
+            Stroke::new(1.5, fade(if hovered { GOLD } else { GOLD_DIM })),
+            StrokeKind::Inside,
+        );
         glyph::paint(
             &painter,
             Glyph::Gold,
-            pos2(rect.right() - 80.0, rect.center().y),
+            pos2(btn.left() + 14.0, btn.center().y),
             8.0,
-            YIELD_COLORS[2],
+            fade(YIELD_COLORS[2]),
         );
         theme::text_bold(
             &painter,
-            pos2(rect.right() - 66.0, rect.center().y),
+            pos2(btn.left() + 27.0, btn.center().y),
             Align2::LEFT_CENTER,
-            p,
-            15.0,
-            YIELD_COLORS[2],
+            format!("Buy {p}"),
+            14.0,
+            fade(YIELD_COLORS[2]),
         );
+        let tip = if afford {
+            format!("Buy {name_full} now for {p} Gold (you have {gold}).")
+        } else {
+            format!("Not enough Gold: {p} needed, you have {gold}.")
+        };
+        if br.on_hover_text(tip).clicked() && afford {
+            buy_clicked = true;
+        }
     }
     let tip = match price {
         Some(p) => format!(
-            "{}\n\nRight-click to buy now for {p} Gold.",
+            "{}\n\nClick to build this. Press Buy (or right-click) to buy it now for {p} Gold.",
             item_tooltip(&s.game, item)
         ),
         None => item_tooltip(&s.game, item),
     };
     let response = response.on_hover_text(tip);
-    if response.secondary_clicked() && price.is_some() {
+    if (response.secondary_clicked() || buy_clicked) && price.is_some() {
         let r = s.game.purchase(id, item.clone());
         if r.is_ok() {
             s.toast(format!("Bought {}.", s.game.item_name(item)));
         }
         s.result(r);
     }
-    if response.clicked() {
+    if response.clicked() && !buy_clicked {
         match item {
             Production::District(..) | Production::Wonder(..) => s.placing = Some(item.clone()),
             _ => match s.game.set_production(id, item.clone()) {

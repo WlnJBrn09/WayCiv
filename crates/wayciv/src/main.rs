@@ -48,6 +48,8 @@ pub struct App {
     pointer: Option<egui::Pos2>,
     shots: Vec<u64>,
     actions: Vec<(u64, String)>,
+    /// Test hook: `WAYCIV_UI_SIZE=WxH`.
+    ui_size: Option<(f32, f32)>,
 }
 
 impl App {
@@ -88,6 +90,10 @@ impl App {
             fake_time: (!shots.is_empty() || !actions.is_empty()).then_some(0.0),
             shots,
             actions,
+            ui_size: std::env::var("WAYCIV_UI_SIZE").ok().and_then(|s| {
+                let (w, h) = s.split_once('x')?;
+                Some((w.parse().ok()?, h.parse().ok()?))
+            }),
         }
     }
 
@@ -104,7 +110,17 @@ impl App {
     /// victory, great_people, city_states, leaders, notifications, legend,
     /// diplomacy or popup. `WAYCIV_TOASTS=1` replays the last few
     /// notifications as new ones (toasts and the unread badge).
-    /// `WAYCIV_FAITH=n` sets your Faith. `WAYCIV_SNAPSHOT_AT=0,120,400`
+    /// `WAYCIV_FAITH=n` sets your Faith. `WAYCIV_GOLD=n` sets your Gold.
+    /// `WAYCIV_PLACE=district|bombard` starts placing a district or aiming
+    /// the city's ranged attack. `WAYCIV_MEETALL=1` meets every other civilization.
+    /// `WAYCIV_SETTLE=1` founds the capital with the starting Settler.
+    /// `WAYCIV_SELECT=<unit>` selects a unit of that type (`builder`,
+    /// `UNIT_TRADER`, `great_engineer`...), spawning one in the capital (a
+    /// Builder goes on the owned tile with the most improvements) when you
+    /// have none. `WAYCIV_CITY_TAB=n` picks the city panel tab.
+    /// `WAYCIV_UI_SIZE=WxH` lays the HUD out as if the screen were at most
+    /// that big (the window is scaled to fit), to test small monitors.
+    /// `WAYCIV_SNAPSHOT_AT=0,120,400`
     /// saves frames at those milliseconds after the game starts (the last
     /// one to `WAYCIV_SNAPSHOT`, the others as `<name>_<ms>.png`), and
     /// `WAYCIV_AT=300:endturn,600:research` runs actions then (see
@@ -148,6 +164,29 @@ impl App {
             let human = game.human();
             game.players[human].faith = faith;
         }
+        if let Some(gold) = env("WAYCIV_GOLD").and_then(|f| f.parse().ok()) {
+            let human = game.human();
+            game.players[human].gold = gold;
+        }
+        if env("WAYCIV_SETTLE").is_some() {
+            let human = game.human();
+            let settler = game
+                .player_units(human)
+                .find(|u| game.unit_type(u).found_city)
+                .map(|u| u.id);
+            if let Some(id) = settler {
+                let _ = game.found_city(id);
+            }
+        }
+        if env("WAYCIV_MEETALL").is_some() {
+            let human = game.human();
+            for o in 0..game.players.len() {
+                if o != human && game.players[o].is_major() {
+                    game.players[human].relations[o].met = true;
+                    game.players[o].relations[human].met = true;
+                }
+            }
+        }
         if env("WAYCIV_REVEAL").is_some() {
             let human = game.human();
             game.players[human]
@@ -170,6 +209,27 @@ impl App {
                 }
             }
             use screens::Panel;
+            if let Some(tab) = env("WAYCIV_CITY_TAB").and_then(|t| t.parse().ok()) {
+                s.city_tab = tab;
+            }
+            match (env("WAYCIV_PLACE").as_deref(), first_city) {
+                (Some("district"), Some((id, _))) => {
+                    s.select_city(Some(id));
+                    s.placing = s
+                        .game
+                        .available_production(id)
+                        .into_iter()
+                        .find(|p| matches!(p, wayciv_core::Production::District(..)));
+                }
+                (Some("bombard"), Some((id, _))) => {
+                    s.select_city(Some(id));
+                    s.city_targeting = true;
+                }
+                _ => {}
+            }
+            if let Some(kind) = env("WAYCIV_SELECT") {
+                select_hook(s, &kind, first_city.map(|c| c.1));
+            }
             if env("WAYCIV_TOASTS").is_some() {
                 s.notifications.replay(&s.game, 5);
             }
@@ -279,6 +339,60 @@ impl App {
     }
 }
 
+/// `WAYCIV_SELECT`: selects (spawning if needed) one of your units.
+fn select_hook(s: &mut hud::Session, kind: &str, city: Option<wayciv_core::Pos>) {
+    let me = s.game.human();
+    let want = kind.to_uppercase().trim_start_matches("UNIT_").to_string();
+    let matches = |id: &str| id.trim_start_matches("UNIT_") == want || id == kind;
+    let found = s
+        .game
+        .player_units(me)
+        .find(|u| matches(&s.game.unit_type(u).id))
+        .map(|u| u.id);
+    let id = found.or_else(|| {
+        let full = format!("UNIT_{want}");
+        let base = city.or_else(|| s.game.player_units(me).next().map(|u| u.pos))?;
+        let at = if want == "BUILDER" {
+            // The owned tile where a Builder has the most to build.
+            let grid = s.game.map.grid;
+            grid.all()
+                .filter(|&p| s.game.map.tile(p).owner == Some(me))
+                .max_by_key(|&p| s.game.valid_improvements(me, p).len())
+                .unwrap_or(base)
+        } else {
+            base
+        };
+        let id = s.game.spawn(me, &full, at)?;
+        if want.starts_with("GREAT_") && want != "GREAT_PROPHET" {
+            if let Some(u) = s.game.units.get_mut(&id) {
+                u.great_person = Some(0);
+            }
+        }
+        Some(id)
+    });
+    if let Some(id) = id {
+        // Fresh orders; a Builder goes where it has the most to build.
+        let best = (want == "BUILDER").then(|| {
+            let grid = s.game.map.grid;
+            grid.all()
+                .filter(|&p| s.game.map.tile(p).owner == Some(me))
+                .max_by_key(|&p| s.game.valid_improvements(me, p).len())
+        });
+        let moves = s.game.unit_type(&s.game.units[&id]).moves;
+        if let Some(u) = s.game.units.get_mut(&id) {
+            u.moves = moves;
+            if let Some(Some(p)) = best {
+                u.pos = p;
+            }
+        }
+        s.select_unit(Some(id));
+        if let Some(u) = s.game.units.get(&id) {
+            let pos = u.pos;
+            map_view_center(s, pos);
+        }
+    }
+}
+
 fn map_view_center(s: &mut hud::Session, pos: wayciv_core::Pos) {
     map_view::center_on(s, pos);
 }
@@ -311,6 +425,14 @@ impl eframe::App for App {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        if let Some((w, h)) = self.ui_size {
+            let ctx = ui.ctx();
+            let physical = ctx.content_rect().size() * ctx.pixels_per_point();
+            let ppp = (physical.x / w).max(physical.y / h);
+            if (ctx.pixels_per_point() - ppp).abs() > 0.001 {
+                ctx.set_pixels_per_point(ppp);
+            }
+        }
         self.snapshot_hook(ui.ctx());
         match &mut self.stage {
             Stage::Loading(_) => {
