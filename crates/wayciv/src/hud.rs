@@ -154,8 +154,15 @@ impl Session {
                 Production::Wonder(w, _) => Production::Wonder(w, pos),
                 other => other,
             };
-            match self.game.set_production(city, placed) {
-                Ok(()) => self.placing = None,
+            match self.game.set_production(city, placed.clone()) {
+                Ok(()) => {
+                    let name = self.game.cities[&city].name.clone();
+                    self.toast(format!(
+                        "{name} is building {}.",
+                        self.game.item_name(&placed)
+                    ));
+                    self.select_city(None);
+                }
                 Err(e) => self.toast(e),
             }
             return;
@@ -291,7 +298,11 @@ impl Session {
 /// the game's length).
 pub fn year(game: &Game) -> String {
     let y = game.calendar_year(game.turn);
-    if y < 0 { format!("{} BC", -y) } else { format!("{y} AD") }
+    if y < 0 {
+        format!("{} BC", -y)
+    } else {
+        format!("{y} AD")
+    }
 }
 
 pub fn tile_tooltip(s: &Session, pos: Pos) -> String {
@@ -424,7 +435,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     ui::city_panel::show(s, &ctx);
     ui::unit_panel::show(s, &ctx);
     let turn_left = ui::turn::show(s, &ctx);
-    ui::minimap::show(s, &ctx, pos2(turn_left - 14.0, screen.bottom() - ui::MARGIN));
+    ui::minimap::show(
+        s,
+        &ctx,
+        pos2(turn_left - 14.0, screen.bottom() - ui::MARGIN),
+    );
     ui::notify::toasts(s, &ctx);
     ui::notify::panel(s, &ctx);
     legend(s, &ctx);
@@ -504,42 +519,72 @@ fn legend(s: &mut Session, ctx: &egui::Context) {
                 ui.horizontal(|ui| {
                     ui.label(RichText::new("Map Key").size(20.0).strong().color(GOLD));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui::theme::round_button(ui, 28.0, ui::glyph::Glyph::Cross, palette::TEXT, None, true)
-                            .on_hover_text("Close (K)")
-                            .clicked()
+                        if ui::theme::round_button(
+                            ui,
+                            28.0,
+                            ui::glyph::Glyph::Cross,
+                            palette::TEXT,
+                            None,
+                            true,
+                        )
+                        .on_hover_text("Close (K)")
+                        .clicked()
                         {
                             close = true;
                         }
                     });
                 });
-                egui::Grid::new("legend_grid").num_columns(2).spacing([14.0, 4.0]).show(ui, |ui| {
-                    let mut column = 0;
-                    let mut cell = |ui: &mut egui::Ui, draw: &dyn Fn(&egui::Painter, egui::Rect), name: &str| {
-                        ui.horizontal(|ui| {
-                            let (r, _) = ui.allocate_exact_size(vec2(22.0, 22.0), Sense::hover());
-                            draw(ui.painter(), r);
-                            ui.label(name);
-                        });
-                        column += 1;
-                        if column % 2 == 0 {
-                            ui.end_row();
+                egui::Grid::new("legend_grid")
+                    .num_columns(2)
+                    .spacing([14.0, 4.0])
+                    .show(ui, |ui| {
+                        let mut column = 0;
+                        let mut cell = |ui: &mut egui::Ui,
+                                        draw: &dyn Fn(&egui::Painter, egui::Rect),
+                                        name: &str| {
+                            ui.horizontal(|ui| {
+                                let (r, _) =
+                                    ui.allocate_exact_size(vec2(22.0, 22.0), Sense::hover());
+                                draw(ui.painter(), r);
+                                ui.label(name);
+                            });
+                            column += 1;
+                            if column % 2 == 0 {
+                                ui.end_row();
+                            }
+                        };
+                        for (id, name) in palette::LEGEND {
+                            cell(ui, &|p, r| swatch(p, r, id, None), name);
                         }
-                    };
-                    for (id, name) in palette::LEGEND {
-                        cell(ui, &|p, r| swatch(p, r, id, None), name);
-                    }
-                    for (feature, terrain, name) in palette::LEGEND_FEATURES {
-                        cell(ui, &|p, r| swatch(p, r, terrain, Some(feature)), name);
-                    }
-                    cell(ui, &|p, r| {
-                        swatch(p, r, "TERRAIN_GRASS", None);
-                        p.line_segment([r.left_bottom() + vec2(2.0, -3.0), r.right_bottom() + vec2(-2.0, -3.0)], egui::Stroke::new(3.0, Color32::from_rgb(92, 78, 66)));
-                    }, "Cliffs");
-                    cell(ui, &|p, r| {
-                        swatch(p, r, "TERRAIN_PLAINS", None);
-                        p.line_segment([r.left_center(), r.right_center()], egui::Stroke::new(2.5, Color32::from_rgb(60, 130, 220)));
-                    }, "River");
-                });
+                        for (feature, terrain, name) in palette::LEGEND_FEATURES {
+                            cell(ui, &|p, r| swatch(p, r, terrain, Some(feature)), name);
+                        }
+                        cell(
+                            ui,
+                            &|p, r| {
+                                swatch(p, r, "TERRAIN_GRASS", None);
+                                p.line_segment(
+                                    [
+                                        r.left_bottom() + vec2(2.0, -3.0),
+                                        r.right_bottom() + vec2(-2.0, -3.0),
+                                    ],
+                                    egui::Stroke::new(3.0, Color32::from_rgb(92, 78, 66)),
+                                );
+                            },
+                            "Cliffs",
+                        );
+                        cell(
+                            ui,
+                            &|p, r| {
+                                swatch(p, r, "TERRAIN_PLAINS", None);
+                                p.line_segment(
+                                    [r.left_center(), r.right_center()],
+                                    egui::Stroke::new(2.5, Color32::from_rgb(60, 130, 220)),
+                                );
+                            },
+                            "River",
+                        );
+                    });
                 ui.add_space(4.0);
                 for line in [
                     "Bumps: hills. Gray peaks: mountains. Star: natural wonder.",
@@ -566,11 +611,21 @@ impl Session {
             Tree::Tech => income.yields[3],
             Tree::Civic => income.yields[4],
             Tree::Ai => self.game.compute(me),
+        };
+        if rate <= 0.0 {
+            return match tree {
+                Tree::Tech => "Needs Science",
+                Tree::Civic => "Needs Culture",
+                Tree::Ai => "Needs Compute",
+            }
+            .into();
         }
-        .max(0.1);
         let left =
             (self.game.research_cost(tree, i) - self.game.progress(me, tree, i)).max(0) as f32;
-        format!("{}t", (left / rate).ceil())
+        match (left / rate).ceil() as i32 {
+            1 => "1 turn".into(),
+            n => format!("{n} turns"),
+        }
     }
 }
 

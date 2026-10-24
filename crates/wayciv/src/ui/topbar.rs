@@ -112,11 +112,17 @@ fn bar(s: &mut Session, ui: &mut Ui) {
     let rect = ui.max_rect();
     let painter = ui.painter().clone();
     painter.line_segment(
-        [rect.left_bottom() - vec2(0.0, 1.0), rect.right_bottom() - vec2(0.0, 1.0)],
+        [
+            rect.left_bottom() - vec2(0.0, 1.0),
+            rect.right_bottom() - vec2(0.0, 1.0),
+        ],
         Stroke::new(2.0, GOLD_DIM),
     );
     painter.line_segment(
-        [rect.left_bottom() - vec2(0.0, 4.0), rect.right_bottom() - vec2(0.0, 4.0)],
+        [
+            rect.left_bottom() - vec2(0.0, 4.0),
+            rect.right_bottom() - vec2(0.0, 4.0),
+        ],
         Stroke::new(1.0, palette::with_alpha(palette::TEAL, 60)),
     );
     let cy = rect.center().y - 1.0;
@@ -124,38 +130,100 @@ fn bar(s: &mut Session, ui: &mut Ui) {
 
     // Right side: menu buttons, then the turn block.
     let unread = s.unread_notifications();
-    let menu: [(Glyph, &str, &str, Option<Panel>, Color32); 8] = [
-        (Glyph::Bell, "Notifications", "N", Some(Panel::Notifications), GOLD),
-        (Glyph::Crown, "Leaders", "L", Some(Panel::Leaders), GOLD),
-        (Glyph::Temple, "Government", "G", Some(Panel::Government), GOLD),
-        (Glyph::Faith, "Religion", "R", Some(Panel::Religion), YIELD_COLORS[5]),
-        (Glyph::Star, "Great People", "P", Some(Panel::GreatPeople), GOLD),
-        (Glyph::City, "City-States", "E", Some(Panel::CityStates), GOLD),
-        (Glyph::Cup, "Victory Progress", "V", Some(Panel::Victory), GOLD),
-        (Glyph::Hex, "Map Key", "K", None, TEXT),
+    let menu: [(Glyph, &str, &str, Option<Panel>, Color32, &str); 8] = [
+        (
+            Glyph::Bell,
+            "Notifications",
+            "N",
+            Some(Panel::Notifications),
+            GOLD,
+            "What happened recently",
+        ),
+        (
+            Glyph::Crown,
+            "Leaders",
+            "L",
+            Some(Panel::Leaders),
+            GOLD,
+            "Other leaders, how they feel about you, diplomacy",
+        ),
+        (
+            Glyph::Temple,
+            "Government",
+            "G",
+            Some(Panel::Government),
+            GOLD,
+            "Your government and policy cards",
+        ),
+        (
+            Glyph::Faith,
+            "Religion",
+            "R",
+            Some(Panel::Religion),
+            YIELD_COLORS[5],
+            "Pantheon, founding a religion, the world's faiths",
+        ),
+        (
+            Glyph::Star,
+            "Great People",
+            "P",
+            Some(Panel::GreatPeople),
+            GOLD,
+            "Who comes next and how close you are",
+        ),
+        (
+            Glyph::City,
+            "City-States",
+            "E",
+            Some(Panel::CityStates),
+            GOLD,
+            "Send envoys for bonuses",
+        ),
+        (
+            Glyph::Cup,
+            "Victory Progress",
+            "V",
+            Some(Panel::Victory),
+            GOLD,
+            "How close everyone is to winning",
+        ),
+        (
+            Glyph::Hex,
+            "Map Key",
+            "K",
+            None,
+            TEXT,
+            "What the map colors and symbols mean",
+        ),
     ];
     let d = 38.0;
     let gap = 6.0;
     let menu_w = menu.len() as f32 * d + (menu.len() - 1) as f32 * gap;
     let mut x = rect.right() - 14.0 - menu_w;
     let menu_left = x;
-    for (g, name, key, panel, color) in menu {
+    for (g, name, key, panel, color, what) in menu {
         let r = Rect::from_min_size(pos2(x, cy - d / 2.0), vec2(d, d));
         let response = ui.interact(r, ui.scope_id().with(("menu", name)), Sense::click());
         let active = match panel {
             Some(p) => s.windows.is_open(p),
             None => s.windows.legend,
         };
-        theme::paint_round_button(&painter, r, &response, g, color, None, true, active);
+        theme::paint_round_button(&painter, r, &response, g, color, Some(key), true, active);
         if panel == Some(Panel::Notifications) && unread > 0 {
             theme::badge(
                 &painter,
                 r.right_top() + vec2(-3.0, 4.0),
-                &if unread > 99 { "99+".into() } else { unread.to_string() },
+                &if unread > 99 {
+                    "99+".into()
+                } else {
+                    unread.to_string()
+                },
                 BAD,
             );
         }
-        let response = response.on_hover_text(format!("{name} ({key})"));
+        let response = response
+            .on_hover_text(format!("{name} ({key})\n{what}"))
+            .on_hover_cursor(egui::CursorIcon::PointingHand);
         if response.clicked() {
             match panel {
                 Some(p) => s.windows.toggle(p),
@@ -176,8 +244,7 @@ fn bar(s: &mut Session, ui: &mut Ui) {
         .unwrap_or_default();
     let year = crate::hud::year(game);
     let turn_font = FontId::proportional(20.0);
-    let turn_galley =
-        painter.layout_no_wrap(format!("Turn {}", game.turn), turn_font, GOLD);
+    let turn_galley = painter.layout_no_wrap(format!("Turn {}", game.turn), turn_font, GOLD);
     let sub_text = |with_era: bool| {
         if with_era && !era.is_empty() {
             format!("{year}  -  {era}")
@@ -186,9 +253,12 @@ fn bar(s: &mut Session, ui: &mut Ui) {
         }
     };
     let chips = chips(s);
-    let total = |chips: &[Chip]| -> f32 { chips.iter().map(|c| chip_width(&painter, c)).sum::<f32>() + 8.0 * chips.len() as f32 };
+    let total = |chips: &[Chip]| -> f32 {
+        chips.iter().map(|c| chip_width(&painter, c)).sum::<f32>() + 8.0 * chips.len() as f32
+    };
     let mut with_era = true;
-    let mut sub_galley = painter.layout_no_wrap(sub_text(true), FontId::proportional(13.0), TEXT_DIM);
+    let mut sub_galley =
+        painter.layout_no_wrap(sub_text(true), FontId::proportional(13.0), TEXT_DIM);
     let mut block_w = turn_galley.size().x.max(sub_galley.size().x);
     let mut avail = menu_left - 24.0 - block_w - (rect.left() + 12.0);
     if avail < total(&chips) * 0.7 {
@@ -199,8 +269,16 @@ fn bar(s: &mut Session, ui: &mut Ui) {
     }
     let _ = with_era;
     let block_x = menu_left - 18.0 - block_w;
-    painter.galley(pos2(block_x + block_w - turn_galley.size().x, cy - 19.0), turn_galley, GOLD);
-    painter.galley(pos2(block_x + block_w - sub_galley.size().x, cy + 3.0), sub_galley, TEXT_DIM);
+    painter.galley(
+        pos2(block_x + block_w - turn_galley.size().x, cy - 19.0),
+        turn_galley,
+        GOLD,
+    );
+    painter.galley(
+        pos2(block_x + block_w - sub_galley.size().x, cy + 3.0),
+        sub_galley,
+        TEXT_DIM,
+    );
 
     // Left side: yield chips, dropping the least important when narrow.
     let mut chips = chips;
@@ -231,7 +309,11 @@ fn chip_width(painter: &egui::Painter, chip: &Chip) -> f32 {
     let main = painter.layout_no_wrap(chip.main.clone(), FontId::proportional(18.0), TEXT);
     let mut w = 40.0 + main.size().x + 12.0;
     if let Some((sub, _)) = &chip.sub {
-        w += 5.0 + painter.layout_no_wrap(sub.clone(), FontId::proportional(14.0), TEXT).size().x;
+        w += 5.0
+            + painter
+                .layout_no_wrap(sub.clone(), FontId::proportional(14.0), TEXT)
+                .size()
+                .x;
     }
     w
 }
@@ -241,7 +323,14 @@ fn draw_chip(painter: &egui::Painter, r: Rect, chip: &Chip, hovered: bool) {
     painter.rect_stroke(
         r,
         18.0,
-        Stroke::new(1.5, if hovered { GOLD } else { palette::with_alpha(GOLD_DIM, 200) }),
+        Stroke::new(
+            1.5,
+            if hovered {
+                GOLD
+            } else {
+                palette::with_alpha(GOLD_DIM, 200)
+            },
+        ),
         StrokeKind::Inside,
     );
     let ic = pos2(r.left() + 19.0, r.center().y);
@@ -270,11 +359,7 @@ fn draw_chip(painter: &egui::Painter, r: Rect, chip: &Chip, hovered: bool) {
 
 fn population_tip(s: &Session, ui: &mut Ui) {
     let me = s.me();
-    ui.label(
-        egui::RichText::new("Population")
-            .strong()
-            .color(GOLD),
-    );
+    ui.label(egui::RichText::new("Population").strong().color(GOLD));
     let mut total = 0;
     for c in s.game.player_cities(me) {
         total += c.population;

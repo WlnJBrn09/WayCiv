@@ -3,6 +3,14 @@
 use crate::map::PlayerId;
 use crate::state::{Game, Victory};
 
+/// How close a player is to one kind of victory.
+pub struct VictoryProgress {
+    pub name: &'static str,
+    pub detail: String,
+    /// 0..=1.
+    pub frac: f32,
+}
+
 impl Game {
     /// Space race projects needed for a science victory.
     pub fn space_projects(&self) -> Vec<usize> {
@@ -23,7 +31,7 @@ impl Game {
         (visiting, domestic)
     }
 
-    pub fn victory_progress(&self, player: PlayerId) -> Vec<(String, String)> {
+    pub fn victory_progress(&self, player: PlayerId) -> Vec<VictoryProgress> {
         let p = &self.players[player];
         let space = self.space_projects();
         let done = space
@@ -35,59 +43,69 @@ impl Game {
             .map(|x| x.id)
             .filter(|&x| x != player)
             .collect();
-        let culture_won = others.iter().filter(|&&o| {
-            let (visiting, domestic) = self.tourists(player, o);
-            visiting > domestic
-        });
+        let culture_won = others
+            .iter()
+            .filter(|&&o| {
+                let (visiting, domestic) = self.tourists(player, o);
+                visiting > domestic
+            })
+            .count();
         let capitals = self.original_capitals_held(player);
         let majors = self.players.iter().filter(|x| x.is_major()).count();
         let religious = others
             .iter()
             .filter(|&&o| p.religion.is_some() && self.dominant_religion(o) == p.religion)
             .count();
+        let frac = |a: usize, b: usize| if b == 0 { 0.0 } else { a as f32 / b as f32 };
         vec![
-            (
-                "Science".into(),
-                format!("{done} of {} space projects", space.len()),
-            ),
-            (
-                "Culture".into(),
-                format!(
-                    "More visiting tourists than {} of {} civilizations' domestic tourists",
-                    culture_won.count(),
+            VictoryProgress {
+                name: "Science",
+                detail: format!(
+                    "{done} of {} space projects. Research rocketry, build a Spaceport, then its projects.",
+                    space.len()
+                ),
+                frac: frac(done, space.len()),
+            },
+            VictoryProgress {
+                name: "Culture",
+                detail: format!(
+                    "More visiting tourists than the domestic tourists of {culture_won} of {} civilizations.",
                     others.len()
                 ),
-            ),
-            (
-                "Domination".into(),
-                format!("{capitals} of {majors} original capitals held"),
-            ),
-            (
-                "Religion".into(),
-                if p.religion.is_some() {
+                frac: frac(culture_won, others.len()),
+            },
+            VictoryProgress {
+                name: "Domination",
+                detail: format!("You hold {capitals} of {majors} original capitals."),
+                frac: frac(capitals, majors),
+            },
+            VictoryProgress {
+                name: "Religion",
+                detail: if p.religion.is_some() {
                     format!(
-                        "Your religion dominates {religious} of {} other civilizations",
+                        "Your religion is dominant in {religious} of {} other civilizations.",
                         others.len()
                     )
                 } else {
-                    "No religion founded".into()
+                    "Found a religion with a Great Prophet first.".into()
                 },
-            ),
-            (
-                "Score".into(),
-                match self.turn_limit() {
+                frac: frac(religious, others.len()),
+            },
+            VictoryProgress {
+                name: "Score",
+                detail: match self.turn_limit() {
                     Some(limit) => format!(
-                        "{} points; turn {} of {limit}",
+                        "{} points. Highest score wins at turn {limit} (now turn {}).",
                         self.score(player),
                         self.turn
                     ),
-                    None => format!(
-                        "{} points; turn {} (no turn limit)",
-                        self.score(player),
-                        self.turn
-                    ),
+                    None => format!("{} points. No turn limit in this game.", self.score(player)),
                 },
-            ),
+                frac: self
+                    .turn_limit()
+                    .map(|l| self.turn as f32 / l as f32)
+                    .unwrap_or(0.0),
+            },
         ]
     }
 

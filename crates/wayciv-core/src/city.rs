@@ -613,7 +613,7 @@ impl Game {
     }
 
     /// Whether `owner_type` (a civ/leader-unique owner) allows `player` to use it.
-    fn unique_ok(&self, player: PlayerId, unique_to: &Option<String>) -> bool {
+    pub fn unique_ok(&self, player: PlayerId, unique_to: &Option<String>) -> bool {
         let p = &self.players[player];
         match unique_to {
             None => true,

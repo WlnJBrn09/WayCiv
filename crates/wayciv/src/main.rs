@@ -67,10 +67,12 @@ impl App {
     /// `WAYCIV_LEADER` the leader, `WAYCIV_TURNS` lets the AI play your civ
     /// for that many turns, `WAYCIV_OPEN` opens a screen, `WAYCIV_REVEAL`
     /// reveals the whole map, and `WAYCIV_CENTER=x,y` centers the view.
-    /// `WAYCIV_OPEN` is one of city, tech, civic, ai, religion, government,
+    /// `WAYCIV_OPEN` is one of city, tech, civic, ai, religion, found (a
+    /// Great Prophet ready to found a religion), government,
     /// victory, great_people, city_states, leaders, notifications, legend,
     /// diplomacy or popup. `WAYCIV_TOASTS=1` replays the last few
     /// notifications as new ones (toasts and the unread badge).
+    /// `WAYCIV_FAITH=n` sets your Faith.
     fn autostart(&mut self, rules: &Arc<Rules>) {
         let env = |k: &str| std::env::var(k).ok();
         let settings = wayciv_core::Settings {
@@ -88,7 +90,9 @@ impl App {
             },
             opponents: 9,
             city_states: 12,
-            length: env("WAYCIV_LENGTH").and_then(|l| wayciv_core::GameLength::parse(&l)).unwrap_or_default(),
+            length: env("WAYCIV_LENGTH")
+                .and_then(|l| wayciv_core::GameLength::parse(&l))
+                .unwrap_or_default(),
             ..Default::default()
         };
         let mut game = wayciv_core::new_game(rules.clone(), settings);
@@ -103,6 +107,10 @@ impl App {
             }
             game.players[human].human = true;
             game.popups.clear();
+        }
+        if let Some(faith) = env("WAYCIV_FAITH").and_then(|f| f.parse().ok()) {
+            let human = game.human();
+            game.players[human].faith = faith;
         }
         if env("WAYCIV_REVEAL").is_some() {
             let human = game.human();
@@ -135,6 +143,27 @@ impl App {
                 Some("ai") => s.windows.open(Panel::Ai),
                 Some("government") => s.windows.open(Panel::Government),
                 Some("religion") => s.windows.open(Panel::Religion),
+                Some("found") => {
+                    // A Great Prophet on a Holy Site next to the capital.
+                    let me = s.game.human();
+                    let grid = s.game.map.grid;
+                    let site = first_city.and_then(|(_, c)| {
+                        grid.neighbors(c)
+                            .find(|&p| s.game.map.tile(p).owner == Some(me))
+                    });
+                    let holy = s.game.rules.idx("DISTRICT_HOLY_SITE");
+                    if let (Some(site), Some(holy)) = (site, holy) {
+                        s.game.map.tile_mut(site).district = Some(holy);
+                        if s.game.players[me].pantheon.is_none() {
+                            let b = s.game.beliefs_of_class("BELIEF_CLASS_PANTHEON")[0];
+                            s.game.players[me].pantheon = Some(b);
+                        }
+                        if let Some(u) = s.game.spawn(me, "UNIT_GREAT_PROPHET", site) {
+                            s.windows.open(Panel::Religion);
+                            s.windows.found = Some(ui::menus::FoundDraft::new(u));
+                        }
+                    }
+                }
                 Some("victory") => s.windows.open(Panel::Victory),
                 Some("great_people") => s.windows.open(Panel::GreatPeople),
                 Some("city_states") => s.windows.open(Panel::CityStates),

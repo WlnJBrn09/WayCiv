@@ -530,6 +530,33 @@ impl Game {
             .map(|(i, _)| i)
     }
 
+    /// Whether `policies` fit the current government's slots.
+    pub fn policies_fit(&self, player: PlayerId, policies: &[usize]) -> bool {
+        let slots = self.policy_slots(player);
+        let content = &self.rules.content;
+        let mut used: Vec<(String, i32)> = slots.iter().map(|(s, _)| (s.clone(), 0)).collect();
+        for &policy in policies {
+            match self.slot_for(&content.policies[policy].slot, &slots, &used) {
+                Some(slot) => used[slot].1 += 1,
+                None => return false,
+            }
+        }
+        true
+    }
+
+    /// Gold it costs to switch to `policies`: free right after a civic,
+    /// otherwise 25 per newly slotted policy.
+    pub fn policy_change_cost(&self, player: PlayerId, policies: &[usize]) -> i32 {
+        if self.players[player].policy_change_free {
+            return 0;
+        }
+        let changed = policies
+            .iter()
+            .filter(|p| !self.players[player].policies.contains(p))
+            .count() as i32;
+        changed * 25
+    }
+
     /// Replaces the player's policies; validates slot counts. Changing
     /// policies is free right after a civic completes; otherwise it costs gold.
     pub fn set_policies(&mut self, player: PlayerId, policies: Vec<usize>) -> Result<(), String> {
@@ -537,24 +564,10 @@ impl Game {
         if policies.iter().any(|p| !available.contains(p)) {
             return Err("A chosen policy isn't available.".into());
         }
-        let slots = self.policy_slots(player);
-        let content = &self.rules.content;
-        let mut used: Vec<(String, i32)> = slots.iter().map(|(s, _)| (s.clone(), 0)).collect();
-        for &policy in &policies {
-            let slot = self
-                .slot_for(&content.policies[policy].slot, &slots, &used)
-                .ok_or("Not enough policy slots.")?;
-            used[slot].1 += 1;
+        if !self.policies_fit(player, &policies) {
+            return Err("Not enough policy slots.".into());
         }
-        let changed = policies
-            .iter()
-            .filter(|p| !self.players[player].policies.contains(p))
-            .count() as i32;
-        let cost = if self.players[player].policy_change_free {
-            0
-        } else {
-            changed * 25
-        };
+        let cost = self.policy_change_cost(player, &policies);
         if self.players[player].gold < cost {
             return Err(format!("Changing policies now costs {cost} Gold."));
         }

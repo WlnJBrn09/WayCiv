@@ -2,7 +2,7 @@
 //! great people, city-states, victory, diplomacy, and leader pop-ups.
 
 use crate::hud::Session;
-use crate::palette::{self, GOLD, YIELD_COLORS, rgb};
+use crate::palette::{self, GOLD, YIELD_COLORS};
 use crate::portraits::Portraits;
 use crate::ui::glyph::Glyph;
 use crate::ui::{self, TOP_BAR, theme};
@@ -27,6 +27,8 @@ pub struct Windows {
     pub legend: bool,
     pub diplomacy: Option<PlayerId>,
     pub policy_draft: Option<Vec<usize>>,
+    /// A religion being founded with a Great Prophet.
+    pub found: Option<ui::menus::FoundDraft>,
 }
 
 /// A window or panel the player can open. Only one is open at a time.
@@ -123,7 +125,10 @@ fn themed_window(
     add: impl FnOnce(&mut egui::Ui),
 ) -> bool {
     let screen = ctx.content_rect();
-    let size = size.min(vec2(screen.width() - 40.0, screen.height() - TOP_BAR - 40.0));
+    let size = size.min(vec2(
+        screen.width() - 40.0,
+        screen.height() - TOP_BAR - 40.0,
+    ));
     let pos = pos2(
         screen.center().x - size.x / 2.0,
         TOP_BAR + (screen.height() - TOP_BAR - size.y) / 2.0,
@@ -139,7 +144,13 @@ fn themed_window(
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
                 let (rect, _) = ui.allocate_exact_size(vec2(34.0, 34.0), Sense::hover());
-                theme::disc(ui.painter(), rect.center(), 16.0, palette::NAVY_RAISED, palette::GOLD_DIM);
+                theme::disc(
+                    ui.painter(),
+                    rect.center(),
+                    16.0,
+                    palette::NAVY_RAISED,
+                    palette::GOLD_DIM,
+                );
                 ui::glyph::paint(ui.painter(), glyph, rect.center(), 9.0, GOLD);
                 ui.label(RichText::new(title).size(26.0).strong().color(GOLD));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -157,7 +168,10 @@ fn themed_window(
             });
             let y = ui.cursor().top() + 2.0;
             ui.painter().line_segment(
-                [pos2(ui.min_rect().left(), y), pos2(ui.max_rect().right(), y)],
+                [
+                    pos2(ui.min_rect().left(), y),
+                    pos2(ui.max_rect().right(), y),
+                ],
                 Stroke::new(1.5, palette::GOLD_DIM),
             );
             ui.add_space(8.0);
@@ -193,33 +207,76 @@ pub fn windows(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) 
             Tree::Ai => s.windows.ai &= open,
         }
     }
-    if s.windows.government {
-        let open = themed_window(ctx, "Government", Glyph::Temple, Some("G"), vec2(800.0, 600.0), |ui| government(s, ui));
-        s.windows.government &= open;
-    }
-    if s.windows.religion {
-        let open = themed_window(ctx, "Religion", Glyph::Faith, Some("R"), vec2(680.0, 560.0), |ui| religion(s, ui));
-        s.windows.religion &= open;
-    }
-    if s.windows.great_people {
-        let open = themed_window(ctx, "Great People", Glyph::Star, Some("P"), vec2(760.0, 420.0), |ui| great_people(s, ui));
-        s.windows.great_people &= open;
-    }
-    if s.windows.city_states {
-        let open = themed_window(ctx, "City-States", Glyph::City, Some("E"), vec2(760.0, 440.0), |ui| city_states(s, ui));
-        s.windows.city_states &= open;
-    }
-    if s.windows.victory {
-        let open = themed_window(ctx, "Victory Progress", Glyph::Cup, Some("V"), vec2(680.0, 460.0), |ui| victory(s, ui));
-        s.windows.victory &= open;
+    // The empire menus close themselves once their choice is made.
+    type Menu = fn(&mut Session, &mut egui::Ui) -> bool;
+    let menus: [(Panel, &str, Glyph, &str, egui::Vec2, Menu); 5] = [
+        (
+            Panel::Government,
+            "Government",
+            Glyph::Temple,
+            "G",
+            vec2(1100.0, 860.0),
+            ui::menus::government,
+        ),
+        (
+            Panel::Religion,
+            "Religion",
+            Glyph::Faith,
+            "R",
+            vec2(1000.0, 820.0),
+            ui::menus::religion,
+        ),
+        (
+            Panel::GreatPeople,
+            "Great People",
+            Glyph::Star,
+            "P",
+            vec2(1100.0, 760.0),
+            ui::menus::great_people,
+        ),
+        (
+            Panel::CityStates,
+            "City-States",
+            Glyph::City,
+            "E",
+            vec2(1100.0, 720.0),
+            ui::menus::city_states,
+        ),
+        (
+            Panel::Victory,
+            "Victory Progress",
+            Glyph::Cup,
+            "V",
+            vec2(760.0, 720.0),
+            ui::menus::victory,
+        ),
+    ];
+    for (panel, title, glyph, key, size, menu) in menus {
+        if !s.windows.is_open(panel) {
+            continue;
+        }
+        let mut done = false;
+        let open = themed_window(ctx, title, glyph, Some(key), size, |ui| done = menu(s, ui));
+        if !open || done {
+            s.windows.close_all();
+        }
     }
     if s.windows.leaders {
-        let open = themed_window(ctx, "Leaders", Glyph::Crown, Some("L"), vec2(700.0, 540.0), |ui| ui::leaders::panel(s, portraits, ui));
+        let open = themed_window(
+            ctx,
+            "Leaders",
+            Glyph::Crown,
+            Some("L"),
+            vec2(700.0, 540.0),
+            |ui| ui::leaders::panel(s, portraits, ui),
+        );
         s.windows.leaders &= open;
     }
     if let Some(other) = s.windows.diplomacy {
         let name = s.game.players[other].name.clone();
-        let open = themed_window(ctx, &name, Glyph::Crown, None, vec2(860.0, 560.0), |ui| diplomacy(s, portraits, ui, other));
+        let open = themed_window(ctx, &name, Glyph::Crown, None, vec2(860.0, 560.0), |ui| {
+            diplomacy(s, portraits, ui, other)
+        });
         if !open {
             s.windows.diplomacy = None;
         }
@@ -308,6 +365,24 @@ fn unlocks(game: &Game, tree: Tree, id: &str) -> Vec<String> {
     out
 }
 
+/// Unit types (ids) a tech or civic unlocks.
+fn unlocked_units(game: &Game, tree: Tree, id: &str) -> Vec<String> {
+    game.rules
+        .content
+        .units
+        .iter()
+        .filter(|u| {
+            u.unique_to.is_none()
+                && match tree {
+                    Tree::Tech => u.prereq_tech.as_deref() == Some(id),
+                    Tree::Civic => u.prereq_civic.as_deref() == Some(id),
+                    Tree::Ai => false,
+                }
+        })
+        .map(|u| u.id.clone())
+        .collect()
+}
+
 /// Draws a tree; returns true when the player picked something to research.
 fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
     let me = s.me();
@@ -331,7 +406,7 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
     };
     ui.horizontal(|ui| {
         ui.label(
-            RichText::new("Click an available item to research it.")
+            RichText::new("Click a bright item to research it next. Dim items need the ones before them first. Hover for what each unlocks.")
                 .color(palette::TEXT),
         );
         for (name, color) in [
@@ -347,7 +422,9 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
     if tree == Tree::Ai {
         let compute = s.game.compute(me);
         if !s.game.ai_tree_unlocked(me) {
-            ui.label(RichText::new("Research Artificial Intelligence to open this tree.").color(GOLD));
+            ui.label(
+                RichText::new("Research Artificial Intelligence to open this tree.").color(GOLD),
+            );
         } else {
             ui.label(RichText::new(format!("Compute +{compute:.0}/turn. Datacenters produce Compute: +6 each, +2 per adjacent district, +3 next to a river or the coast.")).color(crate::palette::COMPUTE));
         }
@@ -399,15 +476,31 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
             let (fill, edge, text) = if is_current {
                 (Color32::from_rgb(70, 54, 20), GOLD, Color32::WHITE)
             } else if known {
-                (Color32::from_rgb(20, 58, 50), palette::GOOD.gamma_multiply(0.55), Color32::from_gray(225))
+                (
+                    Color32::from_rgb(20, 58, 50),
+                    palette::GOOD.gamma_multiply(0.55),
+                    Color32::from_gray(225),
+                )
             } else if available {
                 (Color32::from_rgb(26, 48, 80), accent, Color32::WHITE)
             } else {
-                (Color32::from_rgb(15, 22, 34), Color32::from_rgb(46, 58, 76), Color32::from_gray(130))
+                (
+                    Color32::from_rgb(15, 22, 34),
+                    Color32::from_rgb(46, 58, 76),
+                    Color32::from_gray(130),
+                )
             };
             let response = ui.interact(rect, ui.scope_id().with(("node", i)), Sense::click());
             let hovered = response.hovered() && (available || known);
-            painter.rect_filled(rect, 14.0, if hovered { fill.gamma_multiply(1.35) } else { fill });
+            painter.rect_filled(
+                rect,
+                14.0,
+                if hovered {
+                    fill.gamma_multiply(1.35)
+                } else {
+                    fill
+                },
+            );
             painter.rect_stroke(
                 rect,
                 14.0,
@@ -422,7 +515,17 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                 &item.id,
                 Rect::from_center_size(ic, vec2(h - 18.0, h - 18.0)),
             ) {
-                ui::glyph::paint(&painter, fallback, ic, 13.0, if known || available { accent } else { Color32::from_gray(100) });
+                ui::glyph::paint(
+                    &painter,
+                    fallback,
+                    ic,
+                    13.0,
+                    if known || available {
+                        accent
+                    } else {
+                        Color32::from_gray(100)
+                    },
+                );
             }
             painter.circle_stroke(ic, h / 2.0 - 7.0, Stroke::new(1.5, edge));
             let text_x = h + 4.0;
@@ -436,37 +539,84 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
             );
             let cost = s.game.research_cost(tree, i);
             let (status, status_color) = if known {
-                ("Known".to_string(), palette::GOOD)
-            } else if available || is_current {
-                (format!("{cost}   {}", s.research_turns(tree, i)), accent)
+                ("Researched".to_string(), palette::GOOD)
+            } else if is_current {
+                (format!("Researching: {}", s.research_turns(tree, i)), GOLD)
             } else {
-                (format!("{cost}"), Color32::from_gray(120))
+                (
+                    s.research_turns(tree, i),
+                    if available {
+                        accent
+                    } else {
+                        Color32::from_gray(120)
+                    },
+                )
             };
             painter.text(
-                rect.min + vec2(text_x, 37.0),
+                rect.min + vec2(text_x, 36.0),
                 Align2::LEFT_CENTER,
                 status,
                 FontId::proportional(13.5),
                 status_color,
             );
-            if item.boost.is_some() && !known {
+            // What it unlocks, as unit icons along the right edge.
+            let unit_icons: Vec<String> = if tree == Tree::Ai {
+                Vec::new()
+            } else {
+                unlocked_units(&s.game, tree, &item.id)
+            };
+            for (k, id) in unit_icons.iter().rev().take(3).enumerate() {
+                let c = pos2(rect.right() - 16.0 - k as f32 * 22.0, rect.min.y + 36.0);
+                painter.circle_filled(c, 10.0, Color32::from_rgb(10, 18, 30));
+                s.icons.paint(
+                    &painter,
+                    "unit",
+                    id,
+                    Rect::from_center_size(c, vec2(19.0, 19.0)),
+                );
+            }
+            if let Some(b) = item.boost.as_ref().filter(|_| !known) {
+                let label = if boosted {
+                    "Boosted (50% done)".to_string()
+                } else {
+                    ui::trackers::fit(&painter, &format!("Boost: {b}"), 11.5, w - text_x - 12.0)
+                };
                 painter.text(
                     rect.min + vec2(text_x, 53.0),
                     Align2::LEFT_CENTER,
-                    if boosted { "Boosted!" } else { "Boost: hover" },
+                    label,
                     FontId::proportional(11.5),
-                    if boosted { GOLD } else { Color32::from_gray(120) },
+                    if boosted {
+                        GOLD
+                    } else {
+                        Color32::from_gray(140)
+                    },
                 );
             }
             let progress = s.game.progress(me, tree, i);
             if !known && progress > 0 {
                 let bar = Rect::from_min_size(
                     rect.left_bottom() + vec2(16.0, -7.0),
-                    vec2((w - 32.0) * (progress as f32 / cost.max(1) as f32).min(1.0), 3.5),
+                    vec2(
+                        (w - 32.0) * (progress as f32 / cost.max(1) as f32).min(1.0),
+                        3.5,
+                    ),
                 );
                 painter.rect_filled(bar, 2.0, accent);
             }
-            let mut tip = item.name.clone();
+            let mut tip = if known {
+                item.name.clone()
+            } else {
+                format!(
+                    "{} ({cost} {})",
+                    item.name,
+                    match tree {
+                        Tree::Tech => "Science",
+                        Tree::Civic => "Culture",
+                        Tree::Ai => "Compute",
+                    }
+                )
+            };
             if tree == Tree::Ai {
                 if let Some(t) = wayciv_core::additions::AI_TREE
                     .iter()
@@ -483,7 +633,17 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
             if let Some(b) = &item.boost {
                 tip += &format!("\nBoost (50%): {b}");
             }
+            if available {
+                tip += "\n\nClick to research this next.";
+            } else if !known && !is_current {
+                tip += "\n\nResearch the items before it first.";
+            }
             let response = response.on_hover_text(tip);
+            let response = if available {
+                response.on_hover_cursor(egui::CursorIcon::PointingHand)
+            } else {
+                response
+            };
             if response.clicked() && available {
                 let r = s.game.set_research(me, tree, i);
                 picked = r.is_ok();
@@ -494,327 +654,6 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
     picked
 }
 
-fn government(s: &mut Session, ui: &mut egui::Ui) {
-    let me = s.me();
-    let content = s.game.rules.content.clone_lists();
-    let current = s.game.players[me].government;
-    let available = s.game.available_governments(me);
-    if available.is_empty() {
-        ui.label("Research the Code of Laws civic to adopt your first government (Chiefdom).");
-        return;
-    }
-    ui.horizontal_wrapped(|ui| {
-        for g in available {
-            let gov = &content.governments[g];
-            let selected = current == Some(g);
-            let slots: Vec<String> = gov
-                .slots
-                .iter()
-                .map(|(t, n)| format!("{n} {}", slot_name(t)))
-                .collect();
-            let response = ui
-                .selectable_label(selected, format!("{}\n{}", gov.name, slots.join(", ")))
-                .on_hover_text(&gov.bonus);
-            if response.clicked() && !selected {
-                let r = s.game.set_government(me, g);
-                s.result(r);
-                s.windows.policy_draft = None;
-            }
-        }
-    });
-    let Some(g) = s.game.players[me].government else {
-        return;
-    };
-    ui.label(RichText::new(&content.governments[g].bonus).italics());
-    ui.separator();
-    let draft = s
-        .windows
-        .policy_draft
-        .get_or_insert_with(|| s.game.players[me].policies.clone())
-        .clone();
-    let slots = s.game.policy_slots(me);
-    let free = s.game.players[me].policy_change_free;
-    ui.label(format!(
-        "Slots: {}.  {}",
-        slots
-            .iter()
-            .map(|(t, n)| format!("{n} {}", slot_name(t)))
-            .collect::<Vec<_>>()
-            .join(", "),
-        if free {
-            "Changing policies is free this turn."
-        } else {
-            "Changes cost 25 Gold each until your next civic."
-        }
-    ));
-    let available = s.game.available_policies(me);
-    let mut next = draft.clone();
-    egui::ScrollArea::vertical()
-        .max_height(ui.available_height() - 40.0)
-        .show(ui, |ui| {
-            for kind in [
-                "SLOT_MILITARY",
-                "SLOT_ECONOMIC",
-                "SLOT_DIPLOMATIC",
-                "SLOT_GREAT_PERSON",
-            ] {
-                let list: Vec<usize> = available
-                    .iter()
-                    .copied()
-                    .filter(|&p| content.policies[p].slot == kind)
-                    .collect();
-                if list.is_empty() {
-                    continue;
-                }
-                ui.label(RichText::new(slot_name(kind)).strong().color(GOLD));
-                for p in list {
-                    let policy = &content.policies[p];
-                    let mut on = next.contains(&p);
-                    let active = s
-                        .game
-                        .rules
-                        .content
-                        .modifiers_of(&policy.id)
-                        .any(wayciv_core::effects::is_active);
-                    let tag = if active { "" } else { "  (description only)" };
-                    if ui
-                        .checkbox(&mut on, format!("{}{tag}", policy.name))
-                        .on_hover_text(&policy.description)
-                        .changed()
-                    {
-                        if on {
-                            next.push(p);
-                        } else {
-                            next.retain(|&x| x != p);
-                        }
-                    }
-                }
-            }
-        });
-    s.windows.policy_draft = Some(next.clone());
-    if ui
-        .button(RichText::new("Confirm Policies").strong())
-        .clicked()
-    {
-        match s.game.set_policies(me, next) {
-            Ok(()) => {
-                s.game.players[me].policy_change_free = false;
-                s.toast("Policies updated.");
-            }
-            Err(e) => s.toast(e),
-        }
-    }
-}
-
-fn slot_name(slot: &str) -> &'static str {
-    match slot {
-        "SLOT_MILITARY" => "Military",
-        "SLOT_ECONOMIC" => "Economic",
-        "SLOT_DIPLOMATIC" => "Diplomatic",
-        "SLOT_GREAT_PERSON" => "Great Person",
-        "SLOT_WILDCARD" => "Wildcard",
-        _ => "Other",
-    }
-}
-
-fn religion(s: &mut Session, ui: &mut egui::Ui) {
-    let me = s.me();
-    let p = s.game.players[me].clone();
-    let content = s.game.rules.content.clone_lists();
-    ui.horizontal(|ui| {
-        s.icons.show(ui, "tree", "TREE_RELIGION", 36.0);
-        ui.label(format!("Faith: {}", p.faith));
-    });
-    match p.pantheon {
-        Some(b) => {
-            ui.horizontal(|ui| {
-                s.icons.show(ui, "belief", &content.beliefs[b].id, 40.0);
-                ui.label(
-                    RichText::new(format!("Pantheon: {}", content.beliefs[b].name)).color(GOLD),
-                );
-            });
-            ui.label(&content.beliefs[b].description);
-        }
-        None => {
-            ui.label(
-                RichText::new(format!(
-                    "Choose a pantheon belief ({} Faith).",
-                    wayciv_core::religion::PANTHEON_COST
-                ))
-                .color(GOLD),
-            );
-            let can = s.game.can_choose_pantheon(me);
-            egui::ScrollArea::vertical()
-                .max_height(260.0)
-                .show(ui, |ui| {
-                    for b in s.game.beliefs_of_class("BELIEF_CLASS_PANTHEON") {
-                        ui.horizontal(|ui| {
-                            s.icons.show(ui, "belief", &content.beliefs[b].id, 28.0);
-                            if ui
-                                .add_enabled(can, egui::Button::new(&content.beliefs[b].name))
-                                .clicked()
-                            {
-                                let r = s.game.choose_pantheon(me, b);
-                                s.result(r);
-                            }
-                            ui.label(RichText::new(&content.beliefs[b].description).small());
-                        });
-                    }
-                });
-        }
-    }
-    ui.separator();
-    match p.religion {
-        Some(r) => {
-            ui.label(
-                RichText::new(format!("You founded {}.", content.religions[r].name)).color(GOLD),
-            );
-            for &b in &p.beliefs {
-                ui.horizontal(|ui| {
-                    s.icons.show(ui, "belief", &content.beliefs[b].id, 28.0);
-                    ui.label(format!(
-                        "{}: {}",
-                        content.beliefs[b].name, content.beliefs[b].description
-                    ));
-                });
-            }
-        }
-        None => {
-            ui.label("Earn a Great Prophet (Holy Site districts generate Prophet points), then use it on a Holy Site to found a religion.");
-        }
-    }
-    ui.separator();
-    ui.label(RichText::new("Religions of the world").strong());
-    for (&r, &(founder, _)) in &s.game.religions {
-        let cities = s
-            .game
-            .cities
-            .values()
-            .filter(|c| c.majority_religion() == Some(r))
-            .count();
-        ui.label(format!(
-            "{} - founded by {}, majority in {cities} cities",
-            content.religions[r].name, s.game.players[founder].civ_name
-        ));
-    }
-}
-
-fn great_people(s: &mut Session, ui: &mut egui::Ui) {
-    let me = s.me();
-    let rates: HashMap<usize, i32> = s.game.great_person_rates(me).into_iter().collect();
-    let content = &s.game.rules.content;
-    egui::Grid::new("gp")
-        .striped(true)
-        .num_columns(4)
-        .show(ui, |ui| {
-            ui.strong("Class");
-            ui.strong("Points");
-            ui.strong("Next");
-            ui.strong("Effect");
-            ui.end_row();
-            for (class, gpc) in content.great_person_classes.iter().enumerate() {
-                let points = s.game.players[me]
-                    .great_person_points
-                    .get(&class)
-                    .copied()
-                    .unwrap_or(0);
-                let rate = rates.get(&class).copied().unwrap_or(0);
-                let next = s.game.next_great_person(class);
-                ui.label(&gpc.name);
-                ui.label(format!(
-                    "{points}/{} (+{rate})",
-                    s.game.great_person_cost(class)
-                ));
-                ui.label(
-                    next.map(|g| content.great_people[g].name.clone())
-                        .unwrap_or("-".into()),
-                );
-                ui.label(
-                    next.map(|g| s.game.great_person_effect(g))
-                        .unwrap_or_default(),
-                );
-                ui.end_row();
-            }
-        });
-}
-
-fn city_states(s: &mut Session, ui: &mut egui::Ui) {
-    let me = s.me();
-    ui.label(format!(
-        "Envoys available: {}",
-        s.game.players[me].envoys_available
-    ));
-    ui.label("1 envoy: +2 of the city-state's yield in your capital. 3 and 6 envoys: +1 in every city. Suzerain (most envoys, at least 3): +1 more.");
-    let states: Vec<PlayerId> = s
-        .game
-        .players
-        .iter()
-        .filter(|p| p.is_city_state() && s.game.players[me].relations[p.id].met)
-        .map(|p| p.id)
-        .collect();
-    egui::Grid::new("cs")
-        .striped(true)
-        .num_columns(5)
-        .show(ui, |ui| {
-            for cs in states {
-                let p = s.game.players[cs].clone();
-                ui.label(
-                    RichText::new(&p.name)
-                        .color(rgb(p.primary).gamma_multiply(1.4))
-                        .strong(),
-                );
-                ui.label(p.city_state_category.to_lowercase());
-                ui.label(format!(
-                    "Your envoys: {}",
-                    s.game.players[me].envoys.get(&cs).copied().unwrap_or(0)
-                ));
-                ui.label(match s.game.suzerain(cs) {
-                    Some(x) => format!("Suzerain: {}", s.game.players[x].civ_name),
-                    None => "No suzerain".into(),
-                });
-                if !p.alive {
-                    ui.label("Conquered");
-                } else if ui
-                    .add_enabled(
-                        s.game.players[me].envoys_available > 0,
-                        egui::Button::new("Send Envoy"),
-                    )
-                    .clicked()
-                {
-                    let r = s.game.send_envoy(me, cs);
-                    s.result(r);
-                }
-                ui.end_row();
-            }
-        });
-}
-
-fn victory(s: &mut Session, ui: &mut egui::Ui) {
-    let me = s.me();
-    for (name, progress) in s.game.victory_progress(me) {
-        ui.horizontal(|ui| {
-            ui.label(RichText::new(name).strong().color(GOLD));
-            ui.label(progress);
-        });
-    }
-    ui.separator();
-    ui.label(RichText::new("Scores").strong());
-    let mut players: Vec<&wayciv_core::state::Player> = s
-        .game
-        .alive_majors()
-        .filter(|p| p.id == me || s.game.players[me].relations[p.id].met)
-        .collect();
-    players.sort_by_key(|p| std::cmp::Reverse(s.game.score(p.id)));
-    for p in players {
-        ui.label(format!(
-            "{} ({}) - {}",
-            p.civ_name,
-            p.name,
-            s.game.score(p.id)
-        ));
-    }
-}
-
 fn diplomacy(s: &mut Session, portraits: &mut Portraits, ui: &mut egui::Ui, other: PlayerId) {
     let me = s.me();
     let o = s.game.players[other].clone();
@@ -823,7 +662,15 @@ fn diplomacy(s: &mut Session, portraits: &mut Portraits, ui: &mut egui::Ui, othe
     ui.horizontal(|ui| {
         let (rect, _) = ui.allocate_exact_size(vec2(300.0, 300.0), Sense::hover());
         let painter = ui.painter().clone();
-        theme::portrait_disc(&painter, portraits, rect.center(), 140.0, &leader.id, &leader.name, (o.primary, o.secondary));
+        theme::portrait_disc(
+            &painter,
+            portraits,
+            rect.center(),
+            140.0,
+            &leader.id,
+            &leader.name,
+            (o.primary, o.secondary),
+        );
         painter.circle_stroke(rect.center(), 143.0, Stroke::new(5.0, rel.status_color));
         painter.circle_stroke(rect.center(), 148.0, Stroke::new(1.5, palette::GOLD_DIM));
         ui.vertical(|ui| {
@@ -848,7 +695,11 @@ fn diplomacy(s: &mut Session, portraits: &mut Portraits, ui: &mut egui::Ui, othe
             ui.label(RichText::new(&rel.detail).color(palette::TEXT_DIM));
             if let Some((name, desc)) = &leader.agenda {
                 ui.add_space(4.0);
-                ui.label(RichText::new(format!("Agenda: {name}")).strong().color(GOLD));
+                ui.label(
+                    RichText::new(format!("Agenda: {name}"))
+                        .strong()
+                        .color(GOLD),
+                );
                 ui.label(desc);
             }
             for t in &leader.traits {
@@ -922,75 +773,62 @@ fn leader_popup(
     let leader = s.game.rules.content.leaders[o.leader].clone();
     let line = s.game.dialogue(other, event);
     let mut close = false;
-    egui::Modal::new(egui::Id::unique("leader_popup")).frame(theme::plate_frame().inner_margin(20)).show(ctx, |ui| {
-        ui.set_width(860.0);
-        ui.horizontal(|ui| {
-            let (rect, _) = ui.allocate_exact_size(vec2(380.0, 380.0), Sense::hover());
-            let painter = ui.painter().clone();
-            theme::portrait_disc(&painter, portraits, rect.center(), 180.0, &leader.id, &leader.name, (o.primary, o.secondary));
-            painter.circle_stroke(rect.center(), 184.0, Stroke::new(5.0, palette::GOLD));
-            ui.vertical(|ui| {
-                ui.set_width(420.0);
-                ui.heading(RichText::new(&leader.name).color(GOLD).size(28.0));
-                ui.label(RichText::new(&o.civ_name).size(18.0));
-                ui.add_space(12.0);
-                ui.label(RichText::new(format!("\"{line}\"")).italics().size(17.0));
-                ui.add_space(16.0);
-                match event {
-                    DiploEvent::DeclareFriendFromAi => {
-                        ui.label(format!(
-                            "{} proposes a declaration of friendship.",
-                            leader.name
-                        ));
-                        ui.horizontal(|ui| {
-                            if ui.button("Accept").clicked() {
-                                s.game.propose_friendship(other, me);
+    egui::Modal::new(egui::Id::unique("leader_popup"))
+        .frame(theme::plate_frame().inner_margin(20))
+        .show(ctx, |ui| {
+            ui.set_width(860.0);
+            ui.horizontal(|ui| {
+                let (rect, _) = ui.allocate_exact_size(vec2(380.0, 380.0), Sense::hover());
+                let painter = ui.painter().clone();
+                theme::portrait_disc(
+                    &painter,
+                    portraits,
+                    rect.center(),
+                    180.0,
+                    &leader.id,
+                    &leader.name,
+                    (o.primary, o.secondary),
+                );
+                painter.circle_stroke(rect.center(), 184.0, Stroke::new(5.0, palette::GOLD));
+                ui.vertical(|ui| {
+                    ui.set_width(420.0);
+                    ui.heading(RichText::new(&leader.name).color(GOLD).size(28.0));
+                    ui.label(RichText::new(&o.civ_name).size(18.0));
+                    ui.add_space(12.0);
+                    ui.label(RichText::new(format!("\"{line}\"")).italics().size(17.0));
+                    ui.add_space(16.0);
+                    match event {
+                        DiploEvent::DeclareFriendFromAi => {
+                            ui.label(format!(
+                                "{} proposes a declaration of friendship.",
+                                leader.name
+                            ));
+                            ui.horizontal(|ui| {
+                                if ui.button("Accept").clicked() {
+                                    s.game.propose_friendship(other, me);
+                                    close = true;
+                                }
+                                if ui.button("Decline").clicked() {
+                                    close = true;
+                                }
+                            });
+                        }
+                        DiploEvent::DeclareWarFromAi => {
+                            if ui.button(RichText::new("So be it.").size(16.0)).clicked() {
                                 close = true;
                             }
-                            if ui.button("Decline").clicked() {
+                        }
+                        _ => {
+                            if ui.button(RichText::new("Farewell").size(16.0)).clicked() {
                                 close = true;
                             }
-                        });
-                    }
-                    DiploEvent::DeclareWarFromAi => {
-                        if ui.button(RichText::new("So be it.").size(16.0)).clicked() {
-                            close = true;
                         }
                     }
-                    _ => {
-                        if ui.button(RichText::new("Farewell").size(16.0)).clicked() {
-                            close = true;
-                        }
-                    }
-                }
+                });
             });
         });
-    });
     if close {
         s.popup = None;
-    }
-}
-
-/// Helper so screens can borrow content lists while mutating the game.
-trait CloneLists {
-    fn clone_lists(&self) -> Lists;
-}
-
-pub struct Lists {
-    pub governments: Vec<civ6_data::content::Government>,
-    pub policies: Vec<civ6_data::content::Policy>,
-    pub beliefs: Vec<civ6_data::content::Belief>,
-    pub religions: Vec<civ6_data::content::Religion>,
-}
-
-impl CloneLists for civ6_data::content::Content {
-    fn clone_lists(&self) -> Lists {
-        Lists {
-            governments: self.governments.clone(),
-            policies: self.policies.clone(),
-            beliefs: self.beliefs.clone(),
-            religions: self.religions.clone(),
-        }
     }
 }
 

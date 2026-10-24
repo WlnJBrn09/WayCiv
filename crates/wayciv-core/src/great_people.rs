@@ -147,7 +147,9 @@ impl Game {
                 "Adds 250 Production to what this city is building.".into()
             }
             "GREAT_PERSON_CLASS_MERCHANT" => "Grants 200 Gold.".into(),
-            "GREAT_PERSON_CLASS_GENERAL" | "GREAT_PERSON_CLASS_ADMIRAL" => {
+            "GREAT_PERSON_CLASS_GENERAL"
+            | "GREAT_PERSON_CLASS_ADMIRAL"
+            | "GREAT_PERSON_CLASS_COMANDANTE_GENERAL" => {
                 "Every military unit within 3 tiles gains a level and fully heals.".into()
             }
             "GREAT_PERSON_CLASS_PROPHET" => "Founds a religion on a Holy Site.".into(),
@@ -203,7 +205,9 @@ impl Game {
                     .or_insert(0) += 250;
             }
             "GREAT_PERSON_CLASS_MERCHANT" => self.players[owner].gold += 200,
-            "GREAT_PERSON_CLASS_GENERAL" | "GREAT_PERSON_CLASS_ADMIRAL" => {
+            "GREAT_PERSON_CLASS_GENERAL"
+            | "GREAT_PERSON_CLASS_ADMIRAL"
+            | "GREAT_PERSON_CLASS_COMANDANTE_GENERAL" => {
                 let nearby: Vec<UnitId> = self
                     .player_units(owner)
                     .filter(|x| {

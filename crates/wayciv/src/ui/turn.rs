@@ -16,7 +16,10 @@ pub fn show(s: &mut Session, ctx: &egui::Context) -> f32 {
     let blockers = s.game.blockers(me);
     let screen = ctx.content_rect();
     let half = DIAMETER / 2.0;
-    let center = pos2(screen.right() - MARGIN - DIAMETER / 2.0, screen.bottom() - MARGIN - DIAMETER / 2.0);
+    let center = pos2(
+        screen.right() - MARGIN - DIAMETER / 2.0,
+        screen.bottom() - MARGIN - DIAMETER / 2.0,
+    );
     let origin = center - vec2(half, half);
     let (label, glyph, color) = match blockers.first() {
         Some(b) => (
@@ -31,11 +34,17 @@ pub fn show(s: &mut Session, ctx: &egui::Context) -> f32 {
             },
             Color32::from_rgb(46, 86, 152),
         ),
-        None => ("Next Turn".to_string(), Glyph::Chevrons, Color32::from_rgb(34, 140, 92)),
+        None => (
+            "Next Turn".to_string(),
+            Glyph::Chevrons,
+            Color32::from_rgb(34, 140, 92),
+        ),
     };
-    let winner = s.game.winner.as_ref().map(|(w, v)| {
-        format!("{} won a {v:?} victory!", s.game.players[*w].civ_name)
-    });
+    let winner = s
+        .game
+        .winner
+        .as_ref()
+        .map(|(w, v)| format!("{} won a {v:?} victory!", s.game.players[*w].civ_name));
     let mut end_anyway = false;
     let mut next_unit = false;
     let mut clicked = false;
@@ -56,18 +65,49 @@ pub fn show(s: &mut Session, ctx: &egui::Context) -> f32 {
             let hovered = response.hovered();
             painter.circle_filled(c + vec2(0.0, 4.0), r + 2.0, Color32::from_black_alpha(110));
             painter.circle_filled(c, r, NAVY);
-            painter.circle_stroke(c, r - 1.0, Stroke::new(3.0, if hovered { GOLD } else { GOLD_DIM }));
-            let face = if hovered { color.gamma_multiply(1.18) } else { color };
+            painter.circle_stroke(
+                c,
+                r - 1.0,
+                Stroke::new(3.0, if hovered { GOLD } else { GOLD_DIM }),
+            );
+            let face = if hovered {
+                color.gamma_multiply(1.18)
+            } else {
+                color
+            };
             painter.circle_filled(c, r - 7.0, face);
             // A soft highlight on the upper half.
-            theme::arc(&painter, c, r - 12.0, 0.5, 3.0, Color32::from_white_alpha(46));
+            theme::arc(
+                &painter,
+                c,
+                r - 12.0,
+                0.5,
+                3.0,
+                Color32::from_white_alpha(46),
+            );
             painter.circle_stroke(c, r - 7.0, Stroke::new(1.5, palette::with_alpha(GOLD, 120)));
-            glyph::paint(&painter, glyph, c - vec2(0.0, 33.0), 12.0, Color32::WHITE);
-            let lines = wrap(&painter, &label, 19.0, DIAMETER * 0.74);
-            let line_h = 21.0;
-            let top = c.y - 10.0 - (lines.len() as f32 - 1.0) * line_h / 2.0 + 6.0;
+            // The glyph sits above the label; long labels get a smaller font
+            // so the two never overlap.
+            let mut size = 19.0;
+            let mut lines = wrap(&painter, &label, size, DIAMETER * 0.74);
+            if lines.len() > 2 {
+                size = 16.0;
+                lines = wrap(&painter, &label, size, DIAMETER * 0.8);
+            }
+            let line_h = size + 2.0;
+            let glyph_h = 28.0;
+            let top = c.y - 8.0 - (glyph_h + lines.len() as f32 * line_h) / 2.0;
+            glyph::paint(&painter, glyph, pos2(c.x, top + 11.0), 11.0, Color32::WHITE);
             for (i, l) in lines.iter().enumerate() {
-                theme::text_bold(&painter, pos2(c.x, top + i as f32 * line_h), Align2::CENTER_CENTER, l, 19.0, Color32::WHITE);
+                let y = top + glyph_h + (i as f32 + 0.5) * line_h;
+                theme::text_bold(
+                    &painter,
+                    pos2(c.x, y),
+                    Align2::CENTER_CENTER,
+                    l,
+                    size,
+                    Color32::WHITE,
+                );
             }
             theme::keycap(&painter, c + vec2(0.0, r - 22.0), "Enter");
             let tip = match &winner {
@@ -79,7 +119,12 @@ pub fn show(s: &mut Session, ctx: &egui::Context) -> f32 {
             }
 
             // Satellites: next unit, and end the turn despite unit orders.
-            let sat = |ui: &mut egui::Ui, dir: egui::Vec2, g: Glyph, key: Option<&str>, enabled: bool, tip: &str| {
+            let sat = |ui: &mut egui::Ui,
+                       dir: egui::Vec2,
+                       g: Glyph,
+                       key: Option<&str>,
+                       enabled: bool,
+                       tip: &str| {
                 let sc = c + dir * (r + 6.0);
                 let rect = egui::Rect::from_center_size(sc, vec2(38.0, 38.0));
                 let resp = ui.interact(rect, ui.scope_id().with(tip), Sense::click());
@@ -110,7 +155,9 @@ pub fn show(s: &mut Session, ctx: &egui::Context) -> f32 {
         s.next_unit();
     }
     if end_anyway {
-        let only_units = blockers.iter().all(|b| matches!(b, Blocker::UnitNeedsOrders(_)));
+        let only_units = blockers
+            .iter()
+            .all(|b| matches!(b, Blocker::UnitNeedsOrders(_)));
         if only_units {
             s.end_turn();
         } else {
@@ -124,7 +171,12 @@ pub fn show(s: &mut Session, ctx: &egui::Context) -> f32 {
 /// Greedy word wrap by measured width.
 fn wrap(painter: &egui::Painter, text: &str, size: f32, width: f32) -> Vec<String> {
     let font = FontId::proportional(size);
-    let w = |s: &str| painter.layout_no_wrap(s.to_string(), font.clone(), TEXT).size().x;
+    let w = |s: &str| {
+        painter
+            .layout_no_wrap(s.to_string(), font.clone(), TEXT)
+            .size()
+            .x
+    };
     let mut lines: Vec<String> = Vec::new();
     for word in text.split_whitespace() {
         match lines.last_mut() {

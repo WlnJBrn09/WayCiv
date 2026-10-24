@@ -11,11 +11,15 @@
 //! * `turn`       the big circular Next Turn button
 //! * `unit_panel` the bottom-left unit panel
 //! * `city_panel` the right-hand city panel
+//! * `cards`      cards, grids and buttons the menus are built from
+//! * `menus`      Religion, Government, Great People, City-States, Victory
 
+pub mod cards;
 pub mod city_panel;
 pub mod glyph;
 pub mod keys;
 pub mod leaders;
+pub mod menus;
 pub mod minimap;
 pub mod notify;
 pub mod theme;

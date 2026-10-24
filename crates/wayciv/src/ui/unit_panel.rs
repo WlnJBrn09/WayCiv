@@ -64,11 +64,22 @@ fn stat(ui: &mut Ui, g: Glyph, color: Color32, text: String, tip: &str) {
     let galley = ui
         .painter()
         .layout_no_wrap(text, egui::FontId::proportional(16.0), TEXT);
-    let (rect, response) = ui.allocate_exact_size(vec2(galley.size().x + 36.0, 28.0), Sense::hover());
+    let (rect, response) =
+        ui.allocate_exact_size(vec2(galley.size().x + 36.0, 28.0), Sense::hover());
     let painter = ui.painter();
     painter.rect_filled(rect, 14.0, Color32::from_white_alpha(14));
-    glyph::paint(painter, g, pos2(rect.left() + 15.0, rect.center().y), 8.5, color);
-    painter.galley(pos2(rect.left() + 29.0, rect.center().y - galley.size().y / 2.0), galley, TEXT);
+    glyph::paint(
+        painter,
+        g,
+        pos2(rect.left() + 15.0, rect.center().y),
+        8.5,
+        color,
+    );
+    painter.galley(
+        pos2(rect.left() + 29.0, rect.center().y - galley.size().y / 2.0),
+        galley,
+        TEXT,
+    );
     response.on_hover_text(tip);
 }
 
@@ -79,7 +90,9 @@ fn action_style(a: &UnitAction) -> (Glyph, Option<&'static str>, Color32) {
         UnitAction::Sleep => (Glyph::Sleep, Some("Z"), TEXT),
         UnitAction::Skip => (Glyph::Skip, Some("Space"), TEXT),
         UnitAction::Delete => (Glyph::Cross, None, BAD),
-        UnitAction::FoundReligion | UnitAction::SpreadReligion => (Glyph::Faith, None, palette::YIELD_COLORS[5]),
+        UnitAction::FoundReligion | UnitAction::SpreadReligion => {
+            (Glyph::Faith, None, palette::YIELD_COLORS[5])
+        }
         UnitAction::Activate => (Glyph::Star, None, GOLD),
         UnitAction::Build(_) => (Glyph::Build, None, TEXT),
         UnitAction::TradeRoute(_) => (Glyph::Trade, None, palette::YIELD_COLORS[2]),
@@ -211,24 +224,35 @@ fn actions(s: &mut Session, ui: &mut Ui, id: wayciv_core::UnitId) {
         }
     });
     if !wide.is_empty() {
-        egui::ScrollArea::vertical().max_height(78.0).id_salt("unit_wide_actions").show(ui, |ui| {
-            ui.horizontal_wrapped(|ui| {
-                ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
-                for a in wide {
-                    let (g, _, color) = action_style(&a);
-                    let name = s.game.action_name(&a);
-                    if theme::pill_button(ui, Some(g), &name, color, 0.0).clicked() {
-                        chosen = Some(a);
+        egui::ScrollArea::vertical()
+            .max_height(78.0)
+            .id_salt("unit_wide_actions")
+            .show(ui, |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
+                    for a in wide {
+                        let (g, _, color) = action_style(&a);
+                        let name = s.game.action_name(&a);
+                        if theme::pill_button(ui, Some(g), &name, color, 0.0).clicked() {
+                            chosen = Some(a);
+                        }
                     }
-                }
+                });
             });
-        });
+    }
+    if let Some(UnitAction::FoundReligion) = chosen {
+        // Founding asks for a name and beliefs first.
+        s.windows.open(crate::screens::Panel::Religion);
+        s.windows.found = Some(crate::ui::menus::FoundDraft::new(id));
+        return;
     }
     if let Some(action) = chosen {
         let r = s.game.perform(id, &action);
         s.result(r);
         s.refresh_selection();
-        if !s.game.units.contains_key(&id) || matches!(action, UnitAction::Skip | UnitAction::Fortify) {
+        if !s.game.units.contains_key(&id)
+            || matches!(action, UnitAction::Skip | UnitAction::Fortify)
+        {
             s.next_unit();
         }
     }

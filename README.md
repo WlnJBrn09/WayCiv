@@ -51,6 +51,17 @@ you press `N`; new ones appear briefly as toasts at the right edge.
 The layout follows Civ VI on the Nintendo Switch: research and civic trackers
 top left, leaders top right, the unit or city panel at the bottom left and
 right, and the big Next Turn button with the minimap at the bottom right.
+The menu buttons at the top right show their hotkeys.
+
+Every menu works the same way. A teal strip under the title says what to do
+next. Choices are cards: click one to pick it, a gold frame marks what you
+have, and dimmed cards can't be picked yet (hover for why). A menu closes once
+its decision is made: picking research, a civic, a pantheon, founding a
+religion, confirming policies, sending your last envoy, or choosing what a
+city builds. Policies are Civ VI-style cards (red military, yellow economic,
+green diplomatic, purple great person) that you click into slots, then
+confirm. A Great Prophet's Found Religion button opens the founding screen:
+pick a name, a founder belief and a follower belief.
 
 ## The map
 
