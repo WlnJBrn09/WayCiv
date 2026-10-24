@@ -14,6 +14,11 @@
 //! fringes and shores, rivers, sprites) that are reserved in the painter
 //! on the first tile and handed over by the first `draw_river` call, which
 //! `map_view` makes after the last `draw_tile` of the frame.
+//!
+//! Water is alive: coast foam laps in and out, glints drift over the sea, and
+//! rivers carry travelling highlights downstream. All of it is baked into the
+//! same batches (a few extra vertices per water tile, only when zoomed in
+//! enough to see them) and driven by the clock `map_view` hands over.
 
 mod atlas;
 mod flat;
@@ -336,6 +341,11 @@ struct Frame {
     /// Map width in world units (for the periodic edge wobble).
     wd: f32,
     scratch: Vec<Pos2>,
+    /// Animation clock in seconds, and whether water effects are drawn.
+    time: f32,
+    fx: bool,
+    /// Whether any water effect was emitted this frame.
+    moving: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -486,6 +496,9 @@ pub struct TerrainArt {
     infos: Infos,
     racc: RiverAcc,
     frame: Option<Frame>,
+    time: f32,
+    ambient: bool,
+    saw_motion: bool,
 }
 
 impl TerrainArt {
@@ -499,7 +512,23 @@ impl TerrainArt {
             infos: Infos::default(),
             racc: RiverAcc::default(),
             frame: None,
+            time: 0.0,
+            ambient: false,
+            saw_motion: false,
         }
+    }
+
+    /// Sets the animation clock for this frame; `ambient` turns the water
+    /// effects on.
+    pub fn set_clock(&mut self, time: f32, ambient: bool) {
+        self.time = time;
+        self.ambient = ambient;
+        self.saw_motion = false;
+    }
+
+    /// Whether last frame drew anything that moves (so it needs repainting).
+    pub fn animated(&self) -> bool {
+        self.saw_motion
     }
 
     /// Loads the PNGs on first use. False when the ground atlas is missing.
@@ -599,6 +628,9 @@ fn begin_frame(
         ring,
         wd: SQRT3 * game.map.grid.width as f32,
         scratch: Vec::new(),
+        time: 0.0,
+        fx: false,
+        moving: false,
     }
 }
 
@@ -615,7 +647,10 @@ pub fn draw_tile(art: &mut TerrainArt, painter: &egui::Painter, t: &TileCtx) {
         let (Some(g), Some(s)) = (art.ground.as_mut(), art.sprites.as_mut()) else {
             return;
         };
-        art.frame = Some(begin_frame(g, s, painter, t.game, t.z));
+        let mut frame = begin_frame(g, s, painter, t.game, t.z);
+        frame.time = art.time;
+        frame.fx = art.ambient && t.z >= 14.0;
+        art.frame = Some(frame);
     }
     let TerrainArt {
         frame,
@@ -634,6 +669,7 @@ pub fn draw_tile(art: &mut TerrainArt, painter: &egui::Painter, t: &TileCtx) {
 /// across mountains. Returns false when there was nothing batched.
 pub fn finish(art: &mut TerrainArt, painter: &egui::Painter) -> bool {
     let Some(frame) = art.frame.take() else { return false };
+    art.saw_motion |= frame.moving;
     let Frame {
         idx,
         bufs,
@@ -722,6 +758,11 @@ fn tile(
         }
     }
 
+    // 1b. Glints drifting over open water.
+    if f.fx && info.water {
+        glints(f, c, z, h, biome == 5);
+    }
+
     // 2. Edges: fringes into earlier neighbours, shores, cliffs.
     let me = &game.players[t.viewer];
     for d in 0..6 {
@@ -761,9 +802,16 @@ fn tile(
                 rot: 0,
                 flip: false,
             };
-            let foam = [(0.0, 0.9), (0.05, 0.6), (0.15, 0.0)];
+            // Swells roll in along the coast: the foam laps out and back.
+            let sw = if f.fx {
+                f.moving = true;
+                0.5 + 0.5 * (f.time * 1.25 - wp.x * 0.55 - wp.y * 0.85 + d as f32 * 0.4).sin()
+            } else {
+                0.0
+            };
+            let foam = [(0.0, 0.9), (0.05 + 0.05 * sw, 0.6), (0.15 + 0.12 * sw, 0.0)];
             edge_strip(f, FRINGE, &pts, &edge, nrm, z, white, &foam, [1.0; 3], 0.45, h, d);
-            let wide = [(0.0, 0.0), (0.12, 0.3), (0.28, 0.0)];
+            let wide = [(0.0, 0.0), (0.12 + 0.08 * sw, 0.3), (0.28 + 0.16 * sw, 0.0)];
             edge_strip(f, FRINGE, &pts, &edge, nrm, z, white, &wide, [0.85, 1.0, 1.0], 0.3, h, d);
             if tile.cliffs {
                 let rock = Cell {
@@ -922,6 +970,47 @@ fn edge_strip(
 
 // ---- Rivers ---------------------------------------------------------------
 
+/// Soft glints on open water: each fades in, drifts east a little, and fades
+/// out, on its own slow cycle. Drawn additively (alpha 0, premultiplied).
+fn glints(f: &mut Frame, c: Pos2, z: f32, h: u32, shallow: bool) {
+    let count = if z < 22.0 { 1 } else { 2 };
+    let white = f.cell_center_uv(GROUND_WHITE);
+    for i in 0..count {
+        let r = |salt: u32| (hash2(h as i32, i as i32 * 17 + salt as i32, 9) & 0xffff) as f32 / 65535.0;
+        // Many tiles go without, so the sea isn't uniformly busy.
+        if r(1) < 0.3 {
+            continue;
+        }
+        let period = 3.2 + 3.0 * r(2);
+        let u = ((f.time + period * r(3)) % period) / period;
+        let a = (u * std::f32::consts::PI).sin().powi(2) * if shallow { 0.26 } else { 0.2 };
+        let at = c + vec2((r(4) - 0.5) * 0.9 * z + u * 0.22 * z, (r(5) - 0.5) * 0.8 * z);
+        let (w, t) = ((0.17 + 0.13 * r(6)) * z, (0.022 + 0.014 * r(7)) * z);
+        let tint = [190.0, 228.0, 255.0];
+        let glow = Color32::from_rgba_premultiplied(
+            (tint[0] * a) as u8,
+            (tint[1] * a) as u8,
+            (tint[2] * a) as u8,
+            0,
+        );
+        let clear = Color32::TRANSPARENT;
+        let verts = [
+            Vertex { pos: at, uv: white, color: glow },
+            Vertex { pos: at + vec2(-w, 0.0), uv: white, color: clear },
+            Vertex { pos: at + vec2(0.0, -t), uv: white, color: clear },
+            Vertex { pos: at + vec2(w, 0.0), uv: white, color: clear },
+            Vertex { pos: at + vec2(0.0, t), uv: white, color: clear },
+        ];
+        let m = f.bufs[FRINGE].mesh(5);
+        let base = m.vertices.len() as u32;
+        m.vertices.extend_from_slice(&verts);
+        for k in 0..4u32 {
+            m.indices.extend_from_slice(&[base, base + 1 + k, base + 1 + (k + 1) % 4]);
+        }
+        f.moving = true;
+    }
+}
+
 /// The (displaced) middle of the edge facing `dir`.
 fn edge_mid(f: &Frame, t: &TileCtx, dir: usize) -> Pos2 {
     let m = world_dir(dir) * 0.5;
@@ -1067,7 +1156,18 @@ fn river(f: &mut Frame, racc: &RiverAcc, _pts: &[Pos2], t: &TileCtx, _h: u32) {
             (1.35, bank, 0.0),
         ];
         let mut verts = Vec::with_capacity(7 * cols);
+        let wp = world(pos);
+        // A highlight runs downstream once per tile length (so it joins up
+        // across tiles); its strength varies over the map.
+        let strength = 0.35 + 0.65 * (0.5 + 0.5 * (wp.x * 1.7 + wp.y * 1.3).sin());
         for (k, p) in pts.iter().enumerate() {
+            let crest = if f.fx {
+                f.moving = true;
+                let u = k as f32 / last as f32;
+                (0.5 + 0.5 * (TAU * (u - f.time * 0.45)).sin()).powi(2) * strength
+            } else {
+                0.0
+            };
             let tan = if k == 0 {
                 pts[1] - pts[0]
             } else if k == last {
@@ -1082,15 +1182,23 @@ fn river(f: &mut Frame, racc: &RiverAcc, _pts: &[Pos2], t: &TileCtx, _h: u32) {
                 1.0
             };
             for &(off, col, a) in &across {
+                let mix = |a: [f32; 3], b: [f32; 3], t: f32| {
+                    [
+                        a[0] + (b[0] - a[0]) * t,
+                        a[1] + (b[1] - a[1]) * t,
+                        a[2] + (b[2] - a[2]) * t,
+                    ]
+                };
                 let colr = if off.abs() < 0.1 {
-                    core
+                    mix(core, [1.0; 3], crest * 0.8)
                 } else if off.abs() < 0.8 {
                     // blend the edge and body colours
-                    [
+                    let body = [
                         edge_c[0] * 0.5 + mid_c[0] * 0.5,
                         edge_c[1] * 0.5 + mid_c[1] * 0.5,
                         edge_c[2] * 0.5 + mid_c[2] * 0.5,
-                    ]
+                    ];
+                    mix(body, core, crest * 0.6)
                 } else {
                     col
                 };

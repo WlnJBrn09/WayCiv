@@ -5,6 +5,7 @@
 //! bombard damage, and shield the city's garrison in proportion to their
 //! remaining hit points.
 
+use crate::events::{Event, Striker};
 use crate::hex::Pos;
 use crate::map::{CityId, PlayerId};
 use crate::state::{Game, Unit, UnitId};
@@ -248,6 +249,18 @@ impl Game {
             let attack = self.unit_strength(&unit, true, kind, None, true);
             let defense = self.city_strength(city);
             let dealt = damage(attack, defense, roll);
+            self.emit(Event::Attack {
+                striker: Striker::Unit(Box::new(unit.clone())),
+                target,
+                kind,
+                defender: None,
+                dealt,
+                taken: if kind == AttackKind::Melee {
+                    damage(defense, attack, counter_roll)
+                } else {
+                    0
+                },
+            });
             let max_walls = self.max_walls(city);
             let c = self.cities.get_mut(&city).unwrap();
             if c.wall_hp > 0 && max_walls > 0 {
@@ -292,6 +305,18 @@ impl Game {
             let attack = self.unit_strength(&unit, true, kind, Some(&defender), false);
             let defense = self.unit_strength(&defender, false, kind, Some(&unit), false);
             let dealt = damage(attack, defense, roll);
+            self.emit(Event::Attack {
+                striker: Striker::Unit(Box::new(unit.clone())),
+                target,
+                kind,
+                defender: Some(Box::new(defender.clone())),
+                dealt,
+                taken: if kind == AttackKind::Melee {
+                    damage(defense, attack, counter_roll)
+                } else {
+                    0
+                },
+            });
             let defender_name = self.unit_type(&defender).name.clone();
             self.combat_log.push(format!(
                 "{attacker_name} attacked {defender_name} for {dealt}."
@@ -315,6 +340,11 @@ impl Game {
                     && !attacker_died
                     && !self.ground_units_at(target).any(|u| self.is_military(u))
                 {
+                    self.emit(Event::Moved {
+                        unit: attacker,
+                        from: unit.pos,
+                        to: target,
+                    });
                     let u = self.units.get_mut(&attacker).unwrap();
                     u.pos = target;
                     self.check_camp_cleared(attacker, target);
@@ -353,8 +383,21 @@ impl Game {
             .filter(|u| !self.is_military(u) && self.players[attacker.owner].at_war_with(u.owner))
             .map(|u| u.id)
             .collect();
+        if let Some(first) = victims.first().and_then(|id| self.units.get(id)) {
+            self.emit(Event::Attack {
+                striker: Striker::Unit(Box::new(attacker.clone())),
+                target,
+                kind,
+                defender: Some(Box::new(first.clone())),
+                dealt: 100,
+                taken: 0,
+            });
+        }
         for id in victims {
             let dead = self.units.remove(&id).unwrap();
+            self.emit(Event::Died {
+                unit: Box::new(dead.clone()),
+            });
             let name = self.unit_type(&dead).name.clone();
             self.combat_log.push(format!(
                 "{} killed a {name}.",
@@ -374,6 +417,11 @@ impl Game {
                 .get(&attacker.id)
                 .is_some_and(|u| self.can_stop(u, target))
         {
+            self.emit(Event::Moved {
+                unit: attacker.id,
+                from: attacker.pos,
+                to: target,
+            });
             self.units.get_mut(&attacker.id).unwrap().pos = target;
             self.check_camp_cleared(attacker.id, target);
             self.update_visibility(attacker.owner);
@@ -390,6 +438,9 @@ impl Game {
             return false;
         }
         let dead = self.units.remove(&id).unwrap();
+        self.emit(Event::Died {
+            unit: Box::new(dead.clone()),
+        });
         let name = self.unit_type(&dead).name.clone();
         self.notify(
             dead.owner,
@@ -426,7 +477,16 @@ impl Game {
         let attack = self.city_strength(city);
         let defense = self.unit_strength(&defender, false, AttackKind::Ranged, None, false);
         let roll = self.rng.below(12);
-        self.hurt(defender.id, damage(attack, defense, roll), Some(owner));
+        let dealt = damage(attack, defense, roll);
+        self.emit(Event::Attack {
+            striker: Striker::City(city, self.cities[&city].pos),
+            target,
+            kind: AttackKind::Ranged,
+            defender: Some(Box::new(defender.clone())),
+            dealt,
+            taken: 0,
+        });
+        self.hurt(defender.id, dealt, Some(owner));
         self.cities.get_mut(&city).unwrap().has_attacked = true;
         Ok(())
     }
@@ -471,8 +531,18 @@ impl Game {
             }
         }
         if let Some(u) = self.units.get_mut(&unit) {
+            self.events.push(Event::Moved {
+                unit,
+                from: u.pos,
+                to: pos,
+            });
             u.pos = pos;
         }
+        self.emit(Event::CityCaptured {
+            city,
+            owner: new_owner,
+            pos,
+        });
         if was_capital {
             self.players[old_owner].capital = None;
             let next = self

@@ -221,6 +221,7 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
         religions: BTreeMap::new(),
         great_people_taken: Vec::new(),
         combat_log: Vec::new(),
+        events: Vec::new(),
         popups: Vec::new(),
         trade_routes: Vec::new(),
         camps: BTreeMap::new(),
@@ -252,6 +253,8 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
         "A new age begins. Found your capital with the Settler.",
         starts.first().copied(),
     );
+    // Setup is not a scene to play back.
+    game.events.clear();
     game
 }
 

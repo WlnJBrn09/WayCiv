@@ -8,6 +8,9 @@
 //! a class symbol, a health bar (military only) and a fortified marker.
 //! When a sprite is missing we fall back to the Codex icon, then to the class
 //! symbol on a disc.  Nothing here panics on missing files.
+//!
+//! Units are alive: `UnitFx` carries the animation state (idle breathing,
+//! ships bobbing, the pulsing selection ring, hop, hit flash, fade).
 
 use crate::icons::Icons;
 use crate::palette::rgb;
@@ -246,13 +249,60 @@ fn canvas_px(radius: f32, ortho: f32) -> f32 {
     radius * 2.0 * (1.0 + 0.28 * ortho) * boost
 }
 
-fn draw_sprite(sprite: &Sprite, painter: &egui::Painter, ground: Pos2, px: f32, team: Color32, spent: bool) {
-    let min = ground - vec2(px * 0.5, px * sprite.anchor);
-    let rect = Rect::from_min_size(min, vec2(px, px));
+/// Animation state for one unit drawing (see `anim::Pose`). `REST` draws it
+/// still; the map passes the clock so idle motion plays.
+#[derive(Clone, Copy)]
+pub struct UnitFx {
+    /// Seconds on the animation clock, for idle motion (0: none).
+    pub time: f32,
+    pub alpha: f32,
+    /// Red hit flash, 0 to 1.
+    pub flash: f32,
+    pub scale: f32,
+    /// Pixels the unit hovers above the ground (hop, walking bob).
+    pub lift: f32,
+}
+
+impl UnitFx {
+    pub const REST: UnitFx = UnitFx {
+        time: 0.0,
+        alpha: 1.0,
+        flash: 0.0,
+        scale: 1.0,
+        lift: 0.0,
+    };
+}
+
+/// A stable 0..TAU phase per unit so a crowd doesn't breathe in step.
+fn phase(id: u32) -> f32 {
+    let h = id.wrapping_mul(0x9E37_79B1) ^ (id >> 7).wrapping_mul(0x85EB_CA77);
+    (h >> 8 & 0xffff) as f32 / 65535.0 * std::f32::consts::TAU
+}
+
+fn red_glow(strength: f32) -> Color32 {
+    Color32::from_rgb(255, 70, 50).gamma_multiply((strength * 0.85).clamp(0.0, 1.0)).additive()
+}
+
+#[allow(clippy::too_many_arguments)]
+fn draw_sprite(
+    sprite: &Sprite,
+    painter: &egui::Painter,
+    ground: Pos2,
+    px: f32,
+    team: Color32,
+    spent: bool,
+    stretch: f32,
+    flash: f32,
+) {
+    let min = ground - vec2(px * 0.5, px * sprite.anchor * stretch);
+    let rect = Rect::from_min_size(min, vec2(px, px * stretch));
     let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
     painter.image(sprite.beauty.id(), rect, uv, dim(Color32::WHITE, spent));
     if let Some(mask) = &sprite.mask {
         painter.image(mask.id(), rect, uv, dim(team, spent));
+    }
+    if flash > 0.0 {
+        painter.image(sprite.beauty.id(), rect, uv, red_glow(flash));
     }
 }
 
@@ -266,10 +316,29 @@ fn ground_shadow(painter: &egui::Painter, ground: Pos2, rx: f32, alpha: u8) {
     }
 }
 
-fn selection_ring(painter: &egui::Painter, ground: Pos2, rx: f32) {
-    let r = vec2(rx, rx * 0.46);
-    painter.add(Shape::ellipse_filled(ground, r, Color32::from_white_alpha(28)));
-    painter.add(Shape::ellipse_stroke(ground, r, Stroke::new(2.5, Color32::WHITE)));
+/// The ring under the selected unit: breathes, and a second ring ripples out.
+fn selection_ring(painter: &egui::Painter, ground: Pos2, rx: f32, time: f32) {
+    let pulse = if time > 0.0 { 0.5 + 0.5 * (time * 3.4).sin() } else { 1.0 };
+    let r = vec2(rx * (1.0 + 0.03 * pulse), rx * 0.46 * (1.0 + 0.03 * pulse));
+    painter.add(Shape::ellipse_filled(
+        ground,
+        r,
+        Color32::from_white_alpha((20.0 + 22.0 * pulse) as u8),
+    ));
+    painter.add(Shape::ellipse_stroke(
+        ground,
+        r,
+        Stroke::new(2.5, Color32::WHITE.gamma_multiply(0.78 + 0.22 * pulse)),
+    ));
+    if time > 0.0 {
+        let k = (time * 0.8).fract();
+        let out = vec2(rx * (1.0 + 0.35 * k), rx * 0.46 * (1.0 + 0.35 * k));
+        painter.add(Shape::ellipse_stroke(
+            ground,
+            out,
+            Stroke::new(1.5, Color32::WHITE.gamma_multiply(0.45 * (1.0 - k))),
+        ));
+    }
 }
 
 /// A land or sea unit centered on `at`. `radius` is about 0.42 hex radii for
@@ -284,6 +353,7 @@ pub fn draw_unit(
     at: Pos2,
     radius: f32,
     selected: bool,
+    fx: &UnitFx,
 ) {
     let owner = &game.players[u.owner];
     let primary = rgb(owner.primary);
@@ -292,11 +362,35 @@ pub fn draw_unit(
     let class = class_of(ty);
     let spent = u.moves == 0;
     let military = game.is_military(u);
+    let mut faded = painter.clone();
+    if fx.alpha < 1.0 {
+        faded.set_opacity(fx.alpha);
+    }
+    let painter = &faded;
+    // Idle life: land units breathe, ships ride the swell.
+    let ph = phase(u.id);
+    let naval = matches!(class, Class::Naval) || ty.domain == "DOMAIN_SEA";
+    let (stretch, lift) = if fx.time > 0.0 && !is_still(u) {
+        if naval {
+            (1.0, fx.lift + radius * 0.07 * (fx.time * 1.3 + ph).sin() + radius * 0.07)
+        } else {
+            (1.0 + 0.014 * (fx.time * 1.7 + ph).sin(), fx.lift)
+        }
+    } else {
+        (1.0, fx.lift)
+    };
+    let ground_at = at;
+    let at = at - vec2(0.0, lift);
 
     if radius < TINY {
         // Tiny zoom: owner-coloured disc with the class symbol.
         if selected {
-            painter.circle_stroke(at, radius + 3.0, Stroke::new(2.5, Color32::WHITE));
+            let pulse = 0.5 + 0.5 * (fx.time * 3.4).sin();
+            painter.circle_stroke(
+                at,
+                radius + 3.0,
+                Stroke::new(2.5, Color32::WHITE.gamma_multiply(0.75 + 0.25 * pulse)),
+            );
         }
         painter.circle(
             at,
@@ -305,11 +399,16 @@ pub fn draw_unit(
             Stroke::new((radius * 0.16).max(1.0), dim(secondary, spent)),
         );
         draw_glyph(painter, class, at, radius * 0.62, dim(secondary, spent));
-        hp_bar(u, painter, at, radius, military);
+        if fx.flash > 0.0 {
+            painter.circle_filled(at, radius, red_glow(fx.flash));
+        }
+        hp_bar(u, painter, ground_at, radius, military);
         return;
     }
 
-    let ground = at + vec2(0.0, radius * 0.55);
+    // The shadow and ring stay on the ground while the unit hops.
+    let ground = ground_at + vec2(0.0, radius * 0.55);
+    let hover = ground - vec2(0.0, lift);
     let ids = sprite_ids(game, ty);
     let (height, width) = art.settler_size(painter.ctx());
     let has_sprite = if let Some(s) = art.find(painter.ctx(), &ids) {
@@ -318,15 +417,16 @@ pub fn draw_unit(
         let px = uniform_px(s, height * radius, width * radius * 1.1);
         let rx = (radius * (0.8 + 0.12 * s.ortho)).min(radius * 1.7).min(px * s.bounds.width() * 0.5);
         if selected {
-            selection_ring(painter, ground, rx);
+            selection_ring(painter, ground, rx, fx.time);
         }
-        ground_shadow(painter, ground, rx * 0.9, if spent { 70 } else { 95 });
-        draw_sprite(s, painter, ground, px, primary, spent);
+        let high = (1.0 - lift / (radius * 3.0)).clamp(0.6, 1.0);
+        ground_shadow(painter, ground, rx * 0.9 * high, if spent { 70 } else { 95 });
+        draw_sprite(s, painter, hover, px * fx.scale, primary, spent, stretch, fx.flash);
         true
     } else {
         // No model: Codex icon on a disc, else the class symbol.
         if selected {
-            selection_ring(painter, ground, radius * 0.85);
+            selection_ring(painter, ground, radius * 0.85, fx.time);
         }
         painter.circle(
             at,
@@ -344,6 +444,9 @@ pub fn draw_unit(
         if !drew {
             draw_glyph(painter, class, at, radius * 0.6, dim(secondary, spent));
         }
+        if fx.flash > 0.0 {
+            painter.circle_filled(at, radius, red_glow(fx.flash));
+        }
         false
     };
 
@@ -357,7 +460,12 @@ pub fn draw_unit(
     } else if u.fortified {
         draw_fortified(painter, at + vec2(radius * 0.8, -radius * 0.8), radius * 0.4, spent);
     }
-    hp_bar(u, painter, at, radius, military);
+    hp_bar(u, painter, ground_at, radius, military);
+}
+
+/// Fortified units stand at attention: no idle breathing.
+fn is_still(u: &wayciv_core::state::Unit) -> bool {
+    u.fortified
 }
 
 fn hp_bar(u: &wayciv_core::state::Unit, painter: &egui::Painter, at: Pos2, radius: f32, military: bool) {
@@ -538,7 +646,7 @@ pub fn draw_aircraft(
         // The plane hovers above a soft shadow.
         ground_shadow(painter, at + vec2(r * 0.2, r * 1.0), r * 0.75, 70);
         let px = r * 2.0 * (0.62 + 0.2 * s.ortho);
-        draw_sprite(s, painter, at + vec2(0.0, px * (s.anchor - 0.5)), px, primary, spent);
+        draw_sprite(s, painter, at + vec2(0.0, px * (s.anchor - 0.5)), px, primary, spent, 1.0, 0.0);
         draw_badge(painter, Class::Air, at + vec2(-r * 0.95, -r * 0.8), (r * 0.62).max(5.0), primary, secondary, spent);
         hp_bar(u, painter, at + vec2(0.0, -r * 0.55), r * 0.9, game.is_military(u));
     } else {

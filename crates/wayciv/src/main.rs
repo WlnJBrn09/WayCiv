@@ -50,6 +50,22 @@ pub struct App {
     actions: Vec<(u64, String)>,
     /// Test hook: `WAYCIV_UI_SIZE=WxH`.
     ui_size: Option<(f32, f32)>,
+    /// `WAYCIV_SNAPSHOT_FRAMES=30,36,42`: frame numbers to capture instead.
+    snapshot_frames: Vec<u32>,
+    /// `WAYCIV_ANIM_DEMO=name`, started on frame `DEMO_FRAME`.
+    demo: Option<String>,
+    /// Test hook: `WAYCIV_PERF=1` measures the frame cost (see `perf_hook`).
+    perf: Option<Perf>,
+}
+
+/// The frame on which `WAYCIV_ANIM_DEMO` starts its scene.
+const DEMO_FRAME: u32 = 20;
+
+struct Perf {
+    frames: u32,
+    cpu: f32,
+    /// Seconds spent in `ui` (building the shapes) since the last report.
+    ui: f32,
 }
 
 impl App {
@@ -77,6 +93,10 @@ impl App {
             })
             .unwrap_or_default();
         actions.sort_by_key(|a| a.0);
+        let snapshot_frames: Vec<u32> = std::env::var("WAYCIV_SNAPSHOT_FRAMES")
+            .map(|f| f.split(',').filter_map(|n| n.trim().parse().ok()).collect())
+            .unwrap_or_default();
+        let perf = std::env::var_os("WAYCIV_PERF").map(|_| Perf { frames: 0, cpu: 0.0, ui: 0.0 });
         Self {
             stage: Stage::Loading(rx),
             rules: None,
@@ -94,6 +114,9 @@ impl App {
                 let (w, h) = s.split_once('x')?;
                 Some((w.parse().ok()?, h.parse().ok()?))
             }),
+            snapshot_frames,
+            demo: std::env::var("WAYCIV_ANIM_DEMO").ok(),
+            perf,
         }
     }
 
@@ -125,6 +148,13 @@ impl App {
     /// one to `WAYCIV_SNAPSHOT`, the others as `<name>_<ms>.png`), and
     /// `WAYCIV_AT=300:endturn,600:research` runs actions then (see
     /// `ui::anim::demo`). `WAYCIV_POINTER=x,y` parks the pointer there.
+    /// Animation tests: `WAYCIV_ANIM_DEMO=name` stages a scene on frame 20
+    /// (see `map_view::demo`: walk, fight, shoot, siege, found, build, pan,
+    /// turn, all), `WAYCIV_ANIM_STEP=ms` makes the animation clock advance
+    /// by that much per frame (reproducible captures), and
+    /// `WAYCIV_SNAPSHOT_FRAMES=30,36,42` saves several frames (`out_30.png`,
+    /// ..., and the last as `out.png`). `WAYCIV_PERF=1` repaints every frame
+    /// and prints the average frame cost.
     fn autostart(&mut self, rules: &Arc<Rules>) {
         let env = |k: &str| std::env::var(k).ok();
         let settings = wayciv_core::Settings {
@@ -304,6 +334,12 @@ impl App {
             return;
         }
         *frames += 1;
+        let (path, frames) = (path.clone(), *frames);
+        if frames == DEMO_FRAME
+            && let (Some(name), Stage::Playing(s)) = (&self.demo, &mut self.stage)
+        {
+            map_view::demo(s, name);
+        }
         let now = self.fake_time.unwrap_or(0.0);
         let ms = ((now - *self.clock.get_or_insert(now)) * 1000.0) as u64;
         if let Stage::Playing(s) = &mut self.stage {
@@ -311,8 +347,14 @@ impl App {
                 ui::anim::demo(s, &self.actions.remove(0).1);
             }
         }
-        let shot = if self.shots.is_empty() {
-            (*frames == 30).then(|| (path.clone(), true))
+        let shot = if !self.snapshot_frames.is_empty() {
+            self.snapshot_frames.contains(&frames).then(|| {
+                let last = self.snapshot_frames.last() == Some(&frames);
+                let name = if last { path.clone() } else { path.replace(".png", &format!("_{frames}.png")) };
+                (name, last)
+            })
+        } else if self.shots.is_empty() {
+            (frames == 30).then(|| (path.clone(), true))
         } else if ms >= self.shots[0] {
             let at = self.shots.remove(0);
             let last = self.shots.is_empty();
@@ -334,6 +376,31 @@ impl App {
                 ctx2.request_repaint();
             });
             ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(callback));
+        }
+        ctx.request_repaint();
+    }
+
+    /// Test hook: with `WAYCIV_PERF=1` the app repaints every frame and
+    /// prints the average CPU time per frame every 120 frames, then exits
+    /// after 480.
+    fn perf_hook(&mut self, ctx: &egui::Context, frame: &eframe::Frame) {
+        let (Some(perf), Stage::Playing(_)) = (&mut self.perf, &self.stage) else {
+            return;
+        };
+        perf.frames += 1;
+        perf.cpu += frame.info().cpu_usage.unwrap_or(0.0);
+        if perf.frames % 120 == 0 {
+            eprintln!(
+                "perf: {} frames, {:.2} ms cpu per frame ({:.2} ms in ui)",
+                perf.frames,
+                1000.0 * perf.cpu / 120.0,
+                1000.0 * perf.ui / 120.0
+            );
+            perf.cpu = 0.0;
+            perf.ui = 0.0;
+        }
+        if perf.frames >= 480 {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
         ctx.request_repaint();
     }
@@ -394,7 +461,7 @@ fn select_hook(s: &mut hud::Session, kind: &str, city: Option<wayciv_core::Pos>)
 }
 
 fn map_view_center(s: &mut hud::Session, pos: wayciv_core::Pos) {
-    map_view::center_on(s, pos);
+    map_view::snap_to(s, pos);
 }
 
 impl eframe::App for App {
@@ -424,7 +491,7 @@ impl eframe::App for App {
         }
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         if let Some((w, h)) = self.ui_size {
             let ctx = ui.ctx();
             let physical = ctx.content_rect().size() * ctx.pixels_per_point();
@@ -434,6 +501,17 @@ impl eframe::App for App {
             }
         }
         self.snapshot_hook(ui.ctx());
+        self.perf_hook(ui.ctx(), frame);
+        let started = std::time::Instant::now();
+        self.show(ui);
+        if let Some(perf) = &mut self.perf {
+            perf.ui += started.elapsed().as_secs_f32();
+        }
+    }
+}
+
+impl App {
+    fn show(&mut self, ui: &mut egui::Ui) {
         match &mut self.stage {
             Stage::Loading(_) => {
                 egui::CentralPanel::default().show(ui, |ui| {

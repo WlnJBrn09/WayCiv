@@ -39,6 +39,8 @@ pub struct Session {
     pub city_tab: usize,
     pub icons: crate::icons::Icons,
     pub art: crate::render::Art,
+    /// Map animation: walks, fights, fades, the camera pan.
+    pub anim: crate::render::anim::Anims,
 }
 
 impl Session {
@@ -71,6 +73,7 @@ impl Session {
             city_tab: 0,
             icons: crate::icons::Icons::new(crate::portraits::assets_dir()),
             art: crate::render::Art::new(crate::portraits::assets_dir()),
+            anim: Default::default(),
         };
         let first = s
             .game
