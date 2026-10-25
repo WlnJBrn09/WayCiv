@@ -1,4 +1,4 @@
-//! The circular Research, Civic and AI trackers under the top bar. Their
+//! The circular Research and AI trackers under the top bar. Their
 //! progress rings ease to new values, and finishing an item plays a short
 //! burst with its name.
 
@@ -36,15 +36,6 @@ pub fn show(s: &mut Session, ctx: &egui::Context) {
             glyph: Glyph::Science,
             key: "S",
             choose: "Choose Research",
-        },
-        Tracker {
-            tree: Tree::Civic,
-            panel: Panel::Civic,
-            kind: "civic",
-            accent: YIELD_COLORS[4],
-            glyph: Glyph::Culture,
-            key: "C",
-            choose: "Choose Civic",
         },
     ];
     if s.game.ai_tree_unlocked(me) {
@@ -128,7 +119,6 @@ fn tracker(s: &mut Session, ui: &mut egui::Ui, t: &Tracker) {
             let income = s.game.income(me);
             let rate = match t.tree {
                 Tree::Tech => income.yields[3],
-                Tree::Civic => income.yields[4],
                 Tree::Ai => s.game.compute(me),
             };
             let turns = if rate > 0.0 {

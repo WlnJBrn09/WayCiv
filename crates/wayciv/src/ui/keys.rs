@@ -1,7 +1,7 @@
 //! Keyboard shortcuts.
 //!
 //! Windows and panels: `N` notifications, `L` leaders, `S` research (tech
-//! tree), `C` civics, `A` AI tree, `R` religion, `G` government, `P` great
+//! tree), `A` AI tree, `R` religion, `G` government, `P` great
 //! people, `E` city-states and envoys, `V` victory, `K` map key. Pressing a
 //! window's key again, or `Esc`, closes it; opening one closes the others.
 //!
@@ -15,11 +15,10 @@ use egui::Key;
 use wayciv_core::actions::UnitAction;
 
 /// (key, label, panel) for every window hotkey, in menu order.
-pub const PANEL_KEYS: [(Key, &str, Panel); 10] = [
+pub const PANEL_KEYS: [(Key, &str, Panel); 9] = [
     (Key::N, "N", Panel::Notifications),
     (Key::L, "L", Panel::Leaders),
     (Key::S, "S", Panel::Tech),
-    (Key::C, "C", Panel::Civic),
     (Key::A, "A", Panel::Ai),
     (Key::R, "R", Panel::Religion),
     (Key::G, "G", Panel::Government),

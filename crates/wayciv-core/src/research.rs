@@ -1,4 +1,5 @@
-//! Technologies, civics, Eurekas and Inspirations, governments, and policies.
+//! Technologies and their Eurekas, the AI tree, governments, and policies.
+//! Governments and policies unlock by calendar year.
 
 use crate::map::PlayerId;
 use crate::state::Game;
@@ -23,7 +24,6 @@ pub enum Trigger {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tree {
     Tech,
-    Civic,
     /// WayCiv's AI tree: unlocked by Artificial Intelligence, researched
     /// with Compute from Datacenters.
     Ai,
@@ -33,7 +33,6 @@ impl Game {
     pub fn tree_items(&self, tree: Tree) -> &[crate::rules::Research] {
         match tree {
             Tree::Tech => &self.rules.content.techs,
-            Tree::Civic => &self.rules.content.civics,
             Tree::Ai => &self.rules.ai_tree,
         }
     }
@@ -42,7 +41,6 @@ impl Game {
         let p = &self.players[player];
         match tree {
             Tree::Tech => p.techs[i],
-            Tree::Civic => p.civics[i],
             Tree::Ai => p.ai_techs[i],
         }
     }
@@ -74,12 +72,12 @@ impl Game {
             })
     }
 
-    /// WayCiv charges 60% of Civ VI's costs, so a 300-turn game reaches the
-    /// space race despite the systems WayCiv simplifies.
+    /// Techs are charged 60% of their listed cost, so a 300-turn game
+    /// reaches the space race.
     pub fn research_cost(&self, tree: Tree, i: usize) -> i32 {
         match tree {
             Tree::Ai => self.scaled(self.tree_items(tree)[i].cost),
-            _ => self.scaled(self.tree_items(tree)[i].cost * 3 / 5),
+            Tree::Tech => self.scaled(self.tree_items(tree)[i].cost * 3 / 5),
         }
     }
 
@@ -87,7 +85,6 @@ impl Game {
         let p = &self.players[player];
         match tree {
             Tree::Tech => p.research,
-            Tree::Civic => p.civic,
             Tree::Ai => p.ai_research,
         }
     }
@@ -96,7 +93,6 @@ impl Game {
         let p = &mut self.players[player];
         match tree {
             Tree::Tech => &mut p.research,
-            Tree::Civic => &mut p.civic,
             Tree::Ai => &mut p.ai_research,
         }
     }
@@ -105,7 +101,6 @@ impl Game {
         let p = &mut self.players[player];
         match tree {
             Tree::Tech => &mut p.tech_progress[i],
-            Tree::Civic => &mut p.civic_progress[i],
             Tree::Ai => &mut p.ai_progress[i],
         }
     }
@@ -122,12 +117,11 @@ impl Game {
         let p = &self.players[player];
         match tree {
             Tree::Tech => p.tech_progress[i],
-            Tree::Civic => p.civic_progress[i],
             Tree::Ai => p.ai_progress[i],
         }
     }
 
-    /// Adds science, culture, or compute to the current research; completes it.
+    /// Adds science or compute to the current research; completes it.
     pub(crate) fn advance(&mut self, player: PlayerId, tree: Tree, amount: f32) {
         let Some(i) = self.current_research(player, tree) else {
             return;
@@ -157,15 +151,10 @@ impl Game {
         let p = &mut self.players[player];
         match tree {
             Tree::Tech => p.techs[i] = true,
-            Tree::Civic => {
-                p.civics[i] = true;
-                p.policy_change_free = true;
-            }
             Tree::Ai => p.ai_techs[i] = true,
         }
         let what = match tree {
             Tree::Tech => "Technology researched",
-            Tree::Civic => "Civic completed",
             Tree::Ai => "AI breakthrough",
         };
         self.notify(player, format!("{what}: {name}."), None);
@@ -176,25 +165,10 @@ impl Game {
                 None,
             );
         }
-        if tree == Tree::Civic {
-            // Civics that unlock a government or more policies prompt a review.
-            let civic_id = self.rules.content.civics[i].id.clone();
-            if self
-                .rules
-                .content
-                .governments
-                .iter()
-                .any(|g| g.prereq_civic.as_deref() == Some(civic_id.as_str()))
-            {
-                self.notify(player, "A new government is available.", None);
-            }
-            self.players[player].envoys_available +=
-                i32::from(self.rules.content.civics[i].era != "ERA_ANCIENT" || i.is_multiple_of(2));
-        }
         self.check_boosts(player, Trigger::Poll);
     }
 
-    /// Grants a boost (Eureka/Inspiration) to `tree` item `i`. AI tree items
+    /// Grants a boost (Eureka) to `tree` item `i`. AI tree items
     /// have no boost flag: each boost just adds progress.
     pub fn boost(&mut self, player: PlayerId, tree: Tree, i: usize, percent: i32) {
         let cost = self.research_cost(tree, i);
@@ -202,7 +176,6 @@ impl Game {
         let p = &mut self.players[player];
         let boosted = match tree {
             Tree::Tech => Some(&mut p.tech_boosted[i]),
-            Tree::Civic => Some(&mut p.civic_boosted[i]),
             Tree::Ai => None,
         };
         if let Some(boosted) = boosted {
@@ -214,7 +187,6 @@ impl Game {
         *self.progress_mut(player, tree, i) += cost * percent / 100;
         let kind = match tree {
             Tree::Tech => "Eureka",
-            Tree::Civic => "Inspiration",
             Tree::Ai => "AI boost",
         };
         self.notify(player, format!("{kind}! {name} is boosted."), None);
@@ -229,23 +201,12 @@ impl Game {
         let rules = self.rules.clone();
         let content = &rules.content;
         for boost in &content.boosts {
-            let (tree, i) = match (&boost.tech, &boost.civic) {
-                (Some(t), _) => match rules.tech(t) {
-                    Some(i) => (Tree::Tech, i),
-                    None => continue,
-                },
-                (_, Some(c)) => match rules.civic(c) {
-                    Some(i) => (Tree::Civic, i),
-                    None => continue,
-                },
-                _ => continue,
+            let Some(i) = boost.tech.as_deref().and_then(|t| rules.tech(t)) else {
+                continue;
             };
+            let tree = Tree::Tech;
             let p = &self.players[player];
-            let already = match tree {
-                Tree::Tech => p.tech_boosted[i] || p.techs[i],
-                Tree::Civic => p.civic_boosted[i] || p.civics[i],
-                Tree::Ai => true,
-            };
+            let already = p.tech_boosted[i] || p.techs[i];
             if already || !self.boost_met(player, boost, event) {
                 continue;
             }
@@ -253,7 +214,7 @@ impl Game {
         }
     }
 
-    fn boost_met(&self, player: PlayerId, b: &civ6_data::content::Boost, event: Trigger) -> bool {
+    fn boost_met(&self, player: PlayerId, b: &wayciv_data::content::Boost, event: Trigger) -> bool {
         let rules = &self.rules;
         let content = &rules.content;
         let is = |id: &Option<String>, index: usize, list: &str| -> bool {
@@ -391,10 +352,6 @@ impl Game {
                 .boosting_tech
                 .as_deref()
                 .is_some_and(|t| self.players[player].has_tech(rules, t)),
-            ("BOOST_TRIGGER_CULTURVATE_CIVIC", _) => b
-                .boosting_civic
-                .as_deref()
-                .is_some_and(|c| self.players[player].has_civic(rules, c)),
             ("BOOST_TRIGGER_HAVE_X_POLICY_SLOTS", _) => {
                 self.policy_slots(player)
                     .iter()
@@ -417,7 +374,6 @@ impl Game {
         let p = &self.players[player];
         let boosted = |i: usize| match tree {
             Tree::Tech => p.tech_boosted[i],
-            Tree::Civic => p.civic_boosted[i],
             Tree::Ai => false,
         };
         (0..items.len())
@@ -429,9 +385,7 @@ impl Game {
             })
     }
 
-    /// Policy slots of the current government (`SLOT_*` -> count). Without a
-    /// government, Civ VI's Chiefdom-like start gives one military and one
-    /// economic slot once Code of Laws is known.
+    /// Policy slots of the current government (`SLOT_*` -> count).
     pub fn policy_slots(&self, player: PlayerId) -> Vec<(String, i32)> {
         let p = &self.players[player];
         match p.government {
@@ -440,41 +394,46 @@ impl Game {
         }
     }
 
-    pub fn available_governments(&self, player: PlayerId) -> Vec<usize> {
-        let p = &self.players[player];
+    /// Governments whose year has come.
+    pub fn available_governments(&self, _player: PlayerId) -> Vec<usize> {
+        let year = self.year();
         (0..self.rules.content.governments.len())
-            .filter(|&g| {
-                p.meets(
-                    &self.rules,
-                    None,
-                    self.rules.content.governments[g].prereq_civic.as_deref(),
-                )
-            })
+            .filter(|&g| self.rules.content.governments[g].unlock_year <= year)
             .collect()
     }
 
-    pub fn available_policies(&self, player: PlayerId) -> Vec<usize> {
-        let p = &self.players[player];
+    /// Policies whose year has come, without those replaced by an
+    /// available successor.
+    pub fn available_policies(&self, _player: PlayerId) -> Vec<usize> {
+        let year = self.year();
         let content = &self.rules.content;
         (0..content.policies.len())
             .filter(|&i| {
                 let policy = &content.policies[i];
-                p.meets(&self.rules, None, policy.prereq_civic.as_deref())
+                policy.unlock_year <= year
                     && !policy.obsoleted_by.as_deref().is_some_and(|o| {
                         content
                             .policies
                             .iter()
-                            .position(|x| x.id == o)
-                            .is_some_and(|j| {
-                                p.meets(
-                                    &self.rules,
-                                    None,
-                                    content.policies[j].prereq_civic.as_deref(),
-                                )
-                            })
+                            .find(|x| x.id == o)
+                            .is_some_and(|next| next.unlock_year <= year)
                     })
             })
             .collect()
+    }
+
+    /// The next year (after the current one) when a government or policy
+    /// unlocks, if any is left.
+    pub fn next_unlock_year(&self) -> Option<i32> {
+        let year = self.year();
+        let content = &self.rules.content;
+        content
+            .governments
+            .iter()
+            .map(|g| g.unlock_year)
+            .chain(content.policies.iter().map(|p| p.unlock_year))
+            .filter(|&y| y > year)
+            .min()
     }
 
     pub fn set_government(&mut self, player: PlayerId, government: usize) -> Result<(), String> {
@@ -544,8 +503,8 @@ impl Game {
         true
     }
 
-    /// Gold it costs to switch to `policies`: free right after a civic,
-    /// otherwise 25 per newly slotted policy.
+    /// Gold it costs to switch to `policies`: free right after new
+    /// governments or policies unlock, otherwise 25 per newly slotted policy.
     pub fn policy_change_cost(&self, player: PlayerId, policies: &[usize]) -> i32 {
         if self.players[player].policy_change_free {
             return 0;
@@ -558,7 +517,7 @@ impl Game {
     }
 
     /// Replaces the player's policies; validates slot counts. Changing
-    /// policies is free right after a civic completes; otherwise it costs gold.
+    /// policies is free right after new ones unlock; otherwise it costs gold.
     pub fn set_policies(&mut self, player: PlayerId, policies: Vec<usize>) -> Result<(), String> {
         let available = self.available_policies(player);
         if policies.iter().any(|p| !available.contains(p)) {

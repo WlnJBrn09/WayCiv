@@ -6,6 +6,7 @@
 //! available yet, with the reason), and closes itself once the choice it
 //! exists for has been made. Each returns true when it should close.
 
+use wayciv_core::length::year_label;
 use super::cards::{self, Card, State};
 use super::glyph::Glyph;
 use crate::hud::Session;
@@ -452,10 +453,7 @@ pub fn government(s: &mut Session, ui: &mut Ui) -> bool {
     let p = &game.players[me];
     let govs = game.available_governments(me);
     if govs.is_empty() {
-        cards::instruction(
-            ui,
-            "Research the Code of Laws civic (press C) to unlock your first government, Chiefdom.",
-        );
+        cards::instruction(ui, "No government is available yet.");
         return false;
     }
     let draft: Vec<usize> = s
@@ -511,7 +509,11 @@ pub fn government(s: &mut Session, ui: &mut Ui) -> bool {
                 .iter()
                 .map(|(t, n)| format!("{n} {}", slot_name(t)))
                 .collect();
-            let summary = format!("Slots: {}", summary.join(", "));
+            let summary = format!(
+                "Slots: {} · since {}",
+                summary.join(", "),
+                year_label(g.unlock_year)
+            );
             let mut card = Card::new(&g.name, &g.bonus)
                 .glyph(Glyph::Temple)
                 .footer(&summary)
@@ -580,16 +582,12 @@ pub fn government(s: &mut Session, ui: &mut Ui) -> bool {
             cards::grid(ui, 250.0, list.len(), |ui, i, w| {
                 let q = list[i];
                 let pol = &content.policies[q];
-                let simulated = content
-                    .modifiers_of(&pol.id)
-                    .any(wayciv_core::effects::is_active);
-                let mut card = Card::new(&pol.name, &pol.description)
+                let since = format!("Since {}", year_label(pol.unlock_year));
+                let card = Card::new(&pol.name, &pol.description)
                     .glyph(slot_glyph(kind))
                     .accent(slot_color(kind))
+                    .footer(&since)
                     .state(State::Open);
-                if !simulated {
-                    card = card.footer("Effect not simulated yet");
-                }
                 let r = card.show(ui, icons, w);
                 if r.clicked() {
                     act = Some(if fits(q) {
@@ -598,6 +596,37 @@ pub fn government(s: &mut Session, ui: &mut Ui) -> bool {
                         GovAct::Full(slot_name(kind).to_string())
                     });
                 }
+            });
+        }
+
+        // What the calendar unlocks next.
+        if let Some(year) = game.next_unlock_year() {
+            let coming: Vec<(String, String, String)> = content
+                .governments
+                .iter()
+                .filter(|g| g.unlock_year == year)
+                .map(|g| (g.name.clone(), g.bonus.clone(), "SLOT_WILDCARD".to_string()))
+                .chain(
+                    content
+                        .policies
+                        .iter()
+                        .filter(|q| q.unlock_year == year)
+                        .map(|q| (q.name.clone(), q.description.clone(), q.slot.clone())),
+                )
+                .collect();
+            let when = format!(
+                "in {} (turn {})",
+                year_label(year),
+                game.turn_of_year(year)
+            );
+            cards::section(ui, "Coming next", &when);
+            cards::grid(ui, 250.0, coming.len(), |ui, i, w| {
+                let (name, text, kind) = &coming[i];
+                Card::new(name, text)
+                    .glyph(slot_glyph(kind))
+                    .accent(slot_color(kind))
+                    .state(State::Info)
+                    .show(ui, icons, w);
             });
         }
     });
@@ -953,9 +982,12 @@ mod tests {
             ..Default::default()
         };
         let mut done = false;
-        let _ = ctx.run_ui(input, |ui| {
+        let mut output = ctx.run_ui(input, |ui| {
             egui::CentralPanel::default().show(ui, |ui| done = menu(s, ui));
         });
+        // Icon textures are uploaded through the output; a test has no
+        // renderer to hand them to.
+        output.textures_delta.clear();
         done
     }
 
@@ -981,7 +1013,7 @@ mod tests {
     #[test]
     fn picking_a_pantheon_closes_the_religion_menu() {
         let Some(mut s) = session() else {
-            eprintln!("skipped: Civilization VI is not installed");
+            eprintln!("skipped: content failed to load");
             return;
         };
         let me = s.me();
@@ -1006,7 +1038,7 @@ mod tests {
     #[test]
     fn founding_a_religion_takes_three_picks() {
         let Some(mut s) = session() else {
-            eprintln!("skipped: Civilization VI is not installed");
+            eprintln!("skipped: content failed to load");
             return;
         };
         let me = s.me();

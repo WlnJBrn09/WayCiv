@@ -1,16 +1,11 @@
-//! Player bonuses from policies, governments, beliefs, and leader and civ
-//! traits.
-//!
-//! WayCiv interprets the most common Civ VI modifier effects straight from
-//! the game data when they have no requirements: production bonuses for
-//! unit classes and eras, city and building yields, district and building
-//! production, and great person points. Effects outside that set keep their
-//! Civ VI description but have no mechanical effect yet; `is_active` tells
-//! the UI which is which. Reagan's leader ability is implemented directly.
+//! Player bonuses from the government, policies, beliefs, leader and
+//! civilization abilities, and wonders the player owns. Each source lists
+//! its effects in the data files (`wayciv_data::Effect`).
 
 use crate::map::PlayerId;
 use crate::rules::{self, Rules, Unit, yield_index};
 use crate::state::{City, Game};
+use wayciv_data::Effect;
 
 #[derive(Clone, Debug, Default)]
 pub struct UnitProductionBonus {
@@ -49,14 +44,10 @@ impl UnitProductionBonus {
                 .prereq_tech
                 .as_ref()
                 .and_then(|t| rules.content.techs.iter().find(|x| &x.id == t))
-                .or_else(|| {
-                    unit.prereq_civic
-                        .as_ref()
-                        .and_then(|c| rules.content.civics.iter().find(|x| &x.id == c))
-                })
-                .map(|r| r.era.as_str())
-                .unwrap_or("ERA_ANCIENT");
-            if unit_era != era {
+                .map(|r| r.era.clone())
+                .or_else(|| unit.unlock_year.map(|y| rules.era_of_year(y)))
+                .unwrap_or_else(|| "ERA_ANCIENT".to_string());
+            if &unit_era != era {
                 return false;
             }
         }
@@ -72,6 +63,8 @@ pub struct Bonuses {
     pub capital_percent: [f32; 6],
     pub district_flat: Vec<(usize, [f32; 6])>,
     pub building_flat: Vec<(usize, [f32; 6])>,
+    /// Extra tile yields from an improvement (by improvement index).
+    pub improvement_flat: Vec<(usize, [i32; 6])>,
     pub unit_production: Vec<UnitProductionBonus>,
     pub building_production: f32,
     pub wonder_production: f32,
@@ -81,16 +74,17 @@ pub struct Bonuses {
     pub amenities: i32,
     /// Added to every unit's combat strength.
     pub combat: i32,
+    /// Added to the combat strength of one promotion class.
+    pub class_combat: Vec<(String, i32)>,
     /// Added when fighting inside the player's own territory.
     pub combat_in_territory: i32,
     pub unit_xp: i32,
     pub adjacency_multiplier: f32,
     pub purchase_multiplier: f32,
-    /// Extra gold per city per slotted economic policy (Reaganomics).
-    pub gold_per_economic_policy: f32,
     /// Extra yields per domestic / international trade route.
     pub trade_domestic: [f32; 6],
     pub trade_international: [f32; 6],
+    pub trade_capacity: i32,
 }
 
 impl Default for Bonuses {
@@ -102,6 +96,7 @@ impl Default for Bonuses {
             capital_percent: [0.0; 6],
             district_flat: Vec::new(),
             building_flat: Vec::new(),
+            improvement_flat: Vec::new(),
             unit_production: Vec::new(),
             building_production: 0.0,
             wonder_production: 0.0,
@@ -110,120 +105,173 @@ impl Default for Bonuses {
             housing: 0,
             amenities: 0,
             combat: 0,
+            class_combat: Vec::new(),
             combat_in_territory: 0,
             unit_xp: 0,
             adjacency_multiplier: 1.0,
             purchase_multiplier: 1.0,
-            gold_per_economic_policy: 0.0,
             trade_domestic: [0.0; 6],
             trade_international: [0.0; 6],
+            trade_capacity: 0,
         }
     }
 }
 
-/// Whether WayCiv applies `modifier` (see the module docs).
-pub fn is_active(modifier: &civ6_data::content::Modifier) -> bool {
-    !modifier.has_requirements
-        && matches!(
-            modifier.effect.as_str(),
-            "EFFECT_ADJUST_UNIT_TAG_ERA_PRODUCTION"
-                | "EFFECT_ADJUST_UNIT_PRODUCTION"
-                | "EFFECT_ADJUST_UNIT_DOMAIN_PRODUCTION"
-                | "EFFECT_ADJUST_CITY_YIELD_CHANGE"
-                | "EFFECT_ADJUST_CITY_YIELD_MODIFIER"
-                | "EFFECT_ADJUST_BUILDING_YIELD_CHANGE"
-                | "EFFECT_ADJUST_DISTRICT_PRODUCTION"
-                | "EFFECT_ADJUST_BUILDING_PRODUCTION"
-                | "EFFECT_ADJUST_GREAT_PERSON_POINTS"
-                | "EFFECT_ADJUST_PLAYER_YIELD_MODIFIER"
-                | "EFFECT_ADJUST_TRADE_ROUTE_YIELD_FOR_INTERNATIONAL"
-                | "EFFECT_ADJUST_TRADE_ROUTE_YIELD_FOR_DOMESTIC"
-                | "EFFECT_ADJUST_TRADE_ROUTE_CAPACITY"
-        )
-}
-
 impl Bonuses {
-    fn apply(&mut self, rules: &Rules, modifier: &civ6_data::content::Modifier) {
-        if !is_active(modifier) {
-            return;
-        }
-        let arg = |name: &str| modifier.arguments.get(name).map(String::as_str);
-        let amount: f32 = arg("Amount").and_then(|a| a.parse().ok()).unwrap_or(0.0);
-        let yield_i = arg("YieldType").and_then(yield_index);
-        let capital = modifier.collection.contains("CAPITAL");
-        match modifier.effect.as_str() {
-            "EFFECT_ADJUST_UNIT_TAG_ERA_PRODUCTION" => {
-                self.unit_production.push(UnitProductionBonus {
-                    promotion_class: arg("UnitPromotionClass").map(str::to_owned),
-                    era: arg("EraType").map(str::to_owned),
-                    percent: amount,
-                    ..Default::default()
-                })
-            }
-            "EFFECT_ADJUST_UNIT_PRODUCTION" => self.unit_production.push(UnitProductionBonus {
-                unit: arg("UnitType").map(str::to_owned),
-                percent: amount,
-                ..Default::default()
-            }),
-            "EFFECT_ADJUST_UNIT_DOMAIN_PRODUCTION" => {
-                self.unit_production.push(UnitProductionBonus {
-                    domain: arg("Domain").map(str::to_owned),
-                    percent: amount,
-                    ..Default::default()
-                })
-            }
-            "EFFECT_ADJUST_CITY_YIELD_CHANGE" => {
-                if let Some(i) = yield_i {
-                    if capital {
-                        self.capital_flat[i] += amount
+    /// Adds one effect. `slotted` counts the player's slotted policies by
+    /// slot, for `PolicyYield`.
+    fn apply(&mut self, rules: &Rules, effect: &Effect, slotted: &[(String, usize)]) {
+        let yield_of = |y: &str| yield_index(y);
+        match effect {
+            Effect::CityYield {
+                yield_type,
+                amount,
+                capital,
+            } => {
+                if let Some(i) = yield_of(yield_type) {
+                    if *capital {
+                        self.capital_flat[i] += amount;
                     } else {
-                        self.city_flat[i] += amount
+                        self.city_flat[i] += amount;
                     }
                 }
             }
-            "EFFECT_ADJUST_CITY_YIELD_MODIFIER" | "EFFECT_ADJUST_PLAYER_YIELD_MODIFIER" => {
-                if let Some(i) = yield_i {
-                    if capital {
-                        self.capital_percent[i] += amount
+            Effect::CityPercent {
+                yield_type,
+                percent,
+                capital,
+            } => {
+                if let Some(i) = yield_of(yield_type) {
+                    if *capital {
+                        self.capital_percent[i] += percent;
                     } else {
-                        self.city_percent[i] += amount
+                        self.city_percent[i] += percent;
                     }
                 }
             }
-            "EFFECT_ADJUST_BUILDING_YIELD_CHANGE" => {
-                if let (Some(i), Some(building)) =
-                    (yield_i, arg("BuildingType").and_then(|b| rules.idx(b)))
-                {
+            Effect::DistrictYield {
+                district,
+                yield_type,
+                amount,
+            } => {
+                if let (Some(i), Some(d)) = (yield_of(yield_type), rules.idx(district)) {
                     let mut y = [0.0; 6];
-                    y[i] = amount;
-                    self.building_flat.push((building, y));
+                    y[i] = *amount;
+                    self.district_flat.push((d, y));
                 }
             }
-            "EFFECT_ADJUST_TRADE_ROUTE_YIELD_FOR_INTERNATIONAL" => {
-                if let Some(i) = yield_i {
-                    self.trade_international[i] += amount;
+            Effect::BuildingYield {
+                building,
+                yield_type,
+                amount,
+            } => {
+                if let (Some(i), Some(b)) = (yield_of(yield_type), rules.idx(building)) {
+                    let mut y = [0.0; 6];
+                    y[i] = *amount;
+                    self.building_flat.push((b, y));
                 }
             }
-            "EFFECT_ADJUST_TRADE_ROUTE_YIELD_FOR_DOMESTIC" => {
-                if let Some(i) = yield_i {
-                    self.trade_domestic[i] += amount;
+            Effect::ImprovementYield {
+                improvement,
+                yield_type,
+                amount,
+            } => {
+                if let (Some(i), Some(imp)) = (yield_of(yield_type), rules.idx(improvement)) {
+                    let mut y = [0; 6];
+                    y[i] = *amount;
+                    self.improvement_flat.push((imp, y));
                 }
             }
-            "EFFECT_ADJUST_DISTRICT_PRODUCTION" => self.district_production += amount,
-            "EFFECT_ADJUST_BUILDING_PRODUCTION" => {
-                if arg("IsWonder").is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true")) {
-                    self.wonder_production += amount;
-                } else {
-                    self.building_production += amount;
+            Effect::UnitProduction {
+                percent,
+                class,
+                unit,
+                domain,
+                era,
+                military,
+            } => self.unit_production.push(UnitProductionBonus {
+                promotion_class: class.clone(),
+                unit: unit.clone(),
+                domain: domain.clone(),
+                era: era.clone(),
+                military_only: *military,
+                percent: *percent,
+            }),
+            Effect::BuildingProduction { percent } => self.building_production += percent,
+            Effect::WonderProduction { percent } => self.wonder_production += percent,
+            Effect::DistrictProduction { percent } => self.district_production += percent,
+            Effect::GreatPersonPoints { class, amount } => {
+                if let Some(c) = rules.idx(class) {
+                    self.great_person_points.push((c, *amount));
                 }
             }
-            "EFFECT_ADJUST_GREAT_PERSON_POINTS" => {
-                if let Some(class) = arg("GreatPersonClassType").and_then(|c| rules.idx(c)) {
-                    self.great_person_points.push((class, amount as i32));
+            Effect::Housing { amount } => self.housing += amount,
+            Effect::Amenities { amount } => self.amenities += amount,
+            Effect::Combat { amount, class } => match class {
+                Some(c) => self.class_combat.push((c.clone(), *amount)),
+                None => self.combat += amount,
+            },
+            Effect::CombatInTerritory { amount } => self.combat_in_territory += amount,
+            Effect::UnitXp { amount } => self.unit_xp += amount,
+            Effect::AdjacencyPercent { percent } => self.adjacency_multiplier += percent / 100.0,
+            Effect::PurchaseDiscount { percent } => {
+                self.purchase_multiplier *= 1.0 - percent / 100.0
+            }
+            Effect::TradeYield {
+                routes,
+                yield_type,
+                amount,
+            } => {
+                if let Some(i) = yield_of(yield_type) {
+                    use wayciv_data::effect::Routes;
+                    if *routes != Routes::International {
+                        self.trade_domestic[i] += amount;
+                    }
+                    if *routes != Routes::Domestic {
+                        self.trade_international[i] += amount;
+                    }
                 }
             }
-            _ => {}
+            Effect::TradeCapacity { amount } => self.trade_capacity += amount,
+            Effect::PolicyYield {
+                slot,
+                yield_type,
+                amount,
+            } => {
+                let count = slotted
+                    .iter()
+                    .find(|(s, _)| s == slot)
+                    .map(|(_, n)| *n)
+                    .unwrap_or(0);
+                if let Some(i) = yield_of(yield_type) {
+                    self.city_flat[i] += amount * count as f32;
+                }
+            }
         }
+    }
+
+    /// Combat Strength bonus for a unit of `class`.
+    pub fn combat_for(&self, class: Option<&str>) -> i32 {
+        self.combat
+            + self
+                .class_combat
+                .iter()
+                .filter(|(c, _)| Some(c.as_str()) == class)
+                .map(|(_, n)| n)
+                .sum::<i32>()
+    }
+
+    /// Extra tile yields for an improvement.
+    pub fn improvement_yields(&self, improvement: usize) -> [i32; 6] {
+        let mut y = [0; 6];
+        for (imp, extra) in &self.improvement_flat {
+            if *imp == improvement {
+                for i in 0..6 {
+                    y[i] += extra[i];
+                }
+            }
+        }
+        y
     }
 }
 
@@ -237,51 +285,38 @@ impl Game {
         if !p.is_major() {
             return bonuses;
         }
-        let mut owners: Vec<&str> = Vec::new();
+        let mut effects: Vec<&Effect> = Vec::new();
         if let Some(g) = p.government {
-            owners.push(&content.governments[g].id);
+            effects.extend(&content.governments[g].effects);
         }
-        owners.extend(p.policies.iter().map(|&i| content.policies[i].id.as_str()));
-        owners.extend(p.beliefs.iter().map(|&i| content.beliefs[i].id.as_str()));
-        owners.extend(p.pantheon.iter().map(|&i| content.beliefs[i].id.as_str()));
-        owners.extend(
-            content.leaders[p.leader]
-                .traits
-                .iter()
-                .map(|t| t.id.as_str()),
-        );
-        owners.extend(
-            content.civilizations[p.civ]
-                .traits
-                .iter()
-                .map(|t| t.id.as_str()),
-        );
-        for owner in owners {
-            for modifier in content.modifiers_of(owner) {
-                bonuses.apply(rules, modifier);
+        for &i in &p.policies {
+            effects.extend(&content.policies[i].effects);
+        }
+        for &i in p.beliefs.iter().chain(p.pantheon.iter()) {
+            effects.extend(&content.beliefs[i].effects);
+        }
+        for t in content.leaders[p.leader]
+            .traits
+            .iter()
+            .chain(&content.civilizations[p.civ].traits)
+        {
+            effects.extend(&t.effects);
+        }
+        for c in self.player_cities(player) {
+            for &b in &c.buildings {
+                effects.extend(&content.buildings[b].effects);
             }
         }
-
-        // Ronald Reagan: Peace Through Strength.
-        if content.leaders[p.leader].id == rules::REAGAN {
-            bonuses.unit_production.push(UnitProductionBonus {
-                military_only: true,
-                percent: 15.0,
-                ..Default::default()
-            });
-            bonuses.combat_in_territory += 5;
-            bonuses.capital_flat[rules::CULTURE] += 2.0;
-            let economic = p
-                .policies
-                .iter()
-                .filter(|&&i| content.policies[i].slot == "SLOT_ECONOMIC")
-                .count();
-            bonuses.city_flat[rules::GOLD] += economic as f32;
-            if let Some(hub) = rules.idx("DISTRICT_COMMERCIAL_HUB") {
-                let mut y = [0.0; 6];
-                y[rules::PRODUCTION] = 2.0;
-                bonuses.district_flat.push((hub, y));
+        let mut slotted: Vec<(String, usize)> = Vec::new();
+        for &i in &p.policies {
+            let slot = &content.policies[i].slot;
+            match slotted.iter_mut().find(|(s, _)| s == slot) {
+                Some(entry) => entry.1 += 1,
+                None => slotted.push((slot.clone(), 1)),
             }
+        }
+        for effect in effects {
+            bonuses.apply(rules, effect, &slotted);
         }
         self.ai_tree_bonuses(player, &mut bonuses);
         bonuses

@@ -331,7 +331,7 @@ pub fn demo(s: &mut crate::hud::Session, action: &str) {
     match action {
         "endturn" => s.end_turn(),
         "research" => {
-            for tree in [Tree::Tech, Tree::Civic] {
+            for tree in [Tree::Tech] {
                 if let Some(i) = s.game.current_research(me, tree) {
                     s.game.boost(me, tree, i, 100);
                 }
@@ -344,7 +344,6 @@ pub fn demo(s: &mut crate::hud::Session, action: &str) {
             if let Some(p) = other.strip_prefix("open:") {
                 match p {
                     "tech" => s.windows.open(Panel::Tech),
-                    "civic" => s.windows.open(Panel::Civic),
                     "government" => s.windows.open(Panel::Government),
                     "religion" => s.windows.open(Panel::Religion),
                     "notifications" => s.windows.open(Panel::Notifications),

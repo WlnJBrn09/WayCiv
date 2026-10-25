@@ -1,0 +1,26 @@
+# Eras, in order. `start_year` is roughly where the era begins on the
+# calendar (shown in menus); `great_person_cost` is the base point cost of
+# that era's great people.
+
+era = [
+  { id = "ancient",      name = "Ancient Era",      index = 1, great_person_cost = 30,   start_year = -4000 },
+  { id = "classical",    name = "Classical Era",    index = 2, great_person_cost = 60,   start_year = -1000 },
+  { id = "medieval",     name = "Medieval Era",     index = 3, great_person_cost = 120,  start_year = 500 },
+  { id = "renaissance",  name = "Renaissance Era",  index = 4, great_person_cost = 230,  start_year = 1400 },
+  { id = "industrial",   name = "Industrial Era",   index = 5, great_person_cost = 400,  start_year = 1750 },
+  { id = "modern",       name = "Modern Era",       index = 6, great_person_cost = 640,  start_year = 1900 },
+  { id = "atomic",       name = "Atomic Era",       index = 7, great_person_cost = 940,  start_year = 1945 },
+  { id = "information",  name = "Information Era",  index = 8, great_person_cost = 1300, start_year = 1990 },
+]
+
+great_person_class = [
+  { id = "general",   name = "Great General",   unit = "UNIT_GREAT_GENERAL",   district = "DISTRICT_ENCAMPMENT" },
+  { id = "admiral",   name = "Great Admiral",   unit = "UNIT_GREAT_ADMIRAL",   district = "DISTRICT_HARBOR" },
+  { id = "engineer",  name = "Great Engineer",  unit = "UNIT_GREAT_ENGINEER",  district = "DISTRICT_INDUSTRIAL_ZONE" },
+  { id = "merchant",  name = "Great Merchant",  unit = "UNIT_GREAT_MERCHANT",  district = "DISTRICT_COMMERCIAL_HUB" },
+  { id = "prophet",   name = "Great Prophet",   unit = "UNIT_GREAT_PROPHET",   district = "DISTRICT_HOLY_SITE" },
+  { id = "scientist", name = "Great Scientist", unit = "UNIT_GREAT_SCIENTIST", district = "DISTRICT_CAMPUS" },
+  { id = "writer",    name = "Great Writer",    unit = "UNIT_GREAT_WRITER",    district = "DISTRICT_THEATER" },
+  { id = "artist",    name = "Great Artist",    unit = "UNIT_GREAT_ARTIST",    district = "DISTRICT_THEATER" },
+  { id = "musician",  name = "Great Musician",  unit = "UNIT_GREAT_MUSICIAN",  district = "DISTRICT_THEATER" },
+]

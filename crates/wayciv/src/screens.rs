@@ -1,4 +1,4 @@
-//! Full-screen-style windows: tech and civic trees, government, religion,
+//! Full-screen-style windows: the tech and AI trees, government, religion,
 //! great people, city-states, victory, diplomacy, and leader pop-ups.
 
 use crate::hud::Session;
@@ -17,7 +17,6 @@ use wayciv_core::{Game, PlayerId};
 #[derive(Default)]
 pub struct Windows {
     pub tech: bool,
-    pub civic: bool,
     pub ai: bool,
     pub government: bool,
     pub religion: bool,
@@ -37,7 +36,6 @@ pub struct Windows {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Panel {
     Tech,
-    Civic,
     Ai,
     Government,
     Religion,
@@ -60,7 +58,6 @@ impl Windows {
 
     pub fn any_open(&self) -> bool {
         self.tech
-            || self.civic
             || self.ai
             || self.government
             || self.religion
@@ -80,7 +77,6 @@ impl Windows {
     pub fn is_open(&self, panel: Panel) -> bool {
         match panel {
             Panel::Tech => self.tech,
-            Panel::Civic => self.civic,
             Panel::Ai => self.ai,
             Panel::Government => self.government,
             Panel::Religion => self.religion,
@@ -98,7 +94,6 @@ impl Windows {
         self.close_all();
         match panel {
             Panel::Tech => self.tech = true,
-            Panel::Civic => self.civic = true,
             Panel::Ai => self.ai = true,
             Panel::Government => self.government = true,
             Panel::Religion => self.religion = true,
@@ -204,10 +199,9 @@ pub fn windows(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) 
 }
 
 fn windows_inner(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) {
-    for tree in [Tree::Tech, Tree::Civic, Tree::Ai] {
+    for tree in [Tree::Tech, Tree::Ai] {
         let is_open = match tree {
             Tree::Tech => s.windows.tech,
-            Tree::Civic => s.windows.civic,
             Tree::Ai => s.windows.ai,
         };
         if !is_open {
@@ -215,7 +209,6 @@ fn windows_inner(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context
         }
         let (title, glyph, key) = match tree {
             Tree::Tech => ("Technology Tree", Glyph::Science, "S"),
-            Tree::Civic => ("Civics Tree", Glyph::Culture, "C"),
             Tree::Ai => ("Artificial Intelligence Tree", Glyph::Chip, "A"),
         };
         let mut picked = false;
@@ -226,7 +219,6 @@ fn windows_inner(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context
         let open = open && !picked;
         match tree {
             Tree::Tech => s.windows.tech &= open,
-            Tree::Civic => s.windows.civic &= open,
             Tree::Ai => s.windows.ai &= open,
         }
     }
@@ -309,7 +301,7 @@ fn windows_inner(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context
     }
 }
 
-/// Columns: depth in the prerequisite graph. Rows: Civ VI's own UITreeRow.
+/// Columns: depth in the prerequisite graph. Rows: each item's `row`.
 fn layout(items: &[wayciv_core::rules::Research]) -> HashMap<usize, (i32, i32)> {
     let mut depth: HashMap<usize, i32> = HashMap::new();
     fn d(i: usize, items: &[wayciv_core::rules::Research], memo: &mut HashMap<usize, i32>) -> i32 {
@@ -345,12 +337,11 @@ fn layout(items: &[wayciv_core::rules::Research]) -> HashMap<usize, (i32, i32)> 
     out
 }
 
-/// Things a tech or civic unlocks, for its tooltip.
+/// Things a tech unlocks, for its tooltip.
 fn unlocks(game: &Game, tree: Tree, id: &str) -> Vec<String> {
     let content = &game.rules.content;
-    let matches = |tech: &Option<String>, civic: &Option<String>| match tree {
+    let matches = |tech: &Option<String>| match tree {
         Tree::Tech => tech.as_deref() == Some(id),
-        Tree::Civic => civic.as_deref() == Some(id),
         Tree::Ai => false,
     };
     let mut out: Vec<String> = Vec::new();
@@ -358,29 +349,29 @@ fn unlocks(game: &Game, tree: Tree, id: &str) -> Vec<String> {
         content
             .units
             .iter()
-            .filter(|u| u.unique_to.is_none() && matches(&u.prereq_tech, &u.prereq_civic))
+            .filter(|u| u.unique_to.is_none() && matches(&u.prereq_tech))
             .map(|u| u.name.clone()),
     );
     out.extend(
         content
             .buildings
             .iter()
-            .filter(|b| b.unique_to.is_none() && matches(&b.prereq_tech, &b.prereq_civic))
+            .filter(|b| b.unique_to.is_none() && matches(&b.prereq_tech))
             .map(|b| b.name.clone()),
     );
     out.extend(
         content
             .districts
             .iter()
-            .filter(|d| d.unique_to.is_none() && matches(&d.prereq_tech, &d.prereq_civic))
+            .filter(|d| d.unique_to.is_none() && matches(&d.prereq_tech))
             .map(|d| d.name.clone()),
     );
     out.extend(
         content
-            .governments
+            .improvements
             .iter()
-            .filter(|g| matches(&None, &g.prereq_civic))
-            .map(|g| g.name.clone()),
+            .filter(|i| i.buildable && i.unique_to.is_none() && matches(&i.prereq_tech))
+            .map(|i| i.name.clone()),
     );
     if tree == Tree::Tech && id == wayciv_core::additions::TECH_AI {
         out.push("the AI tree".into());
@@ -388,7 +379,7 @@ fn unlocks(game: &Game, tree: Tree, id: &str) -> Vec<String> {
     out
 }
 
-/// Unit types (ids) a tech or civic unlocks.
+/// Unit types (ids) a tech unlocks.
 fn unlocked_units(game: &Game, tree: Tree, id: &str) -> Vec<String> {
     game.rules
         .content
@@ -398,7 +389,6 @@ fn unlocked_units(game: &Game, tree: Tree, id: &str) -> Vec<String> {
             u.unique_to.is_none()
                 && match tree {
                     Tree::Tech => u.prereq_tech.as_deref() == Some(id),
-                    Tree::Civic => u.prereq_civic.as_deref() == Some(id),
                     Tree::Ai => false,
                 }
         })
@@ -419,12 +409,10 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
     let current = s.game.current_research(me, tree);
     let accent = match tree {
         Tree::Tech => YIELD_COLORS[3],
-        Tree::Civic => YIELD_COLORS[4],
         Tree::Ai => crate::palette::COMPUTE,
     };
     let (icon_kind, fallback) = match tree {
         Tree::Tech => ("tech", Glyph::Science),
-        Tree::Civic => ("civic", Glyph::Culture),
         Tree::Ai => ("ai", Glyph::Chip),
     };
     ui.horizontal(|ui| {
@@ -502,7 +490,6 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
             let available = s.game.researchable(me, tree, i);
             let boosted = match tree {
                 Tree::Tech => s.game.players[me].tech_boosted[i],
-                Tree::Civic => s.game.players[me].civic_boosted[i],
                 Tree::Ai => false,
             };
             let is_current = Some(i) == current;
@@ -671,7 +658,6 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                     item.name,
                     match tree {
                         Tree::Tech => "Science",
-                        Tree::Civic => "Culture",
                         Tree::Ai => "Compute",
                     }
                 )

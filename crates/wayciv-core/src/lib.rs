@@ -1,5 +1,6 @@
-//! WayCiv's game engine: Civilization VI's turn flow and content, with
-//! WayCiv's own simplified rules. No UI; see the `wayciv` crate for that.
+//! WayCiv's game engine: a Civilization-style turn flow with WayCiv's own
+//! content (`wayciv-data`) and simplified rules. No UI; see the `wayciv`
+//! crate for that.
 
 pub mod actions;
 pub mod additions;
@@ -36,9 +37,7 @@ pub use rules::Rules;
 pub use setup::new_game;
 pub use state::{Game, Production, Settings, UnitId};
 
-/// Loads Civ VI content from the user's install and builds the rules.
-pub fn load_rules() -> civ6_data::Result<std::sync::Arc<Rules>> {
-    Ok(std::sync::Arc::new(Rules::new(
-        civ6_data::content::Content::load_installed()?,
-    )))
+/// Loads WayCiv's content and builds the rules.
+pub fn load_rules() -> wayciv_data::Result<std::sync::Arc<Rules>> {
+    Ok(std::sync::Arc::new(Rules::new(wayciv_data::Content::load()?)))
 }

@@ -1,0 +1,160 @@
+# Districts. Specialty districts (the default) need 3 population each;
+# `specialty = false` ones don't. Adjacency bonuses add yields for what's
+# next to the district: `districts = true` counts any district, `per = 2`
+# means one bonus per two matching tiles.
+
+[[district]]
+id = "DISTRICT_CITY_CENTER"
+name = "City Center"
+cost = 54
+city_center = true
+specialty = false
+description = "The heart of every city."
+
+[[district]]
+id = "DISTRICT_WONDER"
+name = "Wonder"
+specialty = false
+internal_only = true
+
+[[district]]
+id = "DISTRICT_CAMPUS"
+name = "Campus"
+cost = 54
+tech = "TECH_WRITING"
+great_people = { scientist = 1 }
+description = "Schools and observatories. Produces Science."
+adjacencies = [
+  { yield = "science", amount = 1, mountain = true },
+  { yield = "science", amount = 2, feature = "FEATURE_JUNGLE", per = 2 },
+  { yield = "science", amount = 1, districts = true, per = 2 },
+]
+
+[[district]]
+id = "DISTRICT_HOLY_SITE"
+name = "Holy Site"
+cost = 54
+tech = "TECH_ASTROLOGY"
+great_people = { prophet = 1 }
+description = "Groves and temples. Produces Faith."
+adjacencies = [
+  { yield = "faith", amount = 2, natural_wonder = true },
+  { yield = "faith", amount = 1, mountain = true },
+  { yield = "faith", amount = 1, feature = "FEATURE_FOREST", per = 2 },
+  { yield = "faith", amount = 1, feature = "FEATURE_TAIGA", per = 2 },
+  { yield = "faith", amount = 1, districts = true, per = 2 },
+]
+
+[[district]]
+id = "DISTRICT_ENCAMPMENT"
+name = "Encampment"
+cost = 54
+tech = "TECH_BRONZE_WORKING"
+great_people = { general = 1 }
+description = "A fortified military camp that trains soldiers and fires on enemies like a city."
+
+[[district]]
+id = "DISTRICT_COMMERCIAL_HUB"
+name = "Commercial Hub"
+cost = 54
+tech = "TECH_CURRENCY"
+great_people = { merchant = 1 }
+trade_capacity = 1
+description = "Markets and warehouses. Produces Gold and holds a trade route."
+adjacencies = [
+  { yield = "gold", amount = 2, river = true },
+  { yield = "gold", amount = 2, district = "DISTRICT_HARBOR" },
+  { yield = "gold", amount = 1, districts = true, per = 2 },
+]
+
+[[district]]
+id = "DISTRICT_HARBOR"
+name = "Harbor"
+cost = 54
+tech = "TECH_CELESTIAL_NAVIGATION"
+coast = true
+great_people = { admiral = 1 }
+trade_capacity = 1
+description = "Docks built on coast or lake. Produces Gold and holds a trade route."
+adjacencies = [
+  { yield = "gold", amount = 1, resource = true },
+  { yield = "gold", amount = 2, district = "DISTRICT_CITY_CENTER" },
+  { yield = "gold", amount = 1, districts = true, per = 2 },
+]
+
+[[district]]
+id = "DISTRICT_THEATER"
+name = "Theater Square"
+cost = 54
+year = -500
+great_people = { writer = 1, artist = 1, musician = 1 }
+description = "Stages and galleries. Produces Culture."
+adjacencies = [
+  { yield = "culture", amount = 1, wonder = true },
+  { yield = "culture", amount = 2, district = "DISTRICT_ENTERTAINMENT_COMPLEX" },
+  { yield = "culture", amount = 1, districts = true, per = 2 },
+]
+
+[[district]]
+id = "DISTRICT_ENTERTAINMENT_COMPLEX"
+name = "Entertainment Complex"
+cost = 54
+year = -300
+amenities = 1
+description = "Arenas and parks that keep citizens happy."
+
+[[district]]
+id = "DISTRICT_INDUSTRIAL_ZONE"
+name = "Industrial Zone"
+cost = 54
+tech = "TECH_APPRENTICESHIP"
+great_people = { engineer = 1 }
+description = "Workshops and factories. Produces Production."
+adjacencies = [
+  { yield = "production", amount = 1, district = "DISTRICT_AQUEDUCT" },
+  { yield = "production", amount = 1, resource = true, per = 2 },
+  { yield = "production", amount = 1, districts = true, per = 2 },
+]
+
+[[district]]
+id = "DISTRICT_AQUEDUCT"
+name = "Aqueduct"
+cost = 36
+tech = "TECH_ENGINEERING"
+specialty = false
+housing = 4
+description = "Brings fresh water from a river, lake, or mountain next to the city."
+
+[[district]]
+id = "DISTRICT_NEIGHBORHOOD"
+name = "Neighborhood"
+cost = 54
+year = 1880
+specialty = false
+one_per_city = false
+housing = 4
+description = "Suburban housing for a growing city."
+
+[[district]]
+id = "DISTRICT_AERODROME"
+name = "Aerodrome"
+cost = 54
+tech = "TECH_FLIGHT"
+description = "An airfield for planes. Doesn't count against the specialty district limit."
+
+[[district]]
+id = "DISTRICT_SPACEPORT"
+name = "Spaceport"
+cost = 1800
+tech = "TECH_ROCKETRY"
+specialty = false
+description = "Launch pads for the space race."
+
+[[district]]
+id = "DISTRICT_DATACENTER"
+name = "Datacenter"
+cost = 54
+tech = "TECH_ARTIFICIAL_INTELLIGENCE"
+great_people = { scientist = 1 }
+description = "Powers your artificial intelligence: produces Compute for the AI tree (+6, +2 per adjacent district, +3 next to a river or the coast for cooling). +1 Science per adjacent district."
+adjacencies = [{ yield = "science", amount = 1, districts = true }]

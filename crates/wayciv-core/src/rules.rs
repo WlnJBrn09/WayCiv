@@ -1,10 +1,9 @@
-//! Game rules: Civ VI content from the user's install, indexed for lookups,
-//! plus WayCiv's own changes (such as Ronald Reagan leading America).
+//! Game rules: WayCiv's content, indexed for lookups.
 
-use civ6_data::content::{Content, Leader, Trait};
+use wayciv_data::content::{Content, Leader};
 use std::collections::HashMap;
 
-pub use civ6_data::content::{
+pub use wayciv_data::content::{
     Building, CityState, Civilization, District, Feature, Improvement, Research, Resource, Terrain,
     Unit, YIELDS, Yields, yield_index,
 };
@@ -29,9 +28,7 @@ pub struct Rules {
 }
 
 impl Rules {
-    pub fn new(mut content: Content) -> Self {
-        apply_overrides(&mut content);
-        crate::additions::apply(&mut content);
+    pub fn new(content: Content) -> Self {
         let ai_tree = crate::additions::ai_tree();
         let mut index = HashMap::new();
         macro_rules! add {
@@ -52,7 +49,6 @@ impl Rules {
         add!(content.buildings);
         add!(content.districts);
         add!(content.techs);
-        add!(content.civics);
         add!(content.governments);
         add!(content.policies);
         add!(content.beliefs);
@@ -69,7 +65,7 @@ impl Rules {
         }
     }
 
-    /// Index of a content item by its Civ VI type id (`UNIT_WARRIOR`, ...).
+    /// Index of a content item by its id (`UNIT_WARRIOR`, ...).
     /// Ids are unique across all content kinds.
     pub fn idx(&self, id: &str) -> Option<usize> {
         self.index.get(id).copied()
@@ -109,11 +105,6 @@ impl Rules {
             .filter(|&i| self.ai_tree.get(i).is_some_and(|t| t.id == id))
     }
 
-    pub fn civic(&self, id: &str) -> Option<usize> {
-        self.idx(id)
-            .filter(|&i| self.content.civics.get(i).is_some_and(|t| t.id == id))
-    }
-
     pub fn leader(&self, id: &str) -> Option<&Leader> {
         self.idx(id)
             .and_then(|i| self.content.leaders.get(i))
@@ -126,8 +117,16 @@ impl Rules {
             .filter(|c| c.id == id)
     }
 
-    pub fn text(&self, key: &str) -> String {
-        self.content.text.get(key)
+    /// The era a calendar year falls in (by each era's start year).
+    pub fn era_of_year(&self, year: i32) -> String {
+        self.content
+            .eras
+            .iter()
+            .filter(|e| e.start_year <= year)
+            .max_by_key(|e| e.start_year)
+            .or(self.content.eras.first())
+            .map(|e| e.id.clone())
+            .unwrap_or_default()
     }
 
     pub fn era_index(&self, era: &str) -> usize {
@@ -152,38 +151,5 @@ impl Rules {
             })
             .map(|u| u.id.clone())
             .unwrap_or_else(|| unit.to_string())
-    }
-}
-
-/// WayCiv's changes to Civ VI's roster: Ronald Reagan leads America in place
-/// of both Teddy Roosevelt personas, with his own leader ability and agenda,
-/// and Gandhi is left out.
-fn apply_overrides(content: &mut Content) {
-    // Not in WayCiv: Teddy Roosevelt's alternate persona (Reagan replaces him)
-    // and Gandhi.
-    content
-        .leaders
-        .retain(|l| l.id != "LEADER_T_ROOSEVELT_ROUGHRIDER" && l.id != "LEADER_GANDHI");
-    if let Some(leader) = content
-        .leaders
-        .iter_mut()
-        .find(|l| l.id == "LEADER_T_ROOSEVELT")
-    {
-        leader.id = REAGAN.to_string();
-        leader.name = "Ronald Reagan".to_string();
-        leader.traits = vec![Trait {
-            id: "TRAIT_LEADER_PEACE_THROUGH_STRENGTH".to_string(),
-            name: "Peace Through Strength".to_string(),
-            description: [
-                "Defense buildup: +15% Production toward military units, and +5 Combat Strength for units fighting inside your territory.",
-                "Reaganomics: +1 Gold in every city for each Economic policy slotted, and Commercial Hubs give +2 Production.",
-                "The Great Communicator: +2 Culture in the Capital. Declaring Friendship with a civilization grants an Envoy and 50 Gold.",
-            ]
-            .join("\n"),
-        }];
-        leader.agenda = Some((
-            "Cold Warrior".to_string(),
-            "Likes civilizations running Democracy. Dislikes civilizations running Communism or Fascism.".to_string(),
-        ));
     }
 }

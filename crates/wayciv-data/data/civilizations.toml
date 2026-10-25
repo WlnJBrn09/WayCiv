@@ -1,0 +1,1230 @@
+# Civilizations, each with its ability and its unique units, buildings,
+# districts, and improvements (which replace a standard one where
+# `replaces` is set). City names are used in order as cities are founded.
+# Leaders are in leaders.toml.
+
+# ================================================================ America
+[[civilization]]
+id = "CIVILIZATION_AMERICA"
+name = "America"
+adjective = "American"
+cities = ["Washington", "New York", "Boston", "Philadelphia", "Chicago", "San Francisco", "New Orleans", "Los Angeles", "Seattle", "Houston", "Atlanta", "Denver", "Detroit", "St. Louis", "Miami", "Baltimore"]
+traits = [{ id = "TRAIT_CIVILIZATION_AMERICA", name = "Land of Opportunity", description = "Immigrants and inventors build a nation of plenty.", effects = [
+  { kind = "city_yield", yield = "gold", amount = 1 },
+  { kind = "great_person_points", class = "engineer", amount = 1 },
+  { kind = "great_person_points", class = "merchant", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_AMERICAN_P51"
+name = "P-51 Mustang"
+unique = "CIVILIZATION_AMERICA"
+replaces = "UNIT_FIGHTER"
+cost = 520
+moves = 10
+sight = 4
+combat = 105
+ranged = 105
+range = 6
+domain = "air"
+class = "air_fighter"
+tech = "TECH_ADVANCED_FLIGHT"
+maintenance = 7
+description = "A long-range escort fighter. Needs no Aluminum."
+
+[[building]]
+id = "BUILDING_FILM_STUDIO"
+name = "Film Studio"
+unique = "CIVILIZATION_AMERICA"
+replaces = "BUILDING_BROADCAST_CENTER"
+cost = 520
+tech = "TECH_RADIO"
+district = "DISTRICT_THEATER"
+requires = ["BUILDING_MUSEUM_ART", "BUILDING_MUSEUM_ARTIFACT"]
+yields = { culture = 5, gold = 2 }
+great_people = { musician = 1 }
+maintenance = 3
+description = "Hollywood exports the American dream."
+
+# ================================================================= Arabia
+[[civilization]]
+id = "CIVILIZATION_ARABIA"
+name = "Arabia"
+adjective = "Arabian"
+cities = ["Mecca", "Medina", "Damascus", "Baghdad", "Cairo", "Basra", "Aleppo", "Jeddah", "Kufa", "Mosul", "Riyadh", "Sanaa", "Taif", "Tabuk"]
+traits = [{ id = "TRAIT_CIVILIZATION_ARABIA", name = "House of Wisdom", description = "Scholars translate and extend the learning of the ancients.", effects = [
+  { kind = "district_yield", district = "DISTRICT_CAMPUS", yield = "faith", amount = 1 },
+  { kind = "district_yield", district = "DISTRICT_HOLY_SITE", yield = "science", amount = 1 },
+] }]
+
+[[building]]
+id = "BUILDING_MADRASA"
+name = "Madrasa"
+unique = "CIVILIZATION_ARABIA"
+replaces = "BUILDING_UNIVERSITY"
+cost = 240
+tech = "TECH_EDUCATION"
+district = "DISTRICT_CAMPUS"
+requires = ["BUILDING_LIBRARY"]
+yields = { science = 5, faith = 2 }
+housing = 1
+great_people = { scientist = 1 }
+maintenance = 2
+description = "A college of law, theology, and mathematics."
+
+[[unit]]
+id = "UNIT_ARABIAN_MAMLUK"
+name = "Mamluk"
+unique = "CIVILIZATION_ARABIA"
+replaces = "UNIT_KNIGHT"
+cost = 180
+moves = 4
+combat = 52
+class = "heavy_cavalry"
+tech = "TECH_STIRRUPS"
+resource = "RESOURCE_IRON"
+maintenance = 3
+description = "Elite slave-soldiers in mail on fast horses."
+
+# ================================================================= Brazil
+[[civilization]]
+id = "CIVILIZATION_BRAZIL"
+name = "Brazil"
+adjective = "Brazilian"
+cities = ["Rio de Janeiro", "São Paulo", "Salvador", "Brasília", "Recife", "Belém", "Manaus", "Fortaleza", "Porto Alegre", "Curitiba", "Belo Horizonte", "Ouro Preto", "Natal", "Goiânia"]
+traits = [{ id = "TRAIT_CIVILIZATION_BRAZIL", name = "Heart of the Amazon", description = "The rainforest is a living treasury.", effects = [
+  { kind = "district_yield", district = "DISTRICT_CAMPUS", yield = "science", amount = 1 },
+  { kind = "district_yield", district = "DISTRICT_THEATER", yield = "culture", amount = 1 },
+  { kind = "great_person_points", class = "musician", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_BRAZILIAN_MINAS_GERAES"
+name = "Minas Geraes"
+unique = "CIVILIZATION_BRAZIL"
+replaces = "UNIT_BATTLESHIP"
+cost = 430
+moves = 5
+combat = 70
+ranged = 80
+range = 3
+anti_air = 95
+domain = "sea"
+class = "naval_ranged"
+year = 1910
+maintenance = 6
+description = "A dreadnought that launched a South American naval race. Needs no Coal."
+
+[[district]]
+id = "DISTRICT_STREET_CARNIVAL"
+name = "Sambadrome"
+unique = "CIVILIZATION_BRAZIL"
+replaces = "DISTRICT_ENTERTAINMENT_COMPLEX"
+cost = 27
+year = -300
+amenities = 2
+description = "A parade ground for Carnival."
+
+# ================================================================== China
+[[civilization]]
+id = "CIVILIZATION_CHINA"
+name = "China"
+adjective = "Chinese"
+cities = ["Xi'an", "Beijing", "Luoyang", "Nanjing", "Hangzhou", "Kaifeng", "Chengdu", "Guangzhou", "Suzhou", "Shanghai", "Wuhan", "Changsha", "Datong", "Kunming", "Harbin", "Tianjin"]
+traits = [{ id = "TRAIT_CIVILIZATION_CHINA", name = "Mandate of Heaven", description = "Dynasties rise and fall, but the empire endures.", effects = [
+  { kind = "wonder_production", percent = 10 },
+  { kind = "great_person_points", class = "scientist", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_CHINESE_CROUCHING_TIGER"
+name = "Crouching Tiger Cannon"
+unique = "CIVILIZATION_CHINA"
+cost = 150
+combat = 30
+ranged = 48
+range = 1
+class = "ranged"
+tech = "TECH_MACHINERY"
+maintenance = 3
+description = "An early handheld bombard braced on a tripod."
+
+[[improvement]]
+id = "IMPROVEMENT_GREAT_WALL"
+name = "Great Wall"
+unique = "CIVILIZATION_CHINA"
+tech = "TECH_MASONRY"
+yields = { gold = 1, culture = 1 }
+terrains = ["TERRAIN_DESERT", "TERRAIN_DESERT_HILLS", "TERRAIN_GRASS", "TERRAIN_GRASS_HILLS", "TERRAIN_PLAINS", "TERRAIN_PLAINS_HILLS", "TERRAIN_SNOW", "TERRAIN_SNOW_HILLS", "TERRAIN_TUNDRA", "TERRAIN_TUNDRA_HILLS"]
+description = "A segment of the wall along the frontier."
+
+# ================================================================ England
+[[civilization]]
+id = "CIVILIZATION_ENGLAND"
+name = "England"
+adjective = "English"
+cities = ["London", "York", "Nottingham", "Bristol", "Canterbury", "Oxford", "Liverpool", "Manchester", "Birmingham", "Norwich", "Plymouth", "Leeds", "Southampton", "Newcastle", "Exeter"]
+traits = [{ id = "TRAIT_CIVILIZATION_ENGLAND", name = "Workshop of the World", description = "Coal, iron, and a merchant fleet.", effects = [
+  { kind = "district_yield", district = "DISTRICT_INDUSTRIAL_ZONE", yield = "production", amount = 1 },
+  { kind = "district_yield", district = "DISTRICT_HARBOR", yield = "production", amount = 1 },
+  { kind = "great_person_points", class = "admiral", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_ENGLISH_SEADOG"
+name = "Sea Dog"
+unique = "CIVILIZATION_ENGLAND"
+replaces = "UNIT_PRIVATEER"
+cost = 270
+moves = 4
+combat = 42
+ranged = 55
+range = 2
+domain = "sea"
+class = "naval_raider"
+year = 1550
+maintenance = 4
+description = "A royal-licensed raider of treasure ships."
+
+[[district]]
+id = "DISTRICT_ROYAL_NAVY_DOCKYARD"
+name = "Royal Dockyard"
+unique = "CIVILIZATION_ENGLAND"
+replaces = "DISTRICT_HARBOR"
+cost = 27
+tech = "TECH_CELESTIAL_NAVIGATION"
+coast = true
+great_people = { admiral = 2 }
+trade_capacity = 1
+description = "The navy's own shipyards and stores."
+adjacencies = [
+  { yield = "gold", amount = 1, resource = true },
+  { yield = "gold", amount = 2, district = "DISTRICT_CITY_CENTER" },
+  { yield = "gold", amount = 1, districts = true },
+]
+
+# ================================================================== Egypt
+[[civilization]]
+id = "CIVILIZATION_EGYPT"
+name = "Egypt"
+adjective = "Egyptian"
+cities = ["Memphis", "Thebes", "Alexandria", "Heliopolis", "Abydos", "Elephantine", "Amarna", "Avaris", "Giza", "Edfu", "Bubastis", "Sais", "Tanis", "Hermopolis"]
+traits = [{ id = "TRAIT_CIVILIZATION_EGYPT", name = "Gift of the Nile", description = "The yearly flood feeds the kingdom and its builders.", effects = [
+  { kind = "wonder_production", percent = 15 },
+  { kind = "district_production", percent = 15 },
+] }]
+
+[[unit]]
+id = "UNIT_EGYPTIAN_CHARIOT_ARCHER"
+name = "Maryannu Chariot Archer"
+unique = "CIVILIZATION_EGYPT"
+replaces = "UNIT_HEAVY_CHARIOT"
+cost = 110
+moves = 3
+combat = 25
+ranged = 33
+range = 2
+class = "ranged"
+tech = "TECH_THE_WHEEL"
+maintenance = 2
+description = "A light chariot with a driver and a bowman."
+
+[[improvement]]
+id = "IMPROVEMENT_SPHINX"
+name = "Sphinx"
+unique = "CIVILIZATION_EGYPT"
+year = -2500
+yields = { culture = 1, faith = 1 }
+terrains = ["TERRAIN_DESERT", "TERRAIN_DESERT_HILLS", "TERRAIN_GRASS", "TERRAIN_GRASS_HILLS", "TERRAIN_PLAINS", "TERRAIN_PLAINS_HILLS"]
+features = ["FEATURE_FLOODPLAINS", "FEATURE_FLOODPLAINS_GRASSLAND", "FEATURE_FLOODPLAINS_PLAINS"]
+description = "A lion-bodied guardian of the royal tombs."
+
+# ================================================================= France
+[[civilization]]
+id = "CIVILIZATION_FRANCE"
+name = "France"
+adjective = "French"
+cities = ["Paris", "Orléans", "Lyon", "Marseille", "Bordeaux", "Reims", "Toulouse", "Rouen", "Avignon", "Nantes", "Strasbourg", "Lille", "Dijon", "Nice", "Tours"]
+traits = [{ id = "TRAIT_CIVILIZATION_FRANCE", name = "Grandeur", description = "Monuments that announce the glory of France.", effects = [
+  { kind = "wonder_production", percent = 15 },
+  { kind = "city_yield", yield = "culture", amount = 1, capital = true },
+] }]
+
+[[unit]]
+id = "UNIT_FRENCH_GARDE_IMPERIALE"
+name = "Imperial Guard"
+unique = "CIVILIZATION_FRANCE"
+replaces = "UNIT_LINE_INFANTRY"
+cost = 360
+combat = 70
+class = "melee"
+tech = "TECH_MILITARY_SCIENCE"
+resource = "RESOURCE_NITER"
+maintenance = 5
+description = "Napoleon's veteran reserve. Needs Niter."
+
+[[improvement]]
+id = "IMPROVEMENT_CHATEAU"
+name = "Château"
+unique = "CIVILIZATION_FRANCE"
+year = 1500
+yields = { gold = 1, culture = 2 }
+terrains = ["TERRAIN_GRASS", "TERRAIN_GRASS_HILLS", "TERRAIN_PLAINS", "TERRAIN_PLAINS_HILLS"]
+description = "A country palace with formal gardens."
+
+# ================================================================ Germany
+[[civilization]]
+id = "CIVILIZATION_GERMANY"
+name = "Germany"
+adjective = "German"
+cities = ["Aachen", "Cologne", "Frankfurt", "Magdeburg", "Mainz", "Heidelberg", "Trier", "Hamburg", "Lübeck", "Munich", "Nuremberg", "Leipzig", "Dresden", "Bremen", "Berlin"]
+traits = [{ id = "TRAIT_CIVILIZATION_GERMANY", name = "Free Imperial Cities", description = "Self-governing towns of guilds and markets.", effects = [
+  { kind = "district_production", percent = 10 },
+  { kind = "building_yield", building = "BUILDING_WORKSHOP", yield = "production", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_GERMAN_UBOAT"
+name = "U-Boat"
+unique = "CIVILIZATION_GERMANY"
+replaces = "UNIT_SUBMARINE"
+cost = 430
+moves = 3
+sight = 3
+combat = 65
+ranged = 77
+range = 2
+domain = "sea"
+class = "naval_raider"
+tech = "TECH_ELECTRICITY"
+maintenance = 6
+description = "A cheaper submarine that sees farther."
+
+[[district]]
+id = "DISTRICT_HANSA"
+name = "Hansa"
+unique = "CIVILIZATION_GERMANY"
+replaces = "DISTRICT_INDUSTRIAL_ZONE"
+cost = 27
+tech = "TECH_APPRENTICESHIP"
+great_people = { engineer = 1 }
+description = "A merchant guild's quarter of warehouses and workshops."
+adjacencies = [
+  { yield = "production", amount = 2, district = "DISTRICT_COMMERCIAL_HUB" },
+  { yield = "production", amount = 1, resource = true },
+  { yield = "production", amount = 1, districts = true, per = 2 },
+]
+
+# ================================================================= Greece
+[[civilization]]
+id = "CIVILIZATION_GREECE"
+name = "Greece"
+adjective = "Greek"
+cities = ["Athens", "Sparta", "Corinth", "Argos", "Thebes", "Delphi", "Olympia", "Miletus", "Syracuse", "Rhodes", "Ephesus", "Megara", "Knossos", "Chalcis"]
+traits = [{ id = "TRAIT_CIVILIZATION_GREECE", name = "Polis", description = "Every city a republic of citizens.", effects = [
+  { kind = "great_person_points", class = "writer", amount = 1 },
+  { kind = "great_person_points", class = "scientist", amount = 1 },
+  { kind = "amenities", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_GREEK_HOPLITE"
+name = "Hoplite"
+unique = "CIVILIZATION_GREECE"
+replaces = "UNIT_SPEARMAN"
+cost = 65
+combat = 28
+class = "anti_cavalry"
+tech = "TECH_BRONZE_WORKING"
+maintenance = 1
+description = "A citizen-soldier with a round shield in the phalanx."
+
+[[district]]
+id = "DISTRICT_ACROPOLIS"
+name = "Acropolis"
+unique = "CIVILIZATION_GREECE"
+replaces = "DISTRICT_THEATER"
+cost = 27
+year = -500
+great_people = { writer = 1, artist = 1, musician = 1 }
+description = "A temple-crowned citadel on the high ground."
+adjacencies = [
+  { yield = "culture", amount = 1, districts = true },
+  { yield = "culture", amount = 1, wonder = true },
+]
+
+# ================================================================== Japan
+[[civilization]]
+id = "CIVILIZATION_JAPAN"
+name = "Japan"
+adjective = "Japanese"
+cities = ["Kyoto", "Nara", "Kamakura", "Edo", "Osaka", "Nagoya", "Sendai", "Hiroshima", "Nagasaki", "Kagoshima", "Fukuoka", "Sapporo", "Kanazawa", "Kobe", "Yokohama"]
+traits = [{ id = "TRAIT_CIVILIZATION_JAPAN", name = "Island Craft", description = "Crowded islands make careful planners.", effects = [
+  { kind = "adjacency_percent", percent = 25 },
+] }]
+
+[[unit]]
+id = "UNIT_JAPANESE_SAMURAI"
+name = "Samurai"
+unique = "CIVILIZATION_JAPAN"
+replaces = "UNIT_MAN_AT_ARMS"
+cost = 160
+combat = 48
+class = "melee"
+year = 900
+maintenance = 3
+description = "A warrior noble of the bow and the sword, available centuries before Men-at-Arms."
+
+[[building]]
+id = "BUILDING_ELECTRONICS_FACTORY"
+name = "Electronics Factory"
+unique = "CIVILIZATION_JAPAN"
+replaces = "BUILDING_FACTORY"
+cost = 390
+tech = "TECH_INDUSTRIALIZATION"
+district = "DISTRICT_INDUSTRIAL_ZONE"
+requires = ["BUILDING_WORKSHOP"]
+yields = { production = 4, culture = 2 }
+great_people = { engineer = 1 }
+maintenance = 3
+description = "Radios, cameras, and televisions for the world."
+
+# ================================================================== Kongo
+[[civilization]]
+id = "CIVILIZATION_KONGO"
+name = "Kongo"
+adjective = "Kongolese"
+cities = ["Mbanza Kongo", "Mbamba", "Nsundi", "Mpangu", "Mbata", "Soyo", "Loango", "Kakongo", "Ngoyo", "Matamba", "Ndongo", "Luanda"]
+traits = [{ id = "TRAIT_CIVILIZATION_KONGO", name = "Royal Craftsmen", description = "Carvers and smiths of renowned skill.", effects = [
+  { kind = "great_person_points", class = "artist", amount = 2 },
+  { kind = "great_person_points", class = "merchant", amount = 1 },
+  { kind = "improvement_yield", improvement = "IMPROVEMENT_MINE", yield = "gold", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_KONGO_SHIELD_BEARER"
+name = "Ngao Mbeba"
+unique = "CIVILIZATION_KONGO"
+replaces = "UNIT_SWORDSMAN"
+cost = 100
+combat = 37
+sight = 3
+class = "melee"
+tech = "TECH_IRON_WORKING"
+maintenance = 2
+description = "Shield bearers of the royal guard who see farther. Needs no Iron."
+
+[[district]]
+id = "DISTRICT_MBANZA"
+name = "Mbanza"
+unique = "CIVILIZATION_KONGO"
+replaces = "DISTRICT_NEIGHBORHOOD"
+cost = 27
+tech = "TECH_APPRENTICESHIP"
+specialty = false
+one_per_city = false
+housing = 5
+description = "A town quarter that can be built centuries before neighborhoods."
+
+# ================================================================= Norway
+[[civilization]]
+id = "CIVILIZATION_NORWAY"
+name = "Norway"
+adjective = "Norwegian"
+cities = ["Nidaros", "Bergen", "Oslo", "Stavanger", "Tromsø", "Ålesund", "Hamar", "Tønsberg", "Kaupang", "Bodø", "Kristiansand", "Drammen"]
+traits = [{ id = "TRAIT_CIVILIZATION_NORWAY", name = "Sea Kings", description = "Longships rule the northern seas.", effects = [
+  { kind = "unit_production", domain = "sea", percent = 25 },
+  { kind = "combat", amount = 3, class = "naval_melee" },
+] }]
+
+[[unit]]
+id = "UNIT_NORWEGIAN_BERSERKER"
+name = "Berserker"
+unique = "CIVILIZATION_NORWAY"
+replaces = "UNIT_MAN_AT_ARMS"
+cost = 160
+moves = 3
+combat = 48
+class = "melee"
+tech = "TECH_MILITARY_TACTICS"
+maintenance = 3
+description = "A frenzied axeman with an extra move."
+
+[[building]]
+id = "BUILDING_STAVE_CHURCH"
+name = "Stave Church"
+unique = "CIVILIZATION_NORWAY"
+replaces = "BUILDING_TEMPLE"
+cost = 120
+year = -800
+district = "DISTRICT_HOLY_SITE"
+requires = ["BUILDING_SHRINE"]
+yields = { faith = 4, production = 1 }
+maintenance = 2
+description = "A timber church with dragon-headed gables."
+
+# =================================================================== Rome
+[[civilization]]
+id = "CIVILIZATION_ROME"
+name = "Rome"
+adjective = "Roman"
+cities = ["Rome", "Ostia", "Antium", "Capua", "Neapolis", "Ravenna", "Mediolanum", "Arretium", "Pompeii", "Brundisium", "Aquileia", "Londinium", "Lutetia", "Carthago Nova", "Colonia"]
+traits = [{ id = "TRAIT_CIVILIZATION_ROME", name = "All Roads Lead to Rome", description = "Roads and colonies bind the empire together.", effects = [
+  { kind = "trade_yield", yield = "gold", amount = 1 },
+  { kind = "trade_capacity", amount = 1 },
+  { kind = "city_yield", yield = "production", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_ROMAN_LEGION"
+name = "Legion"
+unique = "CIVILIZATION_ROME"
+replaces = "UNIT_SWORDSMAN"
+cost = 110
+combat = 40
+class = "melee"
+tech = "TECH_IRON_WORKING"
+resource = "RESOURCE_IRON"
+maintenance = 2
+description = "Heavy infantry of the Republic and the Empire."
+
+[[district]]
+id = "DISTRICT_BATH"
+name = "Thermae"
+unique = "CIVILIZATION_ROME"
+replaces = "DISTRICT_AQUEDUCT"
+cost = 18
+tech = "TECH_ENGINEERING"
+specialty = false
+housing = 6
+amenities = 1
+description = "An aqueduct that feeds public baths."
+
+# ================================================================= Russia
+[[civilization]]
+id = "CIVILIZATION_RUSSIA"
+name = "Russia"
+adjective = "Russian"
+cities = ["St. Petersburg", "Moscow", "Novgorod", "Kazan", "Kiev", "Vladimir", "Smolensk", "Tver", "Yaroslavl", "Arkhangelsk", "Omsk", "Irkutsk", "Yekaterinburg", "Vladivostok", "Murmansk"]
+traits = [{ id = "TRAIT_CIVILIZATION_RUSSIA", name = "Vast Motherland", description = "Endless land, long winters, and patient people.", effects = [
+  { kind = "combat_in_territory", amount = 3 },
+  { kind = "city_yield", yield = "faith", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_RUSSIAN_COSSACK"
+name = "Cossack"
+unique = "CIVILIZATION_RUSSIA"
+replaces = "UNIT_CAVALRY"
+cost = 340
+moves = 5
+combat = 67
+class = "light_cavalry"
+tech = "TECH_MILITARY_SCIENCE"
+resource = "RESOURCE_HORSES"
+maintenance = 5
+description = "Free horsemen of the steppe frontier."
+
+[[district]]
+id = "DISTRICT_LAVRA"
+name = "Lavra"
+unique = "CIVILIZATION_RUSSIA"
+replaces = "DISTRICT_HOLY_SITE"
+cost = 27
+tech = "TECH_ASTROLOGY"
+great_people = { prophet = 2, writer = 1 }
+description = "A great monastery and its school of icon painters."
+adjacencies = [
+  { yield = "faith", amount = 2, natural_wonder = true },
+  { yield = "faith", amount = 1, mountain = true },
+  { yield = "faith", amount = 1, districts = true, per = 2 },
+]
+
+# ================================================================ Scythia
+[[civilization]]
+id = "CIVILIZATION_SCYTHIA"
+name = "Scythia"
+adjective = "Scythian"
+cities = ["Pokrovka", "Gelonus", "Kamianka", "Neapolis Scythica", "Chertomlyk", "Arzhan", "Pazyryk", "Tolstaya Mogila", "Bilsk", "Kul-Oba"]
+traits = [{ id = "TRAIT_CIVILIZATION_SCYTHIA", name = "People of the Saddle", description = "Born on horseback.", effects = [
+  { kind = "unit_production", class = "light_cavalry", percent = 50 },
+  { kind = "combat", amount = 2, class = "light_cavalry" },
+] }]
+
+[[unit]]
+id = "UNIT_SCYTHIAN_HORSE_ARCHER"
+name = "Saka Horse Archer"
+unique = "CIVILIZATION_SCYTHIA"
+cost = 90
+moves = 4
+combat = 20
+ranged = 26
+range = 1
+class = "ranged"
+tech = "TECH_HORSEBACK_RIDING"
+maintenance = 2
+description = "Shoots from the saddle."
+
+[[improvement]]
+id = "IMPROVEMENT_KURGAN"
+name = "Kurgan"
+unique = "CIVILIZATION_SCYTHIA"
+tech = "TECH_ANIMAL_HUSBANDRY"
+yields = { gold = 2, faith = 1 }
+terrains = ["TERRAIN_DESERT", "TERRAIN_GRASS", "TERRAIN_PLAINS", "TERRAIN_TUNDRA"]
+description = "A burial mound of a horse lord, heaped with gold."
+
+# ================================================================== Spain
+[[civilization]]
+id = "CIVILIZATION_SPAIN"
+name = "Spain"
+adjective = "Spanish"
+cities = ["Madrid", "Toledo", "Seville", "Córdoba", "Valencia", "Barcelona", "Salamanca", "Zaragoza", "Cádiz", "Burgos", "Bilbao", "Málaga", "Valladolid", "Santiago"]
+traits = [{ id = "TRAIT_CIVILIZATION_SPAIN", name = "Treasure Fleets", description = "Silver and spices from across the ocean.", effects = [
+  { kind = "trade_yield", routes = "international", yield = "gold", amount = 2 },
+  { kind = "trade_yield", routes = "international", yield = "faith", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_SPANISH_CONQUISTADOR"
+name = "Conquistador"
+unique = "CIVILIZATION_SPAIN"
+replaces = "UNIT_MUSKETMAN"
+cost = 250
+moves = 3
+combat = 58
+class = "melee"
+tech = "TECH_GUNPOWDER"
+resource = "RESOURCE_NITER"
+maintenance = 4
+description = "Armored adventurers with steel and gunpowder."
+
+[[improvement]]
+id = "IMPROVEMENT_MISSION"
+name = "Mission"
+unique = "CIVILIZATION_SPAIN"
+tech = "TECH_EDUCATION"
+yields = { faith = 2, science = 1 }
+terrains = ["TERRAIN_DESERT", "TERRAIN_DESERT_HILLS", "TERRAIN_GRASS", "TERRAIN_GRASS_HILLS", "TERRAIN_PLAINS", "TERRAIN_PLAINS_HILLS", "TERRAIN_TUNDRA", "TERRAIN_TUNDRA_HILLS"]
+description = "A frontier church with a school and fields."
+
+# ================================================================ Sumeria
+[[civilization]]
+id = "CIVILIZATION_SUMERIA"
+name = "Sumeria"
+adjective = "Sumerian"
+cities = ["Uruk", "Ur", "Eridu", "Lagash", "Kish", "Nippur", "Umma", "Larsa", "Shuruppak", "Isin", "Adab", "Girsu"]
+traits = [{ id = "TRAIT_CIVILIZATION_SUMERIA", name = "Cradle of Writing", description = "The first cities, the first scribes.", effects = [
+  { kind = "city_yield", yield = "science", amount = 1, capital = true },
+  { kind = "district_yield", district = "DISTRICT_CAMPUS", yield = "science", amount = 1 },
+  { kind = "great_person_points", class = "writer", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_SUMERIAN_WAR_CART"
+name = "War Cart"
+unique = "CIVILIZATION_SUMERIA"
+cost = 55
+moves = 3
+combat = 30
+class = "heavy_cavalry"
+maintenance = 1
+description = "Four solid wheels pulled by wild asses. Available from the start."
+
+[[improvement]]
+id = "IMPROVEMENT_ZIGGURAT"
+name = "Ziggurat"
+unique = "CIVILIZATION_SUMERIA"
+yields = { science = 2 }
+terrains = ["TERRAIN_DESERT", "TERRAIN_GRASS", "TERRAIN_PLAINS", "TERRAIN_TUNDRA"]
+description = "A stepped temple-mound at the heart of the city."
+
+# ================================================================== Aztec
+[[civilization]]
+id = "CIVILIZATION_AZTEC"
+name = "Aztec"
+adjective = "Aztec"
+cities = ["Tenochtitlan", "Texcoco", "Tlacopan", "Tlatelolco", "Xochimilco", "Chalco", "Coyoacan", "Iztapalapa", "Azcapotzalco", "Tula", "Cholula", "Tlaxcala"]
+traits = [{ id = "TRAIT_CIVILIZATION_AZTEC", name = "Fifth Sun", description = "Sacred duty builds the city of the gods.", effects = [
+  { kind = "district_production", percent = 20 },
+  { kind = "city_yield", yield = "faith", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_AZTEC_EAGLE_WARRIOR"
+name = "Eagle Warrior"
+unique = "CIVILIZATION_AZTEC"
+replaces = "UNIT_WARRIOR"
+cost = 60
+combat = 28
+class = "melee"
+maintenance = 1
+description = "Elite fighters who took captives rather than kill."
+
+[[building]]
+id = "BUILDING_TLACHTLI"
+name = "Tlachtli"
+unique = "CIVILIZATION_AZTEC"
+replaces = "BUILDING_ARENA"
+cost = 135
+year = -300
+district = "DISTRICT_ENTERTAINMENT_COMPLEX"
+yields = { faith = 2, culture = 1 }
+amenities = 1
+maintenance = 1
+description = "A ball court for the sacred game."
+
+# ================================================================= Poland
+[[civilization]]
+id = "CIVILIZATION_POLAND"
+name = "Poland"
+adjective = "Polish"
+cities = ["Kraków", "Warsaw", "Gniezno", "Poznań", "Wrocław", "Gdańsk", "Lublin", "Toruń", "Płock", "Łódź", "Lwów", "Szczecin"]
+traits = [{ id = "TRAIT_CIVILIZATION_POLAND", name = "Golden Liberty", description = "Noble assemblies elect the king.", effects = [
+  { kind = "policy_yield", slot = "military", yield = "culture", amount = 1 },
+  { kind = "combat_in_territory", amount = 2 },
+] }]
+
+[[unit]]
+id = "UNIT_POLISH_HUSSAR"
+name = "Winged Hussar"
+unique = "CIVILIZATION_POLAND"
+cost = 330
+moves = 4
+combat = 64
+class = "heavy_cavalry"
+year = 1570
+maintenance = 5
+description = "Lancers with feathered wings on their backs."
+
+[[building]]
+id = "BUILDING_SUKIENNICE"
+name = "Cloth Hall"
+unique = "CIVILIZATION_POLAND"
+replaces = "BUILDING_MARKET"
+cost = 120
+tech = "TECH_CURRENCY"
+district = "DISTRICT_COMMERCIAL_HUB"
+yields = { gold = 3, production = 2 }
+great_people = { merchant = 1 }
+description = "A covered market for the cloth trade."
+
+# ============================================================== Australia
+[[civilization]]
+id = "CIVILIZATION_AUSTRALIA"
+name = "Australia"
+adjective = "Australian"
+cities = ["Canberra", "Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide", "Hobart", "Darwin", "Newcastle", "Townsville", "Cairns", "Geelong", "Ballarat", "Alice Springs"]
+traits = [{ id = "TRAIT_CIVILIZATION_AUSTRALIA", name = "Sunburnt Country", description = "Wide land and a coast full of harbors.", effects = [
+  { kind = "housing", amount = 1 },
+  { kind = "district_yield", district = "DISTRICT_HARBOR", yield = "food", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_DIGGER"
+name = "Digger"
+unique = "CIVILIZATION_AUSTRALIA"
+replaces = "UNIT_INFANTRY"
+cost = 430
+combat = 78
+class = "melee"
+tech = "TECH_REPLACEABLE_PARTS"
+maintenance = 6
+description = "Volunteer infantry of the ANZAC tradition."
+
+[[improvement]]
+id = "IMPROVEMENT_OUTBACK_STATION"
+name = "Outback Station"
+unique = "CIVILIZATION_AUSTRALIA"
+year = 1830
+yields = { food = 1, production = 1 }
+terrains = ["TERRAIN_DESERT", "TERRAIN_DESERT_HILLS", "TERRAIN_GRASS", "TERRAIN_PLAINS"]
+description = "A sheep and cattle run the size of a county."
+
+# ================================================================ Macedon
+[[civilization]]
+id = "CIVILIZATION_MACEDON"
+name = "Macedon"
+adjective = "Macedonian"
+cities = ["Pella", "Aigai", "Amphipolis", "Thessalonica", "Dion", "Philippi", "Stagira", "Edessa", "Beroea", "Methone", "Alexandria Eschate", "Bucephala"]
+traits = [{ id = "TRAIT_CIVILIZATION_MACEDON", name = "Hellenistic Fusion", description = "Conquerors who adopt the learning of the conquered.", effects = [
+  { kind = "unit_xp", amount = 5 },
+  { kind = "district_yield", district = "DISTRICT_ENCAMPMENT", yield = "science", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_MACEDONIAN_HYPASPIST"
+name = "Hypaspist"
+unique = "CIVILIZATION_MACEDON"
+replaces = "UNIT_SWORDSMAN"
+cost = 100
+combat = 38
+class = "melee"
+tech = "TECH_IRON_WORKING"
+resource = "RESOURCE_IRON"
+maintenance = 2
+description = "The king's shield-bearers, the best of the phalanx."
+
+[[building]]
+id = "BUILDING_BASILIKOI_PAIDES"
+name = "Royal Pages"
+unique = "CIVILIZATION_MACEDON"
+replaces = "BUILDING_BARRACKS"
+cost = 90
+tech = "TECH_BRONZE_WORKING"
+district = "DISTRICT_ENCAMPMENT"
+yields = { production = 1, science = 1 }
+housing = 1
+great_people = { general = 1 }
+maintenance = 1
+description = "Noble youths trained at court to be officers."
+
+# ================================================================= Persia
+[[civilization]]
+id = "CIVILIZATION_PERSIA"
+name = "Persia"
+adjective = "Persian"
+cities = ["Pasargadae", "Persepolis", "Susa", "Ecbatana", "Babylon", "Sardis", "Bactra", "Rhagae", "Gordion", "Tarsus", "Hamadan", "Isfahan", "Tabriz", "Shiraz"]
+traits = [{ id = "TRAIT_CIVILIZATION_PERSIA", name = "Satrapies", description = "Royal roads and governors bind a vast empire.", effects = [
+  { kind = "trade_capacity", amount = 1 },
+  { kind = "trade_yield", routes = "domestic", yield = "gold", amount = 2 },
+] }]
+
+[[unit]]
+id = "UNIT_PERSIAN_IMMORTAL"
+name = "Immortal"
+unique = "CIVILIZATION_PERSIA"
+replaces = "UNIT_SWORDSMAN"
+cost = 100
+combat = 35
+ranged = 25
+range = 2
+class = "melee"
+tech = "TECH_IRON_WORKING"
+maintenance = 2
+description = "Ten thousand guards with spear and bow; they can shoot as well as fight. Need no Iron."
+
+[[improvement]]
+id = "IMPROVEMENT_PAIRIDAEZA"
+name = "Paradise Garden"
+unique = "CIVILIZATION_PERSIA"
+year = -550
+yields = { gold = 2, culture = 1 }
+terrains = ["TERRAIN_DESERT", "TERRAIN_DESERT_HILLS", "TERRAIN_GRASS", "TERRAIN_GRASS_HILLS", "TERRAIN_PLAINS", "TERRAIN_PLAINS_HILLS"]
+description = "A walled garden of water channels and fruit trees."
+
+# ================================================================== Nubia
+[[civilization]]
+id = "CIVILIZATION_NUBIA"
+name = "Nubia"
+adjective = "Nubian"
+cities = ["Meroë", "Napata", "Kerma", "Faras", "Soba", "Dongola", "Musawwarat", "Naqa", "Sanam", "Kawa", "Buhen", "Semna"]
+traits = [{ id = "TRAIT_CIVILIZATION_NUBIA", name = "Land of the Bow", description = "Archers famous from Egypt to Rome.", effects = [
+  { kind = "unit_production", class = "ranged", percent = 40 },
+  { kind = "improvement_yield", improvement = "IMPROVEMENT_MINE", yield = "gold", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_NUBIAN_PITATI"
+name = "Pitati Archer"
+unique = "CIVILIZATION_NUBIA"
+replaces = "UNIT_ARCHER"
+cost = 70
+moves = 3
+combat = 17
+ranged = 30
+range = 2
+class = "ranged"
+tech = "TECH_ARCHERY"
+maintenance = 1
+description = "Swift archers of the land of the bow."
+
+[[improvement]]
+id = "IMPROVEMENT_PYRAMID"
+name = "Nubian Pyramid"
+unique = "CIVILIZATION_NUBIA"
+tech = "TECH_MASONRY"
+yields = { food = 1, faith = 2 }
+terrains = ["TERRAIN_DESERT", "TERRAIN_DESERT_HILLS"]
+features = ["FEATURE_FLOODPLAINS"]
+description = "Steep-sided royal tombs of Meroë."
+
+# ============================================================== Indonesia
+[[civilization]]
+id = "CIVILIZATION_INDONESIA"
+name = "Indonesia"
+adjective = "Indonesian"
+cities = ["Majapahit", "Trowulan", "Palembang", "Jakarta", "Surabaya", "Yogyakarta", "Makassar", "Malacca", "Medan", "Semarang", "Bandung", "Denpasar", "Banda Aceh", "Ternate"]
+traits = [{ id = "TRAIT_CIVILIZATION_INDONESIA", name = "Spice Islands", description = "Seventeen thousand islands on the trade winds.", effects = [
+  { kind = "district_yield", district = "DISTRICT_HARBOR", yield = "faith", amount = 2 },
+  { kind = "improvement_yield", improvement = "IMPROVEMENT_FISHING_BOATS", yield = "gold", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_INDONESIAN_JONG"
+name = "Jong"
+unique = "CIVILIZATION_INDONESIA"
+replaces = "UNIT_FRIGATE"
+cost = 300
+moves = 5
+combat = 45
+ranged = 55
+range = 2
+domain = "sea"
+class = "naval_ranged"
+year = 1400
+maintenance = 5
+description = "A great multi-masted junk of the Javanese fleets."
+
+[[improvement]]
+id = "IMPROVEMENT_KAMPUNG"
+name = "Kampung"
+unique = "CIVILIZATION_INDONESIA"
+tech = "TECH_SHIPBUILDING"
+yields = { production = 1, food = 1 }
+terrains = ["TERRAIN_COAST"]
+description = "A village on stilts over the water."
+
+# ================================================================== Khmer
+[[civilization]]
+id = "CIVILIZATION_KHMER"
+name = "Khmer"
+adjective = "Khmer"
+cities = ["Angkor Thom", "Hariharalaya", "Yasodharapura", "Koh Ker", "Phnom Penh", "Banteay Srei", "Sambor Prei Kuk", "Phimai", "Preah Khan", "Battambang", "Kampot", "Oudong"]
+traits = [{ id = "TRAIT_CIVILIZATION_KHMER", name = "Water Kingdom", description = "Great reservoirs feed the rice fields.", effects = [
+  { kind = "improvement_yield", improvement = "IMPROVEMENT_FARM", yield = "food", amount = 1 },
+  { kind = "district_yield", district = "DISTRICT_AQUEDUCT", yield = "faith", amount = 2 },
+] }]
+
+[[unit]]
+id = "UNIT_KHMER_DOMREY"
+name = "War Elephant Catapult"
+unique = "CIVILIZATION_KHMER"
+replaces = "UNIT_TREBUCHET"
+cost = 200
+combat = 40
+bombard = 45
+range = 2
+class = "siege"
+tech = "TECH_MILITARY_ENGINEERING"
+maintenance = 3
+description = "A ballista mounted on an elephant."
+
+[[building]]
+id = "BUILDING_PRASAT"
+name = "Prasat"
+unique = "CIVILIZATION_KHMER"
+replaces = "BUILDING_TEMPLE"
+cost = 120
+year = -800
+district = "DISTRICT_HOLY_SITE"
+requires = ["BUILDING_SHRINE"]
+yields = { faith = 4, culture = 2 }
+maintenance = 2
+description = "A temple-mountain of carved sandstone towers."
+
+# =============================================================== Ethiopia
+[[civilization]]
+id = "CIVILIZATION_ETHIOPIA"
+name = "Ethiopia"
+adjective = "Ethiopian"
+cities = ["Addis Ababa", "Aksum", "Gondar", "Lalibela", "Harar", "Adwa", "Debre Berhan", "Mekele", "Dire Dawa", "Bahir Dar", "Jimma", "Dessie"]
+traits = [{ id = "TRAIT_CIVILIZATION_ETHIOPIA", name = "Highland Kingdom", description = "An ancient faith in a mountain fortress.", effects = [
+  { kind = "city_yield", yield = "faith", amount = 1 },
+  { kind = "combat_in_territory", amount = 2 },
+  { kind = "improvement_yield", improvement = "IMPROVEMENT_PASTURE", yield = "faith", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_ETHIOPIAN_OROMO_CAVALRY"
+name = "Oromo Cavalry"
+unique = "CIVILIZATION_ETHIOPIA"
+cost = 200
+moves = 5
+sight = 3
+combat = 48
+class = "light_cavalry"
+tech = "TECH_CASTLES"
+maintenance = 3
+description = "Horsemen at home in the highlands."
+
+[[improvement]]
+id = "IMPROVEMENT_ROCK_HEWN_CHURCH"
+name = "Rock-Hewn Church"
+unique = "CIVILIZATION_ETHIOPIA"
+year = 1200
+yields = { faith = 2 }
+terrains = ["TERRAIN_DESERT_HILLS", "TERRAIN_GRASS_HILLS", "TERRAIN_PLAINS_HILLS", "TERRAIN_TUNDRA_HILLS"]
+description = "A church carved down into the living rock."
+
+# ============================================================== Byzantium
+[[civilization]]
+id = "CIVILIZATION_BYZANTIUM"
+name = "Byzantium"
+adjective = "Byzantine"
+cities = ["Constantinople", "Thessalonica", "Nicaea", "Trebizond", "Antioch", "Ephesus", "Smyrna", "Mistra", "Ravenna", "Nicomedia", "Adrianople", "Dyrrachium"]
+traits = [{ id = "TRAIT_CIVILIZATION_BYZANTIUM", name = "Second Rome", description = "Heirs of Rome and champions of the faith.", effects = [
+  { kind = "great_person_points", class = "prophet", amount = 1 },
+  { kind = "combat", amount = 2, class = "heavy_cavalry" },
+  { kind = "combat", amount = 2, class = "light_cavalry" },
+] }]
+
+[[unit]]
+id = "UNIT_BYZANTINE_DROMON"
+name = "Dromon"
+unique = "CIVILIZATION_BYZANTIUM"
+replaces = "UNIT_QUADRIREME"
+cost = 120
+moves = 3
+combat = 22
+ranged = 27
+range = 2
+domain = "sea"
+class = "naval_ranged"
+tech = "TECH_SHIPBUILDING"
+maintenance = 2
+description = "A war galley armed with Greek fire."
+
+[[district]]
+id = "DISTRICT_HIPPODROME"
+name = "Hippodrome"
+unique = "CIVILIZATION_BYZANTIUM"
+replaces = "DISTRICT_ENTERTAINMENT_COMPLEX"
+cost = 27
+year = -300
+amenities = 3
+description = "The chariot-racing track where the city's factions cheer."
+
+# =================================================================== Gaul
+[[civilization]]
+id = "CIVILIZATION_GAUL"
+name = "Gaul"
+adjective = "Gallic"
+cities = ["Aduatuca", "Alesia", "Bibracte", "Gergovia", "Avaricum", "Lutetia", "Cenabum", "Durocortorum", "Vesontio", "Lugdunum", "Burdigala", "Samarobriva"]
+traits = [{ id = "TRAIT_CIVILIZATION_GAUL", name = "Hill Forts and Iron", description = "Miners and smiths in fortified towns.", effects = [
+  { kind = "improvement_yield", improvement = "IMPROVEMENT_MINE", yield = "culture", amount = 1 },
+  { kind = "unit_production", class = "melee", percent = 25 },
+] }]
+
+[[unit]]
+id = "UNIT_GAUL_GAESATAE"
+name = "Gaesatae"
+unique = "CIVILIZATION_GAUL"
+replaces = "UNIT_WARRIOR"
+cost = 55
+combat = 24
+class = "melee"
+maintenance = 1
+description = "Spearmen who charged naked into battle."
+
+[[district]]
+id = "DISTRICT_OPPIDUM"
+name = "Oppidum"
+unique = "CIVILIZATION_GAUL"
+replaces = "DISTRICT_INDUSTRIAL_ZONE"
+cost = 27
+tech = "TECH_IRON_WORKING"
+great_people = { engineer = 1 }
+description = "A walled hill town of forges, available an era early."
+adjacencies = [
+  { yield = "production", amount = 2, resource = true },
+  { yield = "production", amount = 1, district = "DISTRICT_AQUEDUCT" },
+]
+
+# ================================================================ Babylon
+[[civilization]]
+id = "CIVILIZATION_BABYLON"
+name = "Babylon"
+adjective = "Babylonian"
+cities = ["Babylon", "Borsippa", "Sippar", "Kutha", "Dilbat", "Marad", "Kish", "Nippur", "Uruk", "Ur", "Mari", "Eshnunna"]
+traits = [{ id = "TRAIT_CIVILIZATION_BABYLON", name = "Tablets of the Sky", description = "Astronomers who charted every star.", effects = [
+  { kind = "city_percent", yield = "science", percent = 10 },
+  { kind = "great_person_points", class = "scientist", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_BABYLONIAN_SABUM_KIBITTUM"
+name = "Sabum Kibittum"
+unique = "CIVILIZATION_BABYLON"
+cost = 35
+moves = 3
+sight = 3
+combat = 17
+class = "melee"
+description = "A quick, cheap fighter available from the start."
+
+[[building]]
+id = "BUILDING_PALGUM"
+name = "Palgum"
+unique = "CIVILIZATION_BABYLON"
+replaces = "BUILDING_WATER_MILL"
+cost = 80
+tech = "TECH_IRRIGATION"
+district = "DISTRICT_CITY_CENTER"
+yields = { food = 2, production = 1 }
+housing = 1
+description = "Canals and sluices that water the fields."
+
+# ========================================================== Gran Colombia
+[[civilization]]
+id = "CIVILIZATION_GRAN_COLOMBIA"
+name = "Gran Colombia"
+adjective = "Gran Colombian"
+cities = ["Bogotá", "Caracas", "Quito", "Panama City", "Cartagena", "Medellín", "Cali", "Guayaquil", "Maracaibo", "Valencia", "Popayán", "Cuenca", "Barranquilla", "Mérida"]
+traits = [{ id = "TRAIT_CIVILIZATION_GRAN_COLOMBIA", name = "Army of the Liberators", description = "Fast columns that crossed the Andes.", effects = [
+  { kind = "unit_xp", amount = 5 },
+  { kind = "great_person_points", class = "general", amount = 2 },
+  { kind = "combat", amount = 2, class = "light_cavalry" },
+] }]
+
+[[unit]]
+id = "UNIT_COLOMBIAN_LLANERO"
+name = "Llanero"
+unique = "CIVILIZATION_GRAN_COLOMBIA"
+replaces = "UNIT_CAVALRY"
+cost = 330
+moves = 5
+combat = 64
+class = "light_cavalry"
+tech = "TECH_MILITARY_SCIENCE"
+maintenance = 3
+description = "Plainsmen lancers: cheaper upkeep, and they need no Horses."
+
+[[improvement]]
+id = "IMPROVEMENT_HACIENDA"
+name = "Hacienda"
+unique = "CIVILIZATION_GRAN_COLOMBIA"
+year = 1600
+yields = { production = 1, gold = 2 }
+terrains = ["TERRAIN_GRASS", "TERRAIN_GRASS_HILLS", "TERRAIN_PLAINS", "TERRAIN_PLAINS_HILLS"]
+description = "A great estate of coffee and cattle."
+
+# =================================================================== Maya
+[[civilization]]
+id = "CIVILIZATION_MAYA"
+name = "Maya"
+adjective = "Mayan"
+cities = ["Calakmul", "Tikal", "Palenque", "Copán", "Caracol", "Uxmal", "Yaxchilan", "Piedras Negras", "Mayapan", "Cobá", "Naranjo", "Quiriguá", "El Mirador"]
+traits = [{ id = "TRAIT_CIVILIZATION_MAYA", name = "Long Count", description = "Astronomer-priests and a calendar of ages.", effects = [
+  { kind = "improvement_yield", improvement = "IMPROVEMENT_FARM", yield = "gold", amount = 1 },
+  { kind = "city_yield", yield = "science", amount = 1, capital = true },
+  { kind = "housing", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_MAYAN_HULCHE"
+name = "Atlatl Thrower"
+unique = "CIVILIZATION_MAYA"
+replaces = "UNIT_ARCHER"
+cost = 60
+combat = 15
+ranged = 28
+range = 2
+class = "ranged"
+tech = "TECH_ARCHERY"
+maintenance = 1
+description = "Dart throwers armed with spear-throwers."
+
+[[district]]
+id = "DISTRICT_OBSERVATORY"
+name = "Observatory"
+unique = "CIVILIZATION_MAYA"
+replaces = "DISTRICT_CAMPUS"
+cost = 27
+tech = "TECH_WRITING"
+great_people = { scientist = 1 }
+description = "A domed tower for watching Venus."
+adjacencies = [
+  { yield = "science", amount = 2, mountain = true },
+  { yield = "science", amount = 1, resource = true },
+  { yield = "science", amount = 1, districts = true, per = 2 },
+]
+
+# =============================================================== Portugal
+[[civilization]]
+id = "CIVILIZATION_PORTUGAL"
+name = "Portugal"
+adjective = "Portuguese"
+cities = ["Lisbon", "Porto", "Coimbra", "Braga", "Évora", "Faro", "Sagres", "Guimarães", "Viseu", "Setúbal", "Lagos", "Funchal", "Ponta Delgada", "Goa", "Macau"]
+traits = [{ id = "TRAIT_CIVILIZATION_PORTUGAL", name = "Age of Discovery", description = "Caravels to every shore.", effects = [
+  { kind = "trade_yield", routes = "international", yield = "gold", amount = 3 },
+  { kind = "trade_capacity", amount = 1 },
+] }]
+
+[[unit]]
+id = "UNIT_PORTUGUESE_NAU"
+name = "Nau"
+unique = "CIVILIZATION_PORTUGAL"
+replaces = "UNIT_CARAVEL"
+cost = 240
+moves = 5
+sight = 3
+combat = 55
+domain = "sea"
+class = "naval_melee"
+tech = "TECH_CARTOGRAPHY"
+maintenance = 2
+description = "A fast, sturdy ocean-going carrack."
+
+[[building]]
+id = "BUILDING_NAVIGATION_SCHOOL"
+name = "Navigation School"
+unique = "CIVILIZATION_PORTUGAL"
+replaces = "BUILDING_UNIVERSITY"
+cost = 250
+tech = "TECH_EDUCATION"
+district = "DISTRICT_CAMPUS"
+requires = ["BUILDING_LIBRARY"]
+yields = { science = 4 }
+housing = 1
+great_people = { scientist = 1, admiral = 1 }
+maintenance = 2
+description = "A school of pilots, mapmakers, and astronomers."
+
+[[improvement]]
+id = "IMPROVEMENT_FEITORIA"
+name = "Feitoria"
+unique = "CIVILIZATION_PORTUGAL"
+year = 1450
+yields = { gold = 4, production = 1 }
+terrains = ["TERRAIN_COAST"]
+description = "A fortified trading post on the coast."
+
+# ================================================================ Vietnam
+[[civilization]]
+id = "CIVILIZATION_VIETNAM"
+name = "Vietnam"
+adjective = "Vietnamese"
+cities = ["Thăng Long", "Huế", "Hội An", "Cổ Loa", "Hoa Lư", "Đà Nẵng", "Sài Gòn", "Hải Phòng", "Nha Trang", "Vinh", "Cần Thơ", "Đà Lạt", "Biên Hòa"]
+traits = [{ id = "TRAIT_CIVILIZATION_VIETNAM", name = "Nine Dragons", description = "Rice paddies, river deltas, and jungle hills.", effects = [
+  { kind = "improvement_yield", improvement = "IMPROVEMENT_FARM", yield = "food", amount = 1 },
+  { kind = "combat_in_territory", amount = 3 },
+] }]
+
+[[unit]]
+id = "UNIT_VIETNAMESE_VOI_CHIEN"
+name = "Voi Chiến"
+unique = "CIVILIZATION_VIETNAM"
+replaces = "UNIT_CROSSBOWMAN"
+cost = 200
+moves = 3
+sight = 3
+combat = 35
+ranged = 42
+range = 2
+class = "ranged"
+tech = "TECH_MACHINERY"
+maintenance = 3
+description = "War elephants carrying archers."
+
+[[district]]
+id = "DISTRICT_THANH"
+name = "Thành"
+unique = "CIVILIZATION_VIETNAM"
+replaces = "DISTRICT_ENCAMPMENT"
+cost = 27
+tech = "TECH_BRONZE_WORKING"
+specialty = false
+great_people = { general = 1 }
+description = "A citadel that doesn't count against the district limit."
+adjacencies = [{ yield = "culture", amount = 2, districts = true }]

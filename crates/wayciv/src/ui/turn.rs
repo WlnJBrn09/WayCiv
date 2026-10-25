@@ -31,7 +31,6 @@ pub fn show(s: &mut Session, ctx: &egui::Context) -> f32 {
             s.game.blocker_text(b),
             match b {
                 Blocker::ChooseResearch => Glyph::Science,
-                Blocker::ChooseCivic => Glyph::Culture,
                 Blocker::ChoosePantheon => Glyph::Faith,
                 Blocker::ChooseAiResearch => Glyph::Chip,
                 Blocker::ChooseProduction(_) => Glyph::Production,
@@ -175,7 +174,7 @@ pub fn show(s: &mut Session, ctx: &egui::Context) -> f32 {
         if only_units {
             s.end_turn();
         } else {
-            s.toast("Choose research, civics, and production first.");
+            s.toast("Choose research and production first.");
         }
     }
     banner(s, ctx);

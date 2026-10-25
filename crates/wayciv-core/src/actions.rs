@@ -74,18 +74,14 @@ impl Game {
         let resource = tile
             .resource
             .map(|r| &content.resources[r])
-            .filter(|r| p.meets(rules, r.prereq_tech.as_deref(), None));
+            .filter(|r| p.meets(rules, r.prereq_tech.as_deref()));
         (0..content.improvements.len())
             .filter(|&i| {
                 let imp = &content.improvements[i];
                 if !imp.buildable || Some(i) == tile.improvement && !tile.pillaged {
                     return false;
                 }
-                if !p.meets(
-                    rules,
-                    imp.prereq_tech.as_deref(),
-                    imp.prereq_civic.as_deref(),
-                ) {
+                if !p.meets(rules, imp.prereq_tech.as_deref()) || !self.reached(imp.unlock_year) {
                     return false;
                 }
                 if let Some(owner) = &imp.unique_to {

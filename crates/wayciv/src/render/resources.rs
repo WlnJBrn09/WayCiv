@@ -467,7 +467,7 @@ pub fn draw_resource(
         return;
     };
     let res = &content.resources[r];
-    if !player.meets(rules, res.prereq_tech.as_deref(), None) || z <= 8.0 {
+    if !player.meets(rules, res.prereq_tech.as_deref()) || z <= 8.0 {
         return;
     }
     let color = class_color(&res.class);

@@ -1,4 +1,4 @@
-//! WayCiv: a Civilization VI-style game in Rust.
+//! WayCiv: a Civilization-style 4X game in Rust.
 
 mod hud;
 mod icons;
@@ -128,7 +128,7 @@ impl App {
     /// `WAYCIV_LEADER` the leader, `WAYCIV_TURNS` lets the AI play your civ
     /// for that many turns, `WAYCIV_OPEN` opens a screen, `WAYCIV_REVEAL`
     /// reveals the whole map, and `WAYCIV_CENTER=x,y` centers the view.
-    /// `WAYCIV_OPEN` is one of city, tech, civic, ai, religion, found (a
+    /// `WAYCIV_OPEN` is one of city, tech, ai, religion, found (a
     /// Great Prophet ready to found a religion), government,
     /// victory, great_people, city_states, leaders, notifications, legend,
     /// diplomacy or popup. `WAYCIV_TOASTS=1` replays the last few
@@ -265,7 +265,6 @@ impl App {
             }
             match env("WAYCIV_OPEN").as_deref() {
                 Some("tech") => s.windows.open(Panel::Tech),
-                Some("civic") => s.windows.open(Panel::Civic),
                 Some("ai") => s.windows.open(Panel::Ai),
                 Some("government") => s.windows.open(Panel::Government),
                 Some("religion") => s.windows.open(Panel::Religion),
@@ -516,16 +515,16 @@ impl App {
             Stage::Loading(_) => {
                 egui::CentralPanel::default().show(ui, |ui| {
                     ui.centered_and_justified(|ui| {
-                        ui.heading("Loading Civilization VI content from your install...")
+                        ui.heading("Loading...")
                     });
                 });
             }
             Stage::Failed(error) => {
                 let error = error.clone();
                 egui::CentralPanel::default().show(ui, |ui| {
-                    ui.heading("WayCiv couldn't load the game's content");
+                    ui.heading("WayCiv couldn't load its content");
                     ui.label(error);
-                    ui.label("WayCiv reads leaders, units and techs from an installed copy of Civilization VI. Set CIV6_DIR to the game's install folder if it isn't in the default Steam location.");
+                    ui.label("The content is compiled into the game from crates/wayciv-data/data; this means a data file has an error. Rebuild after fixing it.");
                 });
             }
             Stage::Setup(_) => setup_screen::show(self, ui),

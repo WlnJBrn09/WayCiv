@@ -107,7 +107,7 @@ impl Game {
                     && u.promotion_class
                         .as_deref()
                         .is_some_and(|c| classes.contains(&c))
-                    && u.prereq_civic.is_none()
+                    && u.unlock_year.is_none()
                     && known_by_half(&u.prereq_tech)
             })
             .collect();

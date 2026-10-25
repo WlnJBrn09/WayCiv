@@ -8,7 +8,7 @@ use crate::state::{Game, Player, PlayerKind, Relation, Settings};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
-/// Distinct fallback colors for players whose Civ VI colors clash.
+/// Distinct fallback colors for players whose leader colors clash.
 const FALLBACK: [[u8; 3]; 12] = [
     [200, 40, 40],
     [40, 90, 200],
@@ -91,7 +91,6 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
 
     let grid = map.grid;
     let tech_count = content.techs.len();
-    let civic_count = content.civics.len();
     let ai_count = rules.ai_tree.len();
     let blank = |id: PlayerId,
                  kind: PlayerKind,
@@ -115,10 +114,6 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
         tech_progress: vec![0; tech_count],
         tech_boosted: vec![false; tech_count],
         research: None,
-        civics: vec![false; civic_count],
-        civic_progress: vec![0; civic_count],
-        civic_boosted: vec![false; civic_count],
-        civic: None,
         ai_techs: vec![false; ai_count],
         ai_progress: vec![0; ai_count],
         ai_research: None,

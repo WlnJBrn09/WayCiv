@@ -1,5 +1,5 @@
 //! Icons from `assets/icons/<kind>/<id>.png` (generated with Codex; see
-//! tools/icons): resources, units, techs, civics, AI tree items, beliefs,
+//! tools/icons): resources, units, techs, AI tree items, beliefs,
 //! and the trees themselves. Loaded on first use; missing icons are skipped.
 
 use egui::{Color32, Rect, TextureHandle, TextureOptions, pos2};

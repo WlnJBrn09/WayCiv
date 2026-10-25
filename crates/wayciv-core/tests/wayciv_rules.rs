@@ -1,6 +1,6 @@
 //! Scenario tests for WayCiv's own rules: civilians, city-states, loyalty,
 //! the AI tree, strike drones, purchases, the Earth map, and modern great
-//! people. Skipped when Civ VI isn't installed.
+//! people.
 
 use wayciv_core::additions::*;
 use wayciv_core::research::Tree;

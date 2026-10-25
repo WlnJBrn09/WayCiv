@@ -1,0 +1,693 @@
+# The technology tree. Columns come from prerequisite depth; `row` places a
+# tech vertically. Costs are base Science before game-length scaling.
+# A boost (Eureka) grants 40% of the cost when its trigger happens.
+
+# ---------------------------------------------------------------- Ancient
+[[tech]]
+id = "TECH_POTTERY"
+name = "Pottery"
+era = "ancient"
+cost = 25
+row = 0
+description = "Fired clay vessels to store the harvest."
+
+[[tech]]
+id = "TECH_ANIMAL_HUSBANDRY"
+name = "Animal Husbandry"
+era = "ancient"
+cost = 25
+row = 2
+description = "Herding and breeding livestock; reveals Horses."
+
+[[tech]]
+id = "TECH_MINING"
+name = "Mining"
+era = "ancient"
+cost = 25
+row = 4
+description = "Digging stone and ore from the hills."
+
+[[tech]]
+id = "TECH_SAILING"
+name = "Sailing"
+era = "ancient"
+cost = 50
+row = -2
+description = "Boats that cross coastal water."
+boost = { trigger = "settle_coast", text = "Found a city on the coast." }
+
+[[tech]]
+id = "TECH_ASTROLOGY"
+name = "Astrology"
+era = "ancient"
+cost = 50
+row = -1
+prereqs = ["TECH_POTTERY"]
+description = "Reading the heavens for omens."
+boost = { trigger = "create_pantheon", text = "Adopt a pantheon." }
+
+[[tech]]
+id = "TECH_IRRIGATION"
+name = "Irrigation"
+era = "ancient"
+cost = 50
+row = 1
+prereqs = ["TECH_POTTERY"]
+description = "Canals that water distant fields."
+boost = { trigger = "have_x_improvements", improvement = "IMPROVEMENT_FARM", count = 2, text = "Build two Farms." }
+
+[[tech]]
+id = "TECH_WRITING"
+name = "Writing"
+era = "ancient"
+cost = 55
+row = 0
+prereqs = ["TECH_POTTERY"]
+description = "Marks that keep records beyond memory."
+boost = { trigger = "meet_civ", text = "Meet another civilization." }
+
+[[tech]]
+id = "TECH_ARCHERY"
+name = "Archery"
+era = "ancient"
+cost = 50
+row = 2
+prereqs = ["TECH_ANIMAL_HUSBANDRY"]
+description = "Bows for hunting and war."
+boost = { trigger = "kill_with", unit = "UNIT_SLINGER", text = "Defeat a unit with a Slinger." }
+
+[[tech]]
+id = "TECH_MASONRY"
+name = "Masonry"
+era = "ancient"
+cost = 80
+row = 3
+prereqs = ["TECH_MINING"]
+description = "Cut stone for walls and monuments."
+boost = { trigger = "have_x_improvements", improvement = "IMPROVEMENT_QUARRY", text = "Build a Quarry." }
+
+[[tech]]
+id = "TECH_BRONZE_WORKING"
+name = "Bronze Working"
+era = "ancient"
+cost = 80
+row = 4
+prereqs = ["TECH_MINING"]
+description = "Alloyed copper and tin; reveals Iron."
+boost = { trigger = "clear_camp", text = "Clear a barbarian outpost." }
+
+[[tech]]
+id = "TECH_THE_WHEEL"
+name = "The Wheel"
+era = "ancient"
+cost = 80
+row = 5
+prereqs = ["TECH_MINING", "TECH_ANIMAL_HUSBANDRY"]
+description = "Carts, chariots, and the potter's wheel."
+boost = { trigger = "have_x_improvements", improvement = "IMPROVEMENT_MINE", text = "Build a Mine." }
+
+# -------------------------------------------------------------- Classical
+[[tech]]
+id = "TECH_CELESTIAL_NAVIGATION"
+name = "Celestial Navigation"
+era = "classical"
+cost = 125
+row = -2
+prereqs = ["TECH_SAILING", "TECH_ASTROLOGY"]
+description = "Steering by the stars."
+boost = { trigger = "have_x_improvements", improvement = "IMPROVEMENT_FISHING_BOATS", count = 2, text = "Build two Fishing Boats." }
+
+[[tech]]
+id = "TECH_CURRENCY"
+name = "Currency"
+era = "classical"
+cost = 125
+row = 0
+prereqs = ["TECH_WRITING"]
+description = "Coins of standard weight."
+boost = { trigger = "maintain_x_trade_routes", text = "Run a trade route." }
+
+[[tech]]
+id = "TECH_HORSEBACK_RIDING"
+name = "Horseback Riding"
+era = "classical"
+cost = 125
+row = 2
+prereqs = ["TECH_ARCHERY"]
+description = "Riding into battle."
+boost = { trigger = "have_x_improvements", improvement = "IMPROVEMENT_PASTURE", text = "Build a Pasture." }
+
+[[tech]]
+id = "TECH_IRON_WORKING"
+name = "Iron Working"
+era = "classical"
+cost = 125
+row = 4
+prereqs = ["TECH_BRONZE_WORKING"]
+description = "Smelting iron for tools and blades."
+boost = { trigger = "improve_specific_resource", improvement = "IMPROVEMENT_MINE", resource = "RESOURCE_IRON", text = "Mine an Iron deposit." }
+
+[[tech]]
+id = "TECH_SHIPBUILDING"
+name = "Shipbuilding"
+era = "classical"
+cost = 200
+row = -3
+prereqs = ["TECH_SAILING"]
+description = "Keeled hulls for the open sea."
+boost = { trigger = "own_x_units_of_type", unit = "UNIT_GALLEY", count = 2, text = "Own two Galleys." }
+
+[[tech]]
+id = "TECH_MATHEMATICS"
+name = "Mathematics"
+era = "classical"
+cost = 200
+row = -1
+prereqs = ["TECH_CURRENCY", "TECH_ASTROLOGY"]
+description = "Geometry, counting boards, and proofs."
+boost = { trigger = "have_x_unique_specialty_districts", count = 3, text = "Build three different specialty districts." }
+
+[[tech]]
+id = "TECH_CONSTRUCTION"
+name = "Construction"
+era = "classical"
+cost = 200
+row = 3
+prereqs = ["TECH_MASONRY", "TECH_HORSEBACK_RIDING"]
+description = "Arches, concrete, and cranes."
+boost = { trigger = "have_x_improvements", improvement = "IMPROVEMENT_QUARRY", count = 2, text = "Build two Quarries." }
+
+[[tech]]
+id = "TECH_ENGINEERING"
+name = "Engineering"
+era = "classical"
+cost = 200
+row = 5
+prereqs = ["TECH_THE_WHEEL", "TECH_MASONRY"]
+description = "Aqueducts, roads, and siege engines."
+boost = { trigger = "construct_building", building = "BUILDING_WALLS", text = "Build Ancient Walls." }
+
+# --------------------------------------------------------------- Medieval
+[[tech]]
+id = "TECH_MILITARY_TACTICS"
+name = "Military Tactics"
+era = "medieval"
+cost = 300
+row = -2
+prereqs = ["TECH_MATHEMATICS"]
+description = "Drilled formations that hold against cavalry."
+boost = { trigger = "kill_with", unit = "UNIT_SPEARMAN", text = "Defeat a unit with a Spearman." }
+
+[[tech]]
+id = "TECH_APPRENTICESHIP"
+name = "Apprenticeship"
+era = "medieval"
+cost = 300
+row = 0
+prereqs = ["TECH_CURRENCY", "TECH_IRON_WORKING"]
+description = "Masters training the next generation of craftsmen."
+boost = { trigger = "have_x_improvements", improvement = "IMPROVEMENT_MINE", count = 3, text = "Build three Mines." }
+
+[[tech]]
+id = "TECH_MACHINERY"
+name = "Machinery"
+era = "medieval"
+cost = 300
+row = 4
+prereqs = ["TECH_IRON_WORKING", "TECH_ENGINEERING"]
+description = "Gears, cranks, and the crossbow."
+boost = { trigger = "own_x_units_of_type", unit = "UNIT_ARCHER", count = 3, text = "Own three Archers." }
+
+[[tech]]
+id = "TECH_EDUCATION"
+name = "Education"
+era = "medieval"
+cost = 390
+row = -1
+prereqs = ["TECH_MATHEMATICS", "TECH_APPRENTICESHIP"]
+description = "Universities and the study of the liberal arts."
+boost = { trigger = "have_x_great_people", text = "Recruit a great person." }
+
+[[tech]]
+id = "TECH_STIRRUPS"
+name = "Stirrups"
+era = "medieval"
+cost = 390
+row = 2
+prereqs = ["TECH_HORSEBACK_RIDING"]
+description = "A firm seat for the mounted lance."
+boost = { trigger = "kill_with", unit = "UNIT_HORSEMAN", text = "Defeat a unit with a Horseman." }
+
+[[tech]]
+id = "TECH_MILITARY_ENGINEERING"
+name = "Military Engineering"
+era = "medieval"
+cost = 390
+row = 3
+prereqs = ["TECH_CONSTRUCTION", "TECH_ENGINEERING"]
+description = "Trebuchets, sappers, and field fortifications; reveals Niter."
+boost = { trigger = "have_x_districts", district = "DISTRICT_AQUEDUCT", text = "Build an Aqueduct." }
+
+[[tech]]
+id = "TECH_CASTLES"
+name = "Castles"
+era = "medieval"
+cost = 390
+row = 5
+prereqs = ["TECH_CONSTRUCTION"]
+description = "Stone keeps and concentric walls."
+boost = { trigger = "have_x_policy_slots", count = 4, text = "Have four policy slots." }
+
+# ------------------------------------------------------------ Renaissance
+[[tech]]
+id = "TECH_CARTOGRAPHY"
+name = "Cartography"
+era = "renaissance"
+cost = 550
+row = -3
+prereqs = ["TECH_SHIPBUILDING", "TECH_CELESTIAL_NAVIGATION"]
+description = "Charts of coasts and currents for ocean voyages."
+boost = { trigger = "have_x_districts", district = "DISTRICT_HARBOR", count = 2, text = "Build two Harbors." }
+
+[[tech]]
+id = "TECH_MASS_PRODUCTION"
+name = "Mass Production"
+era = "renaissance"
+cost = 550
+row = -2
+prereqs = ["TECH_EDUCATION", "TECH_SHIPBUILDING"]
+description = "Standard parts made in great numbers."
+boost = { trigger = "have_x_improvements", improvement = "IMPROVEMENT_LUMBER_MILL", count = 2, text = "Build two Lumber Mills." }
+
+[[tech]]
+id = "TECH_BANKING"
+name = "Banking"
+era = "renaissance"
+cost = 550
+row = 0
+prereqs = ["TECH_EDUCATION", "TECH_APPRENTICESHIP"]
+description = "Letters of credit and lending houses."
+boost = { trigger = "construct_building", building = "BUILDING_MARKET", text = "Build a Market." }
+
+[[tech]]
+id = "TECH_GUNPOWDER"
+name = "Gunpowder"
+era = "renaissance"
+cost = 550
+row = 2
+prereqs = ["TECH_MILITARY_ENGINEERING", "TECH_STIRRUPS"]
+description = "Black powder for firearms and cannon."
+boost = { trigger = "construct_building", building = "BUILDING_ARMORY", text = "Build an Armory." }
+
+[[tech]]
+id = "TECH_PRINTING"
+name = "Printing"
+era = "renaissance"
+cost = 550
+row = 4
+prereqs = ["TECH_MACHINERY", "TECH_EDUCATION"]
+description = "Movable type and the cheap book."
+boost = { trigger = "construct_building", building = "BUILDING_UNIVERSITY", text = "Build a University." }
+
+[[tech]]
+id = "TECH_SQUARE_RIGGING"
+name = "Square Rigging"
+era = "renaissance"
+cost = 680
+row = -3
+prereqs = ["TECH_CARTOGRAPHY"]
+description = "Tall ships with broadsides."
+boost = { trigger = "kill_with", unit = "UNIT_MUSKETMAN", text = "Defeat a unit with a Musketman." }
+
+[[tech]]
+id = "TECH_ASTRONOMY"
+name = "Astronomy"
+era = "renaissance"
+cost = 680
+row = -1
+prereqs = ["TECH_EDUCATION"]
+description = "Telescopes and a sun-centered heaven."
+boost = { trigger = "construct_building", building = "BUILDING_UNIVERSITY", text = "Build a University." }
+
+[[tech]]
+id = "TECH_METAL_CASTING"
+name = "Metal Casting"
+era = "renaissance"
+cost = 680
+row = 2
+prereqs = ["TECH_GUNPOWDER"]
+description = "Cast bronze and iron guns."
+boost = { trigger = "own_x_units_of_type", unit = "UNIT_CROSSBOWMAN", count = 2, text = "Own two Crossbowmen." }
+
+[[tech]]
+id = "TECH_SIEGE_TACTICS"
+name = "Siege Tactics"
+era = "renaissance"
+cost = 680
+row = 5
+prereqs = ["TECH_CASTLES", "TECH_MILITARY_ENGINEERING"]
+description = "Bastions and trenches for the age of cannon."
+boost = { trigger = "own_x_units_of_type", unit = "UNIT_TREBUCHET", count = 2, text = "Own two Trebuchets." }
+
+# ------------------------------------------------------------- Industrial
+[[tech]]
+id = "TECH_INDUSTRIALIZATION"
+name = "Industrialization"
+era = "industrial"
+cost = 860
+row = -2
+prereqs = ["TECH_MASS_PRODUCTION", "TECH_SQUARE_RIGGING"]
+description = "Mills, foundries, and the factory system; reveals Coal."
+boost = { trigger = "have_x_buildings", building = "BUILDING_WORKSHOP", count = 3, text = "Build Workshops in three cities." }
+
+[[tech]]
+id = "TECH_SCIENTIFIC_THEORY"
+name = "Scientific Theory"
+era = "industrial"
+cost = 860
+row = -1
+prereqs = ["TECH_ASTRONOMY", "TECH_PRINTING"]
+description = "Hypothesis, experiment, and peer review."
+boost = { trigger = "have_x_buildings", building = "BUILDING_UNIVERSITY", count = 2, text = "Have Universities in two cities." }
+
+[[tech]]
+id = "TECH_BALLISTICS"
+name = "Ballistics"
+era = "industrial"
+cost = 860
+row = 2
+prereqs = ["TECH_METAL_CASTING"]
+description = "The mathematics of the shell's arc."
+boost = { trigger = "own_x_units_of_type", unit = "UNIT_BOMBARD", count = 2, text = "Own two Bombards." }
+
+[[tech]]
+id = "TECH_MILITARY_SCIENCE"
+name = "Military Science"
+era = "industrial"
+cost = 860
+row = 4
+prereqs = ["TECH_SIEGE_TACTICS", "TECH_PRINTING"]
+description = "Staff colleges and the study of war."
+boost = { trigger = "kill_with", unit = "UNIT_KNIGHT", text = "Defeat a unit with a Knight." }
+
+[[tech]]
+id = "TECH_STEAM_POWER"
+name = "Steam Power"
+era = "industrial"
+cost = 990
+row = -3
+prereqs = ["TECH_INDUSTRIALIZATION"]
+description = "Engines that drive ships, pumps, and looms."
+boost = { trigger = "construct_building", building = "BUILDING_SHIPYARD", text = "Build a Shipyard." }
+
+[[tech]]
+id = "TECH_SANITATION"
+name = "Sanitation"
+era = "industrial"
+cost = 990
+row = -1
+prereqs = ["TECH_SCIENTIFIC_THEORY"]
+description = "Clean water and sewers for growing cities."
+boost = { trigger = "city_population", count = 15, text = "Grow a city to 15 population." }
+
+[[tech]]
+id = "TECH_ECONOMICS"
+name = "Economics"
+era = "industrial"
+cost = 990
+row = 0
+prereqs = ["TECH_BANKING", "TECH_SCIENTIFIC_THEORY"]
+description = "Markets, prices, and the wealth of nations."
+boost = { trigger = "have_x_buildings", building = "BUILDING_BANK", count = 2, text = "Build two Banks." }
+
+[[tech]]
+id = "TECH_RIFLING"
+name = "Rifling"
+era = "industrial"
+cost = 990
+row = 3
+prereqs = ["TECH_BALLISTICS", "TECH_MILITARY_SCIENCE"]
+description = "Spinning bullets that fly true."
+boost = { trigger = "have_x_improvements", improvement = "IMPROVEMENT_MINE", resource = "RESOURCE_NITER", text = "Mine Niter." }
+
+# ----------------------------------------------------------------- Modern
+[[tech]]
+id = "TECH_FLIGHT"
+name = "Flight"
+era = "modern"
+cost = 1150
+row = -2
+prereqs = ["TECH_INDUSTRIALIZATION", "TECH_SCIENTIFIC_THEORY"]
+description = "Powered, controlled flight."
+boost = { trigger = "construct_building", building = "BUILDING_FACTORY", text = "Build a Factory." }
+
+[[tech]]
+id = "TECH_REPLACEABLE_PARTS"
+name = "Replaceable Parts"
+era = "modern"
+cost = 1150
+row = 0
+prereqs = ["TECH_ECONOMICS"]
+description = "Interchangeable parts for rifles and machines."
+boost = { trigger = "own_x_units_of_type", unit = "UNIT_LINE_INFANTRY", count = 3, text = "Own three Line Infantry." }
+
+[[tech]]
+id = "TECH_STEEL"
+name = "Steel"
+era = "modern"
+cost = 1150
+row = 2
+prereqs = ["TECH_RIFLING"]
+description = "Bessemer steel for rails, ships, and towers; reveals Oil."
+boost = { trigger = "own_x_units_of_type", unit = "UNIT_FIELD_CANNON", text = "Own a Field Cannon." }
+
+[[tech]]
+id = "TECH_ELECTRICITY"
+name = "Electricity"
+era = "modern"
+cost = 1270
+row = -3
+prereqs = ["TECH_STEAM_POWER"]
+description = "Generators, wires, and light at night."
+boost = { trigger = "own_x_units_of_type", unit = "UNIT_IRONCLAD", count = 2, text = "Own two Ironclads." }
+
+[[tech]]
+id = "TECH_RADIO"
+name = "Radio"
+era = "modern"
+cost = 1270
+row = -2
+prereqs = ["TECH_FLIGHT", "TECH_ELECTRICITY"]
+description = "Voices carried on the air; reveals Aluminum."
+boost = { trigger = "own_x_units_of_type", unit = "UNIT_BIPLANE", text = "Own a Biplane." }
+
+[[tech]]
+id = "TECH_CHEMISTRY"
+name = "Chemistry"
+era = "modern"
+cost = 1270
+row = -1
+prereqs = ["TECH_SANITATION"]
+description = "The periodic table and industrial chemicals."
+boost = { trigger = "have_x_districts", district = "DISTRICT_CAMPUS", count = 4, text = "Build four Campuses." }
+
+[[tech]]
+id = "TECH_COMBUSTION"
+name = "Combustion"
+era = "modern"
+cost = 1270
+row = 3
+prereqs = ["TECH_STEEL"]
+description = "The internal combustion engine."
+boost = { trigger = "have_x_improvements", improvement = "IMPROVEMENT_OIL_WELL", text = "Build an Oil Well." }
+
+# ----------------------------------------------------------------- Atomic
+[[tech]]
+id = "TECH_ADVANCED_FLIGHT"
+name = "Advanced Flight"
+era = "atomic"
+cost = 1420
+row = -2
+prereqs = ["TECH_RADIO"]
+description = "Monoplanes, radar, and long-range bombers."
+boost = { trigger = "own_x_units_of_type", unit = "UNIT_BIPLANE", count = 3, text = "Own three Biplanes." }
+
+[[tech]]
+id = "TECH_ROCKETRY"
+name = "Rocketry"
+era = "atomic"
+cost = 1420
+row = -1
+prereqs = ["TECH_RADIO", "TECH_CHEMISTRY"]
+description = "Liquid-fueled rockets that reach space."
+boost = { trigger = "have_x_buildings", building = "BUILDING_RESEARCH_LAB", text = "Build a Research Lab." }
+
+[[tech]]
+id = "TECH_ADVANCED_BALLISTICS"
+name = "Advanced Ballistics"
+era = "atomic"
+cost = 1420
+row = 0
+prereqs = ["TECH_REPLACEABLE_PARTS", "TECH_STEEL"]
+description = "Rapid-fire guns and anti-aircraft fire."
+boost = { trigger = "have_x_buildings", building = "BUILDING_POWER_PLANT", count = 2, text = "Build two Power Plants." }
+
+[[tech]]
+id = "TECH_COMBINED_ARMS"
+name = "Combined Arms"
+era = "atomic"
+cost = 1420
+row = 2
+prereqs = ["TECH_STEEL", "TECH_COMBUSTION"]
+description = "Tanks, aircraft, and infantry fighting together."
+boost = { trigger = "have_x_districts", district = "DISTRICT_AERODROME", text = "Build an Aerodrome." }
+
+[[tech]]
+id = "TECH_PLASTICS"
+name = "Plastics"
+era = "atomic"
+cost = 1420
+row = 3
+prereqs = ["TECH_COMBUSTION", "TECH_CHEMISTRY"]
+description = "Polymers from petroleum."
+boost = { trigger = "have_x_improvements", improvement = "IMPROVEMENT_OIL_WELL", count = 2, text = "Build two Oil Wells." }
+
+[[tech]]
+id = "TECH_COMPUTERS"
+name = "Computers"
+era = "atomic"
+cost = 1600
+row = -3
+prereqs = ["TECH_ELECTRICITY", "TECH_RADIO"]
+description = "Transistors and programmable machines."
+boost = { trigger = "have_x_buildings", building = "BUILDING_BROADCAST_CENTER", text = "Build a Broadcast Center." }
+
+[[tech]]
+id = "TECH_NUCLEAR_FISSION"
+name = "Nuclear Fission"
+era = "atomic"
+cost = 1600
+row = 1
+prereqs = ["TECH_ADVANCED_BALLISTICS", "TECH_CHEMISTRY"]
+description = "Splitting the atom; reveals Uranium."
+boost = { trigger = "own_x_units_of_type", unit = "UNIT_BOMBER", text = "Own a Bomber." }
+
+[[tech]]
+id = "TECH_SYNTHETIC_MATERIALS"
+name = "Synthetic Materials"
+era = "atomic"
+cost = 1600
+row = 3
+prereqs = ["TECH_PLASTICS"]
+description = "Nylon, fiberglass, and synthetic rubber."
+boost = { trigger = "have_x_buildings", building = "BUILDING_AIRPORT", count = 2, text = "Build two Airports." }
+
+# ------------------------------------------------------------ Information
+[[tech]]
+id = "TECH_TELECOMMUNICATIONS"
+name = "Telecommunications"
+era = "information"
+cost = 1860
+row = -3
+prereqs = ["TECH_COMPUTERS"]
+description = "Satellites, fiber, and the global network."
+boost = { trigger = "have_x_buildings", building = "BUILDING_BROADCAST_CENTER", count = 2, text = "Build two Broadcast Centers." }
+
+[[tech]]
+id = "TECH_ARTIFICIAL_INTELLIGENCE"
+name = "Artificial Intelligence"
+era = "information"
+cost = 1950
+row = -4
+prereqs = ["TECH_TELECOMMUNICATIONS"]
+description = "Machines that learn. Opens the AI tree and Datacenters."
+boost = { trigger = "have_x_buildings", building = "BUILDING_RESEARCH_LAB", text = "Build a Research Lab." }
+
+[[tech]]
+id = "TECH_SATELLITES"
+name = "Satellites"
+era = "information"
+cost = 1860
+row = -1
+prereqs = ["TECH_ADVANCED_FLIGHT", "TECH_ROCKETRY"]
+description = "Objects in orbit that watch and relay."
+boost = { trigger = "have_x_districts", district = "DISTRICT_SPACEPORT", text = "Build a Spaceport." }
+
+[[tech]]
+id = "TECH_GUIDANCE_SYSTEMS"
+name = "Guidance Systems"
+era = "information"
+cost = 1860
+row = 0
+prereqs = ["TECH_ROCKETRY", "TECH_ADVANCED_BALLISTICS"]
+description = "Gyroscopes and computers that steer missiles."
+boost = { trigger = "kill_with", unit = "UNIT_FIGHTER", text = "Defeat a unit with a Fighter." }
+
+[[tech]]
+id = "TECH_LASERS"
+name = "Lasers"
+era = "information"
+cost = 1860
+row = 1
+prereqs = ["TECH_NUCLEAR_FISSION"]
+description = "Coherent light for cutting, ranging, and data."
+boost = { trigger = "own_x_units_of_type", unit = "UNIT_DESTROYER", count = 2, text = "Own two Destroyers." }
+
+[[tech]]
+id = "TECH_COMPOSITES"
+name = "Composites"
+era = "information"
+cost = 1860
+row = 3
+prereqs = ["TECH_SYNTHETIC_MATERIALS"]
+description = "Carbon fiber and layered armor."
+boost = { trigger = "own_x_units_of_type", unit = "UNIT_TANK", count = 3, text = "Own three Tanks." }
+
+[[tech]]
+id = "TECH_STEALTH_TECHNOLOGY"
+name = "Stealth Technology"
+era = "information"
+cost = 1860
+row = 4
+prereqs = ["TECH_SYNTHETIC_MATERIALS"]
+description = "Aircraft shaped to slip past radar."
+boost = { trigger = "own_x_units_of_type", unit = "UNIT_BOMBER", count = 2, text = "Own two Bombers." }
+
+[[tech]]
+id = "TECH_ROBOTICS"
+name = "Robotics"
+era = "information"
+cost = 2150
+row = -2
+prereqs = ["TECH_COMPUTERS", "TECH_GUIDANCE_SYSTEMS"]
+description = "Machines that build machines."
+boost = { trigger = "have_x_wonders", count = 3, text = "Build three wonders." }
+
+[[tech]]
+id = "TECH_NANOTECHNOLOGY"
+name = "Nanotechnology"
+era = "information"
+cost = 2150
+row = 3
+prereqs = ["TECH_COMPOSITES"]
+description = "Engineering at the scale of molecules."
+boost = { trigger = "have_x_improvements", improvement = "IMPROVEMENT_MINE", resource = "RESOURCE_ALUMINUM", text = "Mine Aluminum." }
+
+[[tech]]
+id = "TECH_NUCLEAR_FUSION"
+name = "Nuclear Fusion"
+era = "information"
+cost = 2150
+row = 1
+prereqs = ["TECH_LASERS"]
+description = "The power of the sun, contained."
+boost = { trigger = "empire_population", count = 60, text = "Reach 60 total population." }
+
+[[tech]]
+id = "TECH_FUTURE_TECH"
+name = "Future Tech"
+era = "information"
+cost = 2500
+row = 0
+prereqs = ["TECH_SATELLITES", "TECH_ROBOTICS", "TECH_NANOTECHNOLOGY", "TECH_NUCLEAR_FUSION"]
+description = "What comes next."

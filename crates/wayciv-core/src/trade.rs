@@ -16,43 +16,18 @@ pub const ROUTE_RANGE: i32 = 15;
 pub const ROUTE_TURNS: u32 = 30;
 
 impl Game {
-    /// Trade route capacity from Civ VI's capacity modifiers on the player's
-    /// civics, government, policies, and each city's districts and buildings.
+    /// Trade route capacity: the Palace, Commercial Hubs, Harbors, and
+    /// other districts and buildings with capacity, plus government,
+    /// policy, ability, and wonder effects.
     pub fn trade_capacity(&self, player: PlayerId) -> i32 {
         let content = &self.rules.content;
-        let p = &self.players[player];
-        let amount = |owner: &str| -> i32 {
-            content
-                .modifiers_of(owner)
-                .filter(|m| m.effect == "EFFECT_ADJUST_TRADE_ROUTE_CAPACITY")
-                .map(|m| {
-                    m.arguments
-                        .get("Amount")
-                        .and_then(|a| a.parse::<i32>().ok())
-                        .unwrap_or(1)
-                })
-                .sum()
-        };
-        let mut total = 0;
-        for (i, civic) in content.civics.iter().enumerate() {
-            if p.civics[i] {
-                total += amount(&civic.id);
-            }
-        }
-        if let Some(g) = p.government {
-            total += amount(&content.governments[g].id);
-        }
-        for &policy in &p.policies {
-            total += amount(&content.policies[policy].id);
-        }
+        let mut total = self.bonuses(player).trade_capacity;
         for c in self.player_cities(player) {
             for d in &c.districts {
-                let district = &content.districts[d.district];
-                total +=
-                    amount(&district.id).max(district.replaces.as_deref().map(amount).unwrap_or(0));
+                total += content.districts[d.district].trade_capacity;
             }
             for &b in &c.buildings {
-                total += amount(&content.buildings[b].id);
+                total += content.buildings[b].trade_capacity;
             }
         }
         total
@@ -139,7 +114,7 @@ impl Game {
         let used = self.trade_routes_of(u.owner).count() as i32;
         if used >= self.trade_capacity(u.owner) {
             return Err(
-                "No trade route capacity left. Commercial Hubs, Harbors and some civics add more."
+                "No trade route capacity left. Commercial Hubs, Harbors and some policies add more."
                     .into(),
             );
         }

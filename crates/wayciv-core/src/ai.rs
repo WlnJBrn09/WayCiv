@@ -38,7 +38,7 @@ impl Game {
     }
 
     fn ai_research(&mut self, player: PlayerId) {
-        for tree in [Tree::Tech, Tree::Civic, Tree::Ai] {
+        for tree in [Tree::Tech, Tree::Ai] {
             if self.current_research(player, tree).is_none()
                 && let Some(next) = self.ai_pick_research(player, tree)
             {
@@ -77,17 +77,14 @@ impl Game {
                 } else {
                     slot.as_str()
                 };
-                let picks: Vec<usize> = available
+                // Newest policies first: later ones are stronger.
+                let mut picks: Vec<usize> = available
                     .iter()
                     .copied()
                     .filter(|&p| content.policies[p].slot == wanted && !chosen.contains(&p))
-                    .filter(|&p| {
-                        content
-                            .modifiers_of(&content.policies[p].id)
-                            .any(crate::effects::is_active)
-                    })
-                    .take(*count as usize)
                     .collect();
+                picks.sort_by_key(|&p| std::cmp::Reverse(content.policies[p].unlock_year));
+                picks.truncate(*count as usize);
                 chosen.extend(picks);
             }
             if self.set_policies(player, chosen).is_ok() {

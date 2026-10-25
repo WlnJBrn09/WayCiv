@@ -1,0 +1,107 @@
+# Units everyone can build. Civilization unique units are in
+# civilizations.toml with the civilization that owns them.
+#
+# Short fields: tech = prerequisite tech, year = calendar year it unlocks
+# (no tech), class = promotion class, ranged = ranged strength, range in
+# tiles, bombard = strength against cities, resource = strategic resource
+# needed, purchase = "faith" for Faith-bought units, maintenance = Gold per
+# turn.
+
+unit = [
+  # ---------------------------------------------------------- Civilians
+  { id = "UNIT_SETTLER", name = "Settler", cost = 80, sight = 3, found_city = true, description = "Founds a new city. Costs the city 1 population." },
+  { id = "UNIT_BUILDER", name = "Builder", cost = 50, builds = 3, description = "Builds 3 tile improvements, then retires." },
+  { id = "UNIT_TRADER", name = "Trader", cost = 40, year = -2500, trade = true, description = "Runs a trade route to a city within reach and paves a road on the way." },
+  { id = "UNIT_MISSIONARY", name = "Missionary", cost = 75, moves = 4, spreads = 3, religious_strength = 100, purchase = "faith", must_purchase = true, description = "Spreads your religion to 3 cities." },
+  { id = "UNIT_APOSTLE", name = "Apostle", cost = 190, moves = 4, spreads = 3, religious_strength = 110, class = "apostle", purchase = "faith", must_purchase = true, description = "A stronger preacher who can also found a new belief's following." },
+  { id = "UNIT_INQUISITOR", name = "Inquisitor", cost = 75, moves = 4, spreads = 3, religious_strength = 75, class = "inquisitor", purchase = "faith", must_purchase = true, description = "Removes other religions from your cities." },
+  { id = "UNIT_GURU", name = "Guru", cost = 120, moves = 4, religious_strength = 90, purchase = "faith", must_purchase = true, description = "Heals nearby religious units." },
+  { id = "UNIT_WARRIOR_MONK", name = "Warrior Monk", cost = 100, moves = 3, combat = 40, class = "monk", maintenance = 2, purchase = "faith", must_purchase = true, description = "A martial ascetic bought with Faith." },
+  { id = "UNIT_ARCHAEOLOGIST", name = "Archaeologist", cost = 380, moves = 4, year = 1850, description = "Excavates Antiquity Sites and Shipwrecks for artifacts." },
+
+  # ------------------------------------------------------ Great people
+  { id = "UNIT_GREAT_GENERAL",   name = "Great General",   cost = 1, moves = 4, can_train = false, description = "Leads nearby land units into battle." },
+  { id = "UNIT_GREAT_ADMIRAL",   name = "Great Admiral",   cost = 1, moves = 4, domain = "sea", can_train = false, description = "Leads nearby fleets." },
+  { id = "UNIT_GREAT_ENGINEER",  name = "Great Engineer",  cost = 1, moves = 4, can_train = false, description = "Speeds a wonder or a district in a city." },
+  { id = "UNIT_GREAT_MERCHANT",  name = "Great Merchant",  cost = 1, moves = 4, can_train = false, description = "Brings a windfall of Gold." },
+  { id = "UNIT_GREAT_PROPHET",   name = "Great Prophet",   cost = 1, moves = 4, found_religion = true, can_train = false, description = "Founds a religion at a Holy Site." },
+  { id = "UNIT_GREAT_SCIENTIST", name = "Great Scientist", cost = 1, moves = 4, can_train = false, description = "Advances your research." },
+  { id = "UNIT_GREAT_WRITER",    name = "Great Writer",    cost = 1, moves = 4, can_train = false, description = "Writes a Great Work of Writing." },
+  { id = "UNIT_GREAT_ARTIST",    name = "Great Artist",    cost = 1, moves = 4, can_train = false, description = "Paints a Great Work of Art." },
+  { id = "UNIT_GREAT_MUSICIAN",  name = "Great Musician",  cost = 1, moves = 4, can_train = false, description = "Composes a Great Work of Music." },
+
+  # ------------------------------------------------------------ Ancient
+  { id = "UNIT_SCOUT", name = "Scout", cost = 30, moves = 3, sight = 3, combat = 10, class = "recon", description = "Fast explorer that sees farther." },
+  { id = "UNIT_WARRIOR", name = "Warrior", cost = 40, combat = 20, class = "melee", description = "Clubs and spears: the first army." },
+  { id = "UNIT_SLINGER", name = "Slinger", cost = 35, combat = 5, ranged = 15, range = 1, class = "ranged", description = "Hurls stones from the next tile." },
+  { id = "UNIT_ARCHER", name = "Archer", cost = 60, combat = 15, ranged = 25, range = 2, class = "ranged", tech = "TECH_ARCHERY", maintenance = 1, description = "Shoots two tiles away." },
+  { id = "UNIT_SPEARMAN", name = "Spearman", cost = 65, combat = 25, class = "anti_cavalry", tech = "TECH_BRONZE_WORKING", maintenance = 1, description = "Braced spears; strong against mounted units." },
+  { id = "UNIT_HEAVY_CHARIOT", name = "Heavy Chariot", cost = 65, moves = 3, combat = 28, class = "heavy_cavalry", tech = "TECH_THE_WHEEL", maintenance = 1, description = "A two-horse war cart that rides down infantry on open ground." },
+  { id = "UNIT_BATTERING_RAM", name = "Battering Ram", cost = 60, class = "support", tech = "TECH_MASONRY", maintenance = 1, description = "Lets an adjacent melee unit strike city walls at full force." },
+  { id = "UNIT_GALLEY", name = "Galley", cost = 65, moves = 3, combat = 30, domain = "sea", class = "naval_melee", tech = "TECH_SAILING", maintenance = 1, description = "Oared warship for coastal waters." },
+
+  # ---------------------------------------------------------- Classical
+  { id = "UNIT_SWORDSMAN", name = "Swordsman", cost = 90, combat = 35, class = "melee", tech = "TECH_IRON_WORKING", resource = "RESOURCE_IRON", maintenance = 2, description = "Iron-armed infantry, the backbone of classical armies." },
+  { id = "UNIT_HORSEMAN", name = "Horseman", cost = 80, moves = 4, combat = 36, class = "light_cavalry", tech = "TECH_HORSEBACK_RIDING", resource = "RESOURCE_HORSES", maintenance = 2, description = "Fast raider and flanker." },
+  { id = "UNIT_CATAPULT", name = "Catapult", cost = 120, combat = 23, bombard = 35, range = 2, class = "siege", tech = "TECH_ENGINEERING", maintenance = 2, description = "Throws stones at city walls." },
+  { id = "UNIT_SIEGE_TOWER", name = "Siege Tower", cost = 100, class = "support", tech = "TECH_CONSTRUCTION", maintenance = 2, description = "Lets an adjacent melee unit climb over city walls." },
+  { id = "UNIT_QUADRIREME", name = "Quadrireme", cost = 120, moves = 3, combat = 20, ranged = 25, range = 1, domain = "sea", class = "naval_ranged", tech = "TECH_SHIPBUILDING", maintenance = 2, description = "A rowed warship with deck artillery." },
+
+  # ----------------------------------------------------------- Medieval
+  { id = "UNIT_MAN_AT_ARMS", name = "Man-at-Arms", cost = 160, combat = 45, class = "melee", tech = "TECH_APPRENTICESHIP", resource = "RESOURCE_IRON", maintenance = 3, description = "Armored foot soldier." },
+  { id = "UNIT_PIKEMAN", name = "Pikeman", cost = 180, combat = 44, class = "anti_cavalry", tech = "TECH_MILITARY_TACTICS", maintenance = 3, description = "A hedge of long pikes against charging horse." },
+  { id = "UNIT_KNIGHT", name = "Knight", cost = 180, moves = 4, combat = 50, class = "heavy_cavalry", tech = "TECH_STIRRUPS", resource = "RESOURCE_IRON", maintenance = 3, description = "Armored lancer on horseback." },
+  { id = "UNIT_CROSSBOWMAN", name = "Crossbowman", cost = 180, combat = 30, ranged = 40, range = 2, class = "ranged", tech = "TECH_MACHINERY", maintenance = 3, description = "Bolts that pierce armor." },
+  { id = "UNIT_TREBUCHET", name = "Trebuchet", cost = 200, combat = 33, bombard = 45, range = 2, class = "siege", tech = "TECH_MILITARY_ENGINEERING", maintenance = 3, description = "A counterweight engine that breaks castle walls." },
+  { id = "UNIT_MILITARY_ENGINEER", name = "Military Engineer", cost = 170, builds = 2, class = "support", tech = "TECH_MILITARY_ENGINEERING", maintenance = 2, description = "Builds forts and roads." },
+
+  # -------------------------------------------------------- Renaissance
+  { id = "UNIT_MUSKETMAN", name = "Musketman", cost = 240, combat = 55, class = "melee", tech = "TECH_GUNPOWDER", resource = "RESOURCE_NITER", maintenance = 4, description = "Infantry with matchlock muskets." },
+  { id = "UNIT_CARAVEL", name = "Caravel", cost = 240, moves = 4, sight = 3, combat = 55, domain = "sea", class = "naval_melee", tech = "TECH_CARTOGRAPHY", maintenance = 4, description = "An ocean-going explorer and warship." },
+  { id = "UNIT_BOMBARD", name = "Bombard", cost = 280, combat = 43, bombard = 55, range = 2, class = "siege", tech = "TECH_METAL_CASTING", resource = "RESOURCE_NITER", maintenance = 4, description = "Early cannon that batters fortresses." },
+  { id = "UNIT_FRIGATE", name = "Frigate", cost = 280, moves = 4, combat = 45, ranged = 55, range = 2, domain = "sea", class = "naval_ranged", tech = "TECH_SQUARE_RIGGING", maintenance = 5, description = "A fast warship with rows of guns." },
+  { id = "UNIT_PRIVATEER", name = "Privateer", cost = 280, moves = 4, combat = 40, ranged = 50, range = 2, domain = "sea", class = "naval_raider", year = 1550, maintenance = 4, description = "A licensed raider of enemy shipping." },
+
+  # --------------------------------------------------------- Industrial
+  { id = "UNIT_FIELD_CANNON", name = "Field Cannon", cost = 330, combat = 50, ranged = 60, range = 2, class = "ranged", tech = "TECH_BALLISTICS", maintenance = 5, description = "Mobile artillery for the battlefield." },
+  { id = "UNIT_LINE_INFANTRY", name = "Line Infantry", cost = 360, combat = 65, class = "melee", tech = "TECH_MILITARY_SCIENCE", resource = "RESOURCE_NITER", maintenance = 5, description = "Disciplined musket volleys in ranks." },
+  { id = "UNIT_CAVALRY", name = "Cavalry", cost = 330, moves = 5, combat = 62, class = "light_cavalry", tech = "TECH_MILITARY_SCIENCE", resource = "RESOURCE_HORSES", maintenance = 5, description = "Sabre-armed horsemen for pursuit and raids." },
+  { id = "UNIT_MEDIC", name = "Medic", cost = 370, class = "support", tech = "TECH_SANITATION", maintenance = 5, description = "Heals adjacent units faster." },
+  { id = "UNIT_IRONCLAD", name = "Ironclad", cost = 380, moves = 5, sight = 3, combat = 70, domain = "sea", class = "naval_melee", tech = "TECH_STEAM_POWER", resource = "RESOURCE_COAL", maintenance = 5, description = "A steam warship plated with iron." },
+  { id = "UNIT_RANGER", name = "Ranger", cost = 380, moves = 3, combat = 45, ranged = 60, range = 1, class = "recon", tech = "TECH_RIFLING", maintenance = 5, description = "Rifle-armed scout who moves easily through rough ground." },
+
+  # ------------------------------------------------------------- Modern
+  { id = "UNIT_OBSERVATION_BALLOON", name = "Observation Balloon", cost = 240, sight = 3, class = "support", tech = "TECH_FLIGHT", maintenance = 2, description = "Spots for nearby siege units, extending their range." },
+  { id = "UNIT_BIPLANE", name = "Biplane", cost = 430, moves = 6, sight = 4, combat = 80, ranged = 75, range = 4, domain = "air", class = "air_fighter", tech = "TECH_FLIGHT", maintenance = 6, description = "An early fighter that patrols and strafes." },
+  { id = "UNIT_INFANTRY", name = "Infantry", cost = 430, combat = 75, class = "melee", tech = "TECH_REPLACEABLE_PARTS", maintenance = 6, description = "Riflemen with machine-gun support." },
+  { id = "UNIT_ARTILLERY", name = "Artillery", cost = 430, combat = 60, bombard = 80, range = 2, class = "siege", tech = "TECH_STEEL", maintenance = 6, description = "Heavy guns that level fortifications." },
+  { id = "UNIT_BATTLESHIP", name = "Battleship", cost = 430, moves = 5, combat = 60, ranged = 70, range = 3, anti_air = 90, domain = "sea", class = "naval_ranged", tech = "TECH_STEEL", resource = "RESOURCE_COAL", maintenance = 6, description = "Big guns and thick armor." },
+  { id = "UNIT_SUBMARINE", name = "Submarine", cost = 480, moves = 3, combat = 65, ranged = 75, range = 2, domain = "sea", class = "naval_raider", tech = "TECH_ELECTRICITY", maintenance = 6, description = "Strikes from beneath the waves." },
+  { id = "UNIT_AT_CREW", name = "AT Crew", cost = 400, combat = 75, class = "anti_cavalry", tech = "TECH_CHEMISTRY", maintenance = 4, description = "Anti-tank guns that stop armor." },
+  { id = "UNIT_TANK", name = "Tank", cost = 480, moves = 4, combat = 85, class = "heavy_cavalry", tech = "TECH_COMBUSTION", resource = "RESOURCE_OIL", maintenance = 6, description = "Tracked armor that breaks through lines." },
+
+  # ------------------------------------------------------------- Atomic
+  { id = "UNIT_FIGHTER", name = "Fighter", cost = 520, moves = 8, sight = 4, combat = 100, ranged = 100, range = 5, domain = "air", class = "air_fighter", tech = "TECH_ADVANCED_FLIGHT", resource = "RESOURCE_ALUMINUM", maintenance = 7, description = "A monoplane that wins the air." },
+  { id = "UNIT_BOMBER", name = "Bomber", cost = 560, moves = 10, sight = 4, combat = 85, bombard = 110, range = 10, domain = "air", class = "air_bomber", tech = "TECH_ADVANCED_FLIGHT", resource = "RESOURCE_ALUMINUM", maintenance = 7, description = "Long-range strikes on cities and districts." },
+  { id = "UNIT_ANTIAIR_GUN", name = "Anti-Air Gun", cost = 455, anti_air = 90, range = 1, class = "support", tech = "TECH_ADVANCED_BALLISTICS", maintenance = 2, description = "Flak that shoots down aircraft overhead." },
+  { id = "UNIT_MACHINE_GUN", name = "Machine Gun", cost = 540, combat = 70, ranged = 85, range = 1, class = "ranged", tech = "TECH_ADVANCED_BALLISTICS", maintenance = 6, description = "Sustained automatic fire." },
+  { id = "UNIT_AIRCRAFT_CARRIER", name = "Aircraft Carrier", cost = 540, moves = 3, combat = 65, domain = "sea", class = "naval_carrier", tech = "TECH_COMBINED_ARMS", resource = "RESOURCE_OIL", maintenance = 7, description = "A floating airfield." },
+  { id = "UNIT_DESTROYER", name = "Destroyer", cost = 540, moves = 4, sight = 3, combat = 85, anti_air = 90, domain = "sea", class = "naval_melee", tech = "TECH_COMBINED_ARMS", maintenance = 7, description = "A fast escort that hunts submarines." },
+  { id = "UNIT_HELICOPTER", name = "Helicopter", cost = 600, moves = 4, sight = 3, combat = 86, class = "light_cavalry", tech = "TECH_SYNTHETIC_MATERIALS", maintenance = 7, description = "Gunship that ignores terrain." },
+
+  # -------------------------------------------------------- Information
+  { id = "UNIT_NUCLEAR_SUBMARINE", name = "Nuclear Submarine", cost = 680, moves = 4, combat = 80, ranged = 85, range = 2, domain = "sea", class = "naval_raider", tech = "TECH_TELECOMMUNICATIONS", resource = "RESOURCE_URANIUM", maintenance = 8, description = "Silent and with unlimited range." },
+  { id = "UNIT_MECHANIZED_INFANTRY", name = "Mechanized Infantry", cost = 650, moves = 3, combat = 85, class = "melee", tech = "TECH_SATELLITES", maintenance = 8, description = "Infantry in armored carriers." },
+  { id = "UNIT_ROCKET_ARTILLERY", name = "Rocket Artillery", cost = 680, moves = 3, sight = 3, combat = 70, bombard = 100, range = 3, class = "siege", tech = "TECH_GUIDANCE_SYSTEMS", maintenance = 8, description = "Salvoes of guided rockets." },
+  { id = "UNIT_MOBILE_SAM", name = "Mobile SAM", cost = 590, moves = 3, anti_air = 100, range = 1, class = "support", tech = "TECH_GUIDANCE_SYSTEMS", maintenance = 4, description = "Surface-to-air missiles on wheels." },
+  { id = "UNIT_JET_FIGHTER", name = "Jet Fighter", cost = 650, moves = 10, sight = 5, combat = 110, ranged = 110, range = 6, domain = "air", class = "air_fighter", tech = "TECH_LASERS", resource = "RESOURCE_ALUMINUM", maintenance = 8, description = "Supersonic air superiority." },
+  { id = "UNIT_JET_BOMBER", name = "Jet Bomber", cost = 700, moves = 15, sight = 5, combat = 90, bombard = 120, range = 15, domain = "air", class = "air_bomber", tech = "TECH_STEALTH_TECHNOLOGY", resource = "RESOURCE_ALUMINUM", maintenance = 8, description = "A stealth bomber that strikes anywhere." },
+  { id = "UNIT_MISSILE_CRUISER", name = "Missile Cruiser", cost = 680, moves = 5, sight = 3, combat = 75, ranged = 90, range = 3, anti_air = 110, domain = "sea", class = "naval_ranged", tech = "TECH_LASERS", maintenance = 8, description = "Guided missiles against ships and aircraft." },
+  { id = "UNIT_MODERN_AT", name = "Modern AT", cost = 580, moves = 3, combat = 85, class = "anti_cavalry", tech = "TECH_COMPOSITES", maintenance = 8, description = "Guided anti-tank missiles." },
+  { id = "UNIT_MODERN_ARMOR", name = "Modern Armor", cost = 680, moves = 4, combat = 95, class = "heavy_cavalry", tech = "TECH_COMPOSITES", resource = "RESOURCE_URANIUM", maintenance = 8, description = "The main battle tank." },
+  { id = "UNIT_ANDURIL_STRIKE_DRONE", name = "Anduril Strike Drone", cost = 360, moves = 5, sight = 3, combat = 45, ranged = 80, range = 3, class = "ranged", tech = "TECH_ARTIFICIAL_INTELLIGENCE", maintenance = 2, description = "Autonomous loitering strike drone. Built three at a time. Flies over rough terrain (every land tile costs 1 move) and ignores zones of control. Requires Autonomous Systems from the AI tree." },
+
+  # ---------------------------------------------------------- Barbarians
+  { id = "UNIT_BARBARIAN_HORSEMAN", name = "Barbarian Horseman", cost = 40, moves = 3, combat = 20, class = "light_cavalry", unique = "CIVILIZATION_BARBARIAN", barbarian = true, maintenance = 1, description = "A mounted raider." },
+  { id = "UNIT_BARBARIAN_HORSE_ARCHER", name = "Barbarian Horse Archer", cost = 35, moves = 3, combat = 10, ranged = 15, range = 1, class = "ranged", unique = "CIVILIZATION_BARBARIAN", barbarian = true, maintenance = 1, description = "A raider who shoots from the saddle." },
+]

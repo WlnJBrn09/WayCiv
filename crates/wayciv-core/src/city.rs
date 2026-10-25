@@ -145,9 +145,17 @@ impl Game {
         let tile = self.map.tile(pos);
         let visible = tile.resource.is_none_or(|r| {
             let res = &self.rules.content.resources[r];
-            self.players[player].meets(&self.rules, res.prereq_tech.as_deref(), None)
+            self.players[player].meets(&self.rules, res.prereq_tech.as_deref())
         });
         let mut y = self.map.base_yields(&self.rules, pos, visible);
+        if let Some(imp) = tile.improvement.filter(|_| !tile.pillaged)
+            && tile.owner == Some(player)
+        {
+            let extra = self.bonuses(player).improvement_yields(imp);
+            for i in 0..6 {
+                y[i] += extra[i];
+            }
+        }
         if tile.district.is_some() && self.city_at(pos).is_none() {
             y = [0; 6];
         }
@@ -463,12 +471,10 @@ impl Game {
         }
     }
 
-    /// Fraction of the tech and civic trees researched (0..1).
+    /// Fraction of the tech tree researched (0..1).
     pub fn game_progress(&self, player: PlayerId) -> f32 {
         let p = &self.players[player];
-        let techs = p.techs.iter().filter(|&&t| t).count() as f32 / p.techs.len().max(1) as f32;
-        let civics = p.civics.iter().filter(|&&t| t).count() as f32 / p.civics.len().max(1) as f32;
-        techs.max(civics)
+        p.techs.iter().filter(|&&t| t).count() as f32 / p.techs.len().max(1) as f32
     }
 
     pub fn production_cost(&self, player: PlayerId, item: &Production) -> i32 {
@@ -726,7 +732,7 @@ impl Game {
                 {
                     return false;
                 }
-                p.meets(rules, u.prereq_tech.as_deref(), u.prereq_civic.as_deref())
+                p.meets(rules, u.prereq_tech.as_deref()) && self.reached(u.unlock_year)
             }
             Production::Building(i) | Production::Wonder(i, _) => {
                 let b = &content.buildings[*i];
@@ -775,7 +781,7 @@ impl Game {
                 {
                     return false;
                 }
-                p.meets(rules, b.prereq_tech.as_deref(), b.prereq_civic.as_deref())
+                p.meets(rules, b.prereq_tech.as_deref()) && self.reached(b.unlock_year)
             }
             Production::District(i, _) => {
                 let d = &content.districts[*i];
@@ -820,7 +826,7 @@ impl Game {
                 {
                     return false;
                 }
-                p.meets(rules, d.prereq_tech.as_deref(), d.prereq_civic.as_deref())
+                p.meets(rules, d.prereq_tech.as_deref()) && self.reached(d.unlock_year)
             }
             Production::Project(i) => {
                 let project = &content.projects[*i];
@@ -849,7 +855,7 @@ impl Game {
                 {
                     return false;
                 }
-                p.meets(rules, project.prereq_tech.as_deref(), None)
+                p.meets(rules, project.prereq_tech.as_deref())
             }
         }
     }

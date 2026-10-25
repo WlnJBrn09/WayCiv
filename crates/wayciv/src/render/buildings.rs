@@ -177,7 +177,7 @@ fn load_sprite(ctx: &egui::Context, dir: &std::path::Path, name: &str) -> Option
 }
 
 /// The base district a unique district replaces.
-fn base_district(d: &civ6_data::content::District) -> &str {
+fn base_district(d: &wayciv_data::content::District) -> &str {
     if let Some(r) = &d.replaces {
         return r;
     }

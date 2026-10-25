@@ -156,13 +156,7 @@ impl Game {
                     && !u.id.starts_with("UNIT_GREAT_")
             })
             .filter(|(_, u)| u.religious_strength > 0 || u.spread_charges > 0)
-            .filter(|(_, u)| {
-                p.meets(
-                    &self.rules,
-                    u.prereq_tech.as_deref(),
-                    u.prereq_civic.as_deref(),
-                )
-            })
+            .filter(|(_, u)| p.meets(&self.rules, u.prereq_tech.as_deref()) && self.reached(u.unlock_year))
             .filter(|(_, u)| u.unique_to.is_none())
             .map(|(i, _)| i)
             .collect()

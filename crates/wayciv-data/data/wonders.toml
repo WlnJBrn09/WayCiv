@@ -1,0 +1,383 @@
+# World wonders: one per world. `yields` go to the city that builds it;
+# `effects` apply across the builder's empire. Wonders without a tech
+# unlock in the year the real one was built (roughly).
+
+[[wonder]]
+id = "BUILDING_STONEHENGE"
+name = "Stonehenge"
+cost = 180
+tech = "TECH_ASTROLOGY"
+yields = { faith = 2 }
+description = "A ring of standing stones aligned with the midsummer sunrise."
+effects = [{ kind = "great_person_points", class = "prophet", amount = 2 }]
+
+[[wonder]]
+id = "BUILDING_HANGING_GARDENS"
+name = "Hanging Gardens"
+cost = 180
+tech = "TECH_IRRIGATION"
+housing = 2
+description = "Terraced gardens watered by hidden pumps."
+effects = [{ kind = "city_percent", yield = "food", percent = 10 }]
+
+[[wonder]]
+id = "BUILDING_PYRAMIDS"
+name = "Pyramids"
+cost = 220
+tech = "TECH_MASONRY"
+yields = { culture = 2 }
+description = "Tombs of the pharaohs, raised by an army of workers."
+effects = [{ kind = "district_production", percent = 15 }]
+
+[[wonder]]
+id = "BUILDING_ETEMENANKI"
+name = "Etemenanki"
+cost = 220
+tech = "TECH_WRITING"
+yields = { science = 2 }
+description = "The great ziggurat of Babylon, a stair to the heavens."
+effects = [{ kind = "district_yield", district = "DISTRICT_CAMPUS", yield = "science", amount = 1 }]
+
+[[wonder]]
+id = "BUILDING_ORACLE"
+name = "Oracle"
+cost = 290
+year = -1400
+yields = { culture = 1, faith = 1 }
+description = "The sanctuary at Delphi, where the Pythia spoke for Apollo."
+effects = [
+  { kind = "great_person_points", class = "writer", amount = 1 },
+  { kind = "great_person_points", class = "prophet", amount = 1 },
+]
+
+[[wonder]]
+id = "BUILDING_GREAT_LIGHTHOUSE"
+name = "Great Lighthouse"
+cost = 290
+tech = "TECH_CELESTIAL_NAVIGATION"
+district = "DISTRICT_HARBOR"
+requires = ["BUILDING_LIGHTHOUSE"]
+yields = { gold = 3 }
+description = "The Pharos of Alexandria, a beacon seen for miles out to sea."
+effects = [
+  { kind = "unit_production", domain = "sea", percent = 25 },
+  { kind = "great_person_points", class = "admiral", amount = 1 },
+]
+
+[[wonder]]
+id = "BUILDING_COLOSSUS"
+name = "Colossus"
+cost = 400
+tech = "TECH_SHIPBUILDING"
+district = "DISTRICT_HARBOR"
+yields = { gold = 3 }
+description = "A bronze titan astride the harbor of Rhodes."
+effects = [{ kind = "trade_capacity", amount = 1 }]
+
+[[wonder]]
+id = "BUILDING_PETRA"
+name = "Petra"
+cost = 400
+tech = "TECH_MATHEMATICS"
+description = "A city carved into rose-red desert cliffs."
+yields = { food = 2, gold = 2 }
+effects = [{ kind = "trade_yield", routes = "international", yield = "gold", amount = 2 }]
+
+[[wonder]]
+id = "BUILDING_TERRACOTTA_ARMY"
+name = "Terracotta Army"
+cost = 400
+tech = "TECH_CONSTRUCTION"
+district = "DISTRICT_ENCAMPMENT"
+description = "Eight thousand clay soldiers guarding an emperor's tomb."
+effects = [
+  { kind = "unit_xp", amount = 10 },
+  { kind = "great_person_points", class = "general", amount = 2 },
+]
+
+[[wonder]]
+id = "BUILDING_JEBEL_BARKAL"
+name = "Jebel Barkal"
+cost = 400
+tech = "TECH_IRON_WORKING"
+yields = { faith = 4 }
+description = "The holy mountain of Napata, crowned with temples."
+effects = [{ kind = "building_yield", building = "BUILDING_SHRINE", yield = "faith", amount = 1 }]
+
+[[wonder]]
+id = "BUILDING_STATUE_OF_ZEUS"
+name = "Statue of Zeus"
+cost = 400
+year = -435
+district = "DISTRICT_ENCAMPMENT"
+yields = { gold = 3 }
+description = "Phidias' ivory and gold Zeus at Olympia."
+effects = [{ kind = "unit_production", class = "anti_cavalry", percent = 50 }]
+
+[[wonder]]
+id = "BUILDING_HALICARNASSUS_MAUSOLEUM"
+name = "Mausoleum at Halicarnassus"
+cost = 400
+year = -350
+district = "DISTRICT_HARBOR"
+description = "The tomb of Mausolus, so grand it named every mausoleum after it."
+effects = [{ kind = "district_yield", district = "DISTRICT_HARBOR", yield = "science", amount = 1 }, { kind = "district_yield", district = "DISTRICT_HARBOR", yield = "faith", amount = 1 }]
+
+[[wonder]]
+id = "BUILDING_APADANA"
+name = "Apadana"
+cost = 400
+year = -500
+description = "The audience hall of Persepolis, where envoys bowed to the King of Kings."
+yields = { culture = 2 }
+effects = [{ kind = "wonder_production", percent = 10 }]
+
+[[wonder]]
+id = "BUILDING_GREAT_LIBRARY"
+name = "Great Library"
+cost = 400
+year = -280
+district = "DISTRICT_CAMPUS"
+requires = ["BUILDING_LIBRARY"]
+yields = { science = 2 }
+description = "Alexandria's collection of every scroll it could copy."
+effects = [
+  { kind = "building_yield", building = "BUILDING_LIBRARY", yield = "science", amount = 1 },
+  { kind = "great_person_points", class = "scientist", amount = 1 },
+]
+
+[[wonder]]
+id = "BUILDING_MAHABODHI_TEMPLE"
+name = "Mahabodhi Temple"
+cost = 400
+year = -250
+district = "DISTRICT_HOLY_SITE"
+requires = ["BUILDING_TEMPLE"]
+yields = { faith = 4 }
+description = "Built where the Buddha found enlightenment under the bodhi tree."
+effects = [{ kind = "great_person_points", class = "prophet", amount = 2 }]
+
+[[wonder]]
+id = "BUILDING_COLOSSEUM"
+name = "Colosseum"
+cost = 400
+year = 80
+district = "DISTRICT_ENTERTAINMENT_COMPLEX"
+yields = { culture = 2 }
+description = "Rome's great amphitheater of gladiators and beasts."
+effects = [{ kind = "amenities", amount = 1 }]
+
+[[wonder]]
+id = "BUILDING_HAGIA_SOPHIA"
+name = "Hagia Sophia"
+cost = 710
+tech = "TECH_EDUCATION"
+district = "DISTRICT_HOLY_SITE"
+yields = { faith = 4 }
+description = "Justinian's church, whose dome seems to float on light."
+effects = [{ kind = "building_yield", building = "BUILDING_TEMPLE", yield = "faith", amount = 1 }]
+
+[[wonder]]
+id = "BUILDING_CHICHEN_ITZA"
+name = "Chichen Itza"
+cost = 710
+year = 600
+description = "The Maya pyramid whose stairs cast a serpent of shadow at the equinox."
+yields = { culture = 2 }
+effects = [{ kind = "building_production", percent = 10 }]
+
+[[wonder]]
+id = "BUILDING_MONT_ST_MICHEL"
+name = "Mont-Saint-Michel"
+cost = 710
+year = 1000
+yields = { faith = 2 }
+description = "An abbey on a tidal island, cut off from the land twice a day."
+effects = [{ kind = "combat_in_territory", amount = 3 }, { kind = "city_yield", yield = "faith", amount = 1 }]
+
+[[wonder]]
+id = "BUILDING_ANGKOR_WAT"
+name = "Angkor Wat"
+cost = 710
+year = 1150
+district = "DISTRICT_AQUEDUCT"
+yields = { faith = 2 }
+description = "A temple-city of moats and towers in the Cambodian forest."
+effects = [{ kind = "housing", amount = 1 }]
+
+[[wonder]]
+id = "BUILDING_HUEY_TEOCALLI"
+name = "Huey Teocalli"
+cost = 710
+tech = "TECH_MILITARY_TACTICS"
+description = "The Great Temple of Tenochtitlan, on an island in Lake Texcoco."
+yields = { faith = 2, food = 2 }
+effects = [{ kind = "amenities", amount = 1 }]
+
+[[wonder]]
+id = "BUILDING_ALHAMBRA"
+name = "Alhambra"
+cost = 710
+tech = "TECH_CASTLES"
+district = "DISTRICT_ENCAMPMENT"
+description = "A red fortress-palace of courtyards and fountains in Granada."
+yields = { culture = 2 }
+effects = [{ kind = "amenities", amount = 1 }, { kind = "great_person_points", class = "general", amount = 2 }]
+
+[[wonder]]
+id = "BUILDING_GREAT_ZIMBABWE"
+name = "Great Zimbabwe"
+cost = 920
+tech = "TECH_BANKING"
+district = "DISTRICT_COMMERCIAL_HUB"
+requires = ["BUILDING_MARKET"]
+yields = { gold = 5 }
+description = "Dry-stone walls of a city that traded gold to the coast."
+effects = [{ kind = "trade_capacity", amount = 1 }, { kind = "trade_yield", yield = "gold", amount = 2 }]
+
+[[wonder]]
+id = "BUILDING_VENETIAN_ARSENAL"
+name = "Venetian Arsenal"
+cost = 920
+tech = "TECH_MASS_PRODUCTION"
+district = "DISTRICT_INDUSTRIAL_ZONE"
+description = "A shipyard that could build a galley in a day."
+effects = [{ kind = "unit_production", domain = "sea", percent = 50 }]
+
+[[wonder]]
+id = "BUILDING_FORBIDDEN_CITY"
+name = "Forbidden City"
+cost = 920
+tech = "TECH_PRINTING"
+yields = { culture = 5 }
+description = "The walled palace of the Ming and Qing emperors."
+effects = [{ kind = "policy_yield", slot = "wildcard", yield = "culture", amount = 1 }]
+
+[[wonder]]
+id = "BUILDING_TORRE_DE_BELEM"
+name = "Torre de Belém"
+cost = 920
+year = 1519
+district = "DISTRICT_HARBOR"
+yields = { gold = 5 }
+description = "The tower that saw Portugal's fleets off to the Indies."
+effects = [{ kind = "trade_yield", routes = "international", yield = "gold", amount = 2 }]
+
+[[wonder]]
+id = "BUILDING_POTALA_PALACE"
+name = "Potala Palace"
+cost = 1060
+tech = "TECH_ASTRONOMY"
+yields = { culture = 2, faith = 3 }
+description = "The Dalai Lama's winter palace, high above Lhasa."
+effects = [{ kind = "city_yield", yield = "faith", amount = 1 }]
+
+[[wonder]]
+id = "BUILDING_HERMITAGE"
+name = "Hermitage"
+cost = 1450
+year = 1764
+district = "DISTRICT_THEATER"
+yields = { culture = 3 }
+description = "Catherine the Great's collection, grown into one of the world's largest museums."
+effects = [{ kind = "great_person_points", class = "artist", amount = 3 }]
+
+[[wonder]]
+id = "BUILDING_BOLSHOI_THEATRE"
+name = "Bolshoi Theatre"
+cost = 1240
+year = 1825
+district = "DISTRICT_THEATER"
+yields = { culture = 2 }
+description = "Moscow's stage for ballet and opera."
+effects = [{ kind = "great_person_points", class = "musician", amount = 2 }, { kind = "great_person_points", class = "writer", amount = 2 }]
+
+[[wonder]]
+id = "BUILDING_RUHR_VALLEY"
+name = "Ruhr Valley"
+cost = 1240
+tech = "TECH_INDUSTRIALIZATION"
+district = "DISTRICT_INDUSTRIAL_ZONE"
+requires = ["BUILDING_FACTORY"]
+description = "Coal pits and steelworks along the Rhine."
+yields = { production = 4 }
+effects = [{ kind = "district_yield", district = "DISTRICT_INDUSTRIAL_ZONE", yield = "production", amount = 2 }]
+
+[[wonder]]
+id = "BUILDING_OXFORD_UNIVERSITY"
+name = "Oxford University"
+cost = 1240
+tech = "TECH_SCIENTIFIC_THEORY"
+district = "DISTRICT_CAMPUS"
+requires = ["BUILDING_UNIVERSITY"]
+yields = { science = 3 }
+description = "The oldest university in the English-speaking world."
+effects = [{ kind = "building_yield", building = "BUILDING_UNIVERSITY", yield = "science", amount = 1 }, { kind = "great_person_points", class = "scientist", amount = 2 }]
+
+[[wonder]]
+id = "BUILDING_BIG_BEN"
+name = "Big Ben"
+cost = 1450
+tech = "TECH_ECONOMICS"
+district = "DISTRICT_COMMERCIAL_HUB"
+requires = ["BUILDING_BANK"]
+yields = { gold = 6 }
+description = "The great bell in the clock tower of Westminster."
+effects = [{ kind = "city_percent", yield = "gold", percent = 10 }]
+
+[[wonder]]
+id = "BUILDING_EIFFEL_TOWER"
+name = "Eiffel Tower"
+cost = 1620
+tech = "TECH_STEEL"
+yields = { culture = 3 }
+description = "An iron lattice over Paris, built for the 1889 World's Fair."
+effects = [{ kind = "amenities", amount = 1 }, { kind = "city_yield", yield = "culture", amount = 1 }]
+
+[[wonder]]
+id = "BUILDING_BROADWAY"
+name = "Broadway"
+cost = 1620
+year = 1900
+district = "DISTRICT_THEATER"
+yields = { culture = 4 }
+description = "The theater district of Manhattan."
+effects = [{ kind = "city_percent", yield = "culture", percent = 10 }]
+
+[[wonder]]
+id = "BUILDING_CRISTO_REDENTOR"
+name = "Cristo Redentor"
+cost = 1620
+year = 1931
+yields = { culture = 4 }
+description = "Christ the Redeemer, arms open above Rio de Janeiro."
+effects = [{ kind = "city_yield", yield = "faith", amount = 2 }]
+
+[[wonder]]
+id = "BUILDING_ESTADIO_DO_MARACANA"
+name = "Maracanã Stadium"
+cost = 1740
+year = 1950
+district = "DISTRICT_ENTERTAINMENT_COMPLEX"
+yields = { culture = 6 }
+description = "Rio's stadium, built for the 1950 World Cup."
+effects = [{ kind = "amenities", amount = 2 }]
+
+[[wonder]]
+id = "BUILDING_SYDNEY_OPERA_HOUSE"
+name = "Sydney Opera House"
+cost = 1850
+year = 1973
+district = "DISTRICT_HARBOR"
+yields = { culture = 8 }
+description = "White sail-shaped shells on Sydney Harbour."
+effects = [{ kind = "great_person_points", class = "musician", amount = 3 }]
+
+[[wonder]]
+id = "BUILDING_BIOSPHERE"
+name = "Biosphère"
+cost = 1740
+tech = "TECH_SYNTHETIC_MATERIALS"
+yields = { science = 8 }
+description = "Buckminster Fuller's geodesic dome in Montreal."
+effects = [{ kind = "city_percent", yield = "science", percent = 5 }]

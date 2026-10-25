@@ -1,5 +1,4 @@
-//! Scenario tests for trade, aircraft, and barbarians. Skipped when Civ VI
-//! isn't installed (content comes from the user's install).
+//! Scenario tests for trade, aircraft, and barbarians.
 
 use wayciv_core::state::{Game, Production};
 use wayciv_core::{Pos, Settings, load_rules, new_game};
@@ -60,9 +59,7 @@ fn gandhi_is_not_in_the_game_and_spies_are_not_buildable() {
     for i in 0..g.rules.content.techs.len() {
         g.players[me].techs[i] = true;
     }
-    for i in 0..g.rules.content.civics.len() {
-        g.players[me].civics[i] = true;
-    }
+    g.turn = g.turn_of_year(2040);
     let settler = g
         .player_units(me)
         .find(|u| g.unit_type(u).found_city)
@@ -70,8 +67,12 @@ fn gandhi_is_not_in_the_game_and_spies_are_not_buildable() {
         .id;
     g.found_city(settler).unwrap();
     let city = g.player_cities(me).next().unwrap().id;
-    let spy = g.rules.idx("UNIT_SPY").unwrap();
-    assert!(!g.can_produce(city, &Production::Unit(spy)));
+    // WayCiv has no espionage: there is no Spy unit to build.
+    assert!(g.rules.idx("UNIT_SPY").is_none());
+    assert!(
+        (0..g.rules.content.units.len()).all(|u| g.rules.content.units[u].id != "UNIT_SPY"
+            || !g.can_produce(city, &Production::Unit(u)))
+    );
 }
 
 #[test]
@@ -81,9 +82,8 @@ fn trade_route_earns_yields_builds_road_and_returns_trader() {
     let (a, b) = land_pair(&g, 6);
     let origin = g.found_city_at(me, a, Some("Origin".into()));
     let destination = g.found_city_at(me, b, Some("Destination".into()));
-    let foreign_trade = g.rules.civic("CIVIC_FOREIGN_TRADE").unwrap();
-    g.players[me].civics[foreign_trade] = true;
-    assert!(g.trade_capacity(me) >= 1, "Foreign Trade grants a route");
+    g.turn = g.turn_of_year(-2500);
+    assert!(g.trade_capacity(me) >= 1, "the Palace holds a route");
     let trader_kind = g.rules.idx("UNIT_TRADER").unwrap();
     assert!(g.can_produce(origin, &Production::Unit(trader_kind)));
     let trader = g.spawn(me, "UNIT_TRADER", a).unwrap();

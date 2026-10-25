@@ -9,7 +9,15 @@ fn main() {
             .take(220)
             .collect::<String>()
     };
-    let era = |e: &str| rules.text(&format!("LOC_{e}_NAME")).replace("LOC_", "");
+    let era = |e: &str| {
+        rules
+            .content
+            .eras
+            .iter()
+            .find(|x| x.id == e)
+            .map(|x| x.name.trim_end_matches(" Era").to_string())
+            .unwrap_or_default()
+    };
     for r in &c.resources {
         let class = r.class.trim_start_matches("RESOURCECLASS_").to_lowercase();
         println!(
@@ -23,12 +31,7 @@ fn main() {
             .as_deref()
             .and_then(|t| rules.tech(t))
             .map(|i| c.techs[i].era.clone())
-            .or_else(|| {
-                u.prereq_civic
-                    .as_deref()
-                    .and_then(|t| rules.civic(t))
-                    .map(|i| c.civics[i].era.clone())
-            })
+            .or_else(|| u.unlock_year.map(|y| rules.era_of_year(y)))
             .unwrap_or_else(|| "ERA_ANCIENT".into());
         let owner = u
             .unique_to
@@ -66,14 +69,6 @@ fn main() {
             era(&t.era)
         );
     }
-    for t in &c.civics {
-        println!(
-            "civic\t{}\tthe civic (social and cultural idea) \"{}\" ({} era) as a symbolic emblem",
-            t.id,
-            t.name,
-            era(&t.era)
-        );
-    }
     for t in wayciv_core::additions::AI_TREE.iter() {
         println!(
             "ai\t{}\tthe artificial intelligence research \"{}\" as a symbolic emblem, glowing cyan",
@@ -84,10 +79,6 @@ fn main() {
         (
             "TREE_TECH",
             "the Technology Tree: a glowing gear and lightbulb emblem, blue tones",
-        ),
-        (
-            "TREE_CIVIC",
-            "the Civics Tree: a laurel wreath around a scroll emblem, purple tones",
         ),
         (
             "TREE_RELIGION",

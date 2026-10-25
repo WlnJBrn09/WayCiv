@@ -1,0 +1,15 @@
+# Space race projects, built in order in a city with a Spaceport. Finishing
+# all of them wins a science victory.
+
+project = [
+  { id = "PROJECT_LAUNCH_EARTH_SATELLITE", name = "Launch Earth Satellite", cost = 900, tech = "TECH_ROCKETRY", district = "DISTRICT_SPACEPORT", space_race = true,
+    description = "Put the first artificial moon in orbit." },
+  { id = "PROJECT_LAUNCH_MOON_LANDING", name = "Moon Landing", cost = 1500, tech = "TECH_SATELLITES", district = "DISTRICT_SPACEPORT", space_race = true,
+    description = "Land a crew on the Moon and bring them home." },
+  { id = "PROJECT_LAUNCH_MARS_REACTOR", name = "Mars Reactor", cost = 1800, tech = "TECH_NUCLEAR_FUSION", district = "DISTRICT_SPACEPORT", space_race = true,
+    description = "Send a fusion reactor to power a Martian base." },
+  { id = "PROJECT_LAUNCH_MARS_HABITATION", name = "Mars Habitat", cost = 1800, tech = "TECH_ROBOTICS", district = "DISTRICT_SPACEPORT", space_race = true,
+    description = "Robots assemble pressurized living quarters on Mars." },
+  { id = "PROJECT_LAUNCH_MARS_HYDROPONICS", name = "Mars Greenhouses", cost = 1800, tech = "TECH_NANOTECHNOLOGY", district = "DISTRICT_SPACEPORT", space_race = true,
+    description = "Grow food for the first colonists." },
+]

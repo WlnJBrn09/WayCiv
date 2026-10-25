@@ -1,16 +1,16 @@
-//! The turn: AI moves, then every player's end-of-turn processing, as in
-//! Civ VI's single-player flow.
+//! The turn: AI moves, then every player's end-of-turn processing, then the
+//! calendar advances (unlocking governments, policies, and other
+//! year-gated content).
 
 use crate::map::{CityId, PlayerId};
 use crate::research::Tree;
 use crate::rules::{FAITH, GOLD, SCIENCE};
 use crate::state::{Game, UnitId};
 
-/// What stops the human from ending the turn (Civ VI's End Turn button).
+/// What stops the human from ending the turn (the End Turn button).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Blocker {
     ChooseResearch,
-    ChooseCivic,
     ChooseProduction(CityId),
     ChoosePantheon,
     ChooseAiResearch,
@@ -73,11 +73,6 @@ impl Game {
         {
             blockers.push(Blocker::ChooseResearch);
         }
-        if p.civic.is_none()
-            && (0..p.civics.len()).any(|i| self.researchable(player, Tree::Civic, i))
-        {
-            blockers.push(Blocker::ChooseCivic);
-        }
         if p.ai_research.is_none()
             && self.compute(player) > 0.0
             && (0..p.ai_techs.len()).any(|i| self.researchable(player, Tree::Ai, i))
@@ -105,7 +100,6 @@ impl Game {
     pub fn blocker_text(&self, blocker: &Blocker) -> String {
         match blocker {
             Blocker::ChooseResearch => "Choose Research".into(),
-            Blocker::ChooseCivic => "Choose Civic".into(),
             Blocker::ChoosePantheon => "Choose Pantheon".into(),
             Blocker::ChooseAiResearch => "Choose AI Research".into(),
             Blocker::ChooseProduction(_) => "Choose Production".into(),
@@ -131,7 +125,9 @@ impl Game {
         }
         self.spread_pressure();
         self.process_loyalty();
+        let before = self.year();
         self.turn += 1;
+        self.process_year_unlocks(before);
         for p in 0..self.players.len() {
             if self.players[p].alive {
                 self.refresh_units(p);
@@ -166,7 +162,6 @@ impl Game {
             return;
         }
         self.advance(player, Tree::Tech, income.yields[SCIENCE]);
-        self.advance(player, Tree::Civic, income.yields[crate::rules::CULTURE]);
         self.process_ai(player);
         let p = &mut self.players[player];
         p.gold += income.net_gold;
@@ -242,7 +237,6 @@ impl Game {
             .filter(|&&b| self.rules.content.buildings[b].wonder)
             .count() as i32;
         let techs = p.techs.iter().filter(|&&t| t).count() as i32;
-        let civics = p.civics.iter().filter(|&&t| t).count() as i32;
         let great_people = self
             .player_units(player)
             .filter(|u| u.great_person.is_some())
@@ -250,9 +244,81 @@ impl Game {
             + p.great_works;
         pop + cities * 5
             + wonders * 15
-            + techs * 2
-            + civics * 2
+            + techs * 3
             + great_people * 5
             + i32::from(p.religion.is_some()) * 10
+    }
+
+    /// Content whose calendar year falls after `before` and by now: new
+    /// governments, policies, and year-gated units, buildings, wonders,
+    /// districts, and improvements. Each major gets a free policy change
+    /// and an envoy when governments or policies unlock.
+    fn process_year_unlocks(&mut self, before: i32) {
+        let now = self.year();
+        if now <= before {
+            return;
+        }
+        let content = &self.rules.content;
+        let new = |y: i32| y > before && y <= now;
+        let governments: Vec<String> = content
+            .governments
+            .iter()
+            .filter(|g| new(g.unlock_year))
+            .map(|g| g.name.clone())
+            .collect();
+        let policies: Vec<String> = content
+            .policies
+            .iter()
+            .filter(|p| new(p.unlock_year))
+            .map(|p| p.name.clone())
+            .collect();
+        let mut other: Vec<String> = Vec::new();
+        let year_of = |y: Option<i32>| y.is_some_and(new);
+        other.extend(
+            content
+                .units
+                .iter()
+                .filter(|u| year_of(u.unlock_year) && u.unique_to.is_none())
+                .map(|u| u.name.clone()),
+        );
+        other.extend(
+            content
+                .buildings
+                .iter()
+                .filter(|b| year_of(b.unlock_year) && b.unique_to.is_none())
+                .map(|b| b.name.clone()),
+        );
+        other.extend(
+            content
+                .districts
+                .iter()
+                .filter(|d| year_of(d.unlock_year) && d.unique_to.is_none())
+                .map(|d| d.name.clone()),
+        );
+        if governments.is_empty() && policies.is_empty() && other.is_empty() {
+            return;
+        }
+        let mut parts = Vec::new();
+        if !governments.is_empty() {
+            parts.push(format!("Government: {}.", governments.join(", ")));
+        }
+        if !policies.is_empty() {
+            parts.push(format!("Policies: {}.", policies.join(", ")));
+        }
+        if !other.is_empty() {
+            parts.push(format!("Now available: {}.", other.join(", ")));
+        }
+        let text = format!("{}: {}", crate::length::year_label(now), parts.join(" "));
+        let policy_news = !governments.is_empty() || !policies.is_empty();
+        for p in 0..self.players.len() {
+            if !self.players[p].alive || !self.players[p].is_major() {
+                continue;
+            }
+            if policy_news {
+                self.players[p].policy_change_free = true;
+                self.players[p].envoys_available += 1;
+            }
+            self.notify(p, text.clone(), None);
+        }
     }
 }

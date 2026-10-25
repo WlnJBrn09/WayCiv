@@ -3,7 +3,7 @@
 //! Env: SIZE=0|1|2, OPPONENTS, CITY_STATES, LENGTH=100|250|500|750|1000|infinite.
 use wayciv_core::{Settings, load_rules, new_game};
 
-fn main() -> civ6_data::Result<()> {
+fn main() -> wayciv_data::Result<()> {
     let args: Vec<u64> = std::env::args()
         .skip(1)
         .filter_map(|a| a.parse().ok())
@@ -84,18 +84,18 @@ fn main() -> civ6_data::Result<()> {
                 let cities: Vec<_> = game.player_cities(p.id).collect();
                 let pop: i32 = cities.iter().map(|c| c.population).sum();
                 let techs = p.techs.iter().filter(|t| **t).count();
-                let civics = p.civics.iter().filter(|t| **t).count();
+                let policies = p.policies.len();
                 let units = game.player_units(p.id).count();
                 let wars = game.real_wars(p.id);
                 println!(
-                    "{:<24} {:<12} alive={} cities={:>2} pop={:>3} techs={:>2} civics={:>2} units={:>3} gold={:>5} wars={} gov={} score={}",
+                    "{:<24} {:<12} alive={} cities={:>2} pop={:>3} techs={:>2} policies={:>2} units={:>3} gold={:>5} wars={} gov={} score={}",
                     p.name,
                     p.civ_name,
                     p.alive,
                     cities.len(),
                     pop,
                     techs,
-                    civics,
+                    policies,
                     units,
                     p.gold,
                     wars,

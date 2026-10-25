@@ -101,7 +101,7 @@ impl Game {
             return 10 + 5 * self.era_of(unit.owner) as i32;
         }
         let bonuses = self.bonuses(unit.owner);
-        s += bonuses.combat + unit.level * 3;
+        s += bonuses.combat_for(ty.promotion_class.as_deref()) + unit.level * 3;
         if self.map.tile(unit.pos).owner == Some(unit.owner) {
             s += bonuses.combat_in_territory;
         }
@@ -151,7 +151,7 @@ impl Game {
                     && u.domain == "DOMAIN_LAND"
                     && u.unique_to.is_none()
             })
-            .filter(|u| p.meets(rules, u.prereq_tech.as_deref(), u.prereq_civic.as_deref()))
+            .filter(|u| p.meets(rules, u.prereq_tech.as_deref()) && self.reached(u.unlock_year))
             .map(|u| u.combat)
             .max()
             .unwrap_or(20);

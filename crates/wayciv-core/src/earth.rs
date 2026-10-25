@@ -237,7 +237,7 @@ fn place_natural_wonders(rules: &Rules, map: &mut Map, proj: &Projection) {
 }
 
 /// Where each leader starts: their historical capital.
-const LEADER_STARTS: [(&str, f64, f64); 36] = [
+const LEADER_STARTS: [(&str, f64, f64); 35] = [
     ("LEADER_REAGAN", 38.9, -77.0),
     ("LEADER_SALADIN", 21.4, 39.8),
     ("LEADER_PEDRO", -22.9, -43.2),
@@ -245,7 +245,6 @@ const LEADER_STARTS: [(&str, f64, f64); 36] = [
     ("LEADER_CLEOPATRA", 30.4, 31.0),
     ("LEADER_VICTORIA", 51.5, -0.1),
     ("LEADER_CATHERINE_DE_MEDICI", 48.9, 2.35),
-    ("LEADER_CATHERINE_DE_MEDICI_ALT", 48.9, 2.35),
     ("LEADER_BARBAROSSA", 50.8, 6.1),
     ("LEADER_GORGO", 37.1, 22.4),
     ("LEADER_PERICLES", 38.0, 23.7),
@@ -276,10 +275,7 @@ const LEADER_STARTS: [(&str, f64, f64); 36] = [
     ("LEADER_LADY_TRIEU", 21.0, 105.8),
 ];
 
-/// City-states at their real cities (keyed by Civ VI's civilization type,
-/// which for a few city-states is an older name: `CIVILIZATION_LISBON` is
-/// Mogadishu, `CIVILIZATION_JAKARTA` is Bandar Brunei, `CIVILIZATION_PALENQUE`
-/// is Mitla).
+/// City-states at their real cities.
 const CITY_STATE_STARTS: [(&str, f64, f64); 42] = [
     ("CIVILIZATION_AMSTERDAM", 52.4, 4.9),
     ("CIVILIZATION_BRUSSELS", 50.85, 4.35),
@@ -288,13 +284,13 @@ const CITY_STATE_STARTS: [(&str, f64, f64); 42] = [
     ("CIVILIZATION_GENEVA", 46.2, 6.15),
     ("CIVILIZATION_HATTUSA", 40.0, 34.6),
     ("CIVILIZATION_HONG_KONG", 22.3, 114.2),
-    ("CIVILIZATION_JAKARTA", 4.9, 114.9),
+    ("CIVILIZATION_BANDAR_BRUNEI", 4.9, 114.9),
     ("CIVILIZATION_JERUSALEM", 31.8, 35.2),
     ("CIVILIZATION_KABUL", 34.5, 69.2),
     ("CIVILIZATION_KANDY", 7.3, 80.6),
     ("CIVILIZATION_KUMASI", 6.7, -1.6),
     ("CIVILIZATION_LA_VENTA", 18.1, -94.0),
-    ("CIVILIZATION_LISBON", 2.0, 45.3),
+    ("CIVILIZATION_MOGADISHU", 2.0, 45.3),
     ("CIVILIZATION_MOHENJO_DARO", 27.3, 68.1),
     ("CIVILIZATION_NAN_MADOL", 6.8, 158.3),
     ("CIVILIZATION_PRESLAV", 43.15, 26.8),
@@ -310,7 +306,7 @@ const CITY_STATE_STARTS: [(&str, f64, f64); 42] = [
     ("CIVILIZATION_ARMAGH", 54.35, -6.65),
     ("CIVILIZATION_GRANADA", 37.2, -3.6),
     ("CIVILIZATION_MUSCAT", 23.6, 58.4),
-    ("CIVILIZATION_PALENQUE", 16.9, -96.4),
+    ("CIVILIZATION_MITLA", 16.9, -96.4),
     ("CIVILIZATION_AYUTTHAYA", 14.35, 100.6),
     ("CIVILIZATION_CHINGUETTI", 20.5, -12.4),
     ("CIVILIZATION_JOHANNESBURG", -26.2, 28.0),
@@ -325,7 +321,7 @@ const CITY_STATE_STARTS: [(&str, f64, f64); 42] = [
     ("CIVILIZATION_VATICAN_CITY", 41.9, 12.45),
 ];
 
-/// The real-world location of a leader or city-state, by its Civ VI id.
+/// The real-world location of a leader or city-state, by its id.
 pub fn home(id: &str) -> Option<(f64, f64)> {
     LEADER_STARTS
         .iter()
@@ -407,7 +403,7 @@ mod tests {
     #[test]
     fn the_americas_are_connected_by_land() {
         let Ok(rules) = crate::load_rules() else {
-            eprintln!("skipped: Civilization VI is not installed");
+            eprintln!("skipped: content failed to load");
             return;
         };
         for size in [MapSize::Small, MapSize::Standard, MapSize::Large] {

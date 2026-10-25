@@ -1,5 +1,5 @@
 use wayciv_core::{Settings, load_rules, new_game};
-fn main() -> civ6_data::Result<()> {
+fn main() -> wayciv_data::Result<()> {
     let rules = load_rules()?;
     let mut game = new_game(
         rules,

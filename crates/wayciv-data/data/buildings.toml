@@ -1,0 +1,101 @@
+# Buildings. `district` is where it goes (City Center when missing a
+# specialty district); `requires` lists buildings needed first; `year` is
+# the calendar year it unlocks when no tech does. Wonders are in
+# wonders.toml; civilization unique buildings in civilizations.toml.
+
+building = [
+  # -------------------------------------------------------- City Center
+  { id = "BUILDING_PALACE", name = "Palace", cost = 1, district = "DISTRICT_CITY_CENTER", yields = { production = 2, gold = 5, science = 2, culture = 1 }, housing = 1, amenities = 1, defense = 50, trade_capacity = 1,
+    description = "Seat of government, built free in the Capital. Holds one trade route." },
+  { id = "BUILDING_MONUMENT", name = "Monument", cost = 60, district = "DISTRICT_CITY_CENTER", yields = { culture = 2 },
+    description = "A carved stone honoring the city's founders." },
+  { id = "BUILDING_GRANARY", name = "Granary", cost = 65, tech = "TECH_POTTERY", district = "DISTRICT_CITY_CENTER", yields = { food = 1 }, housing = 2,
+    description = "Stores grain against lean years." },
+  { id = "BUILDING_WATER_MILL", name = "Water Mill", cost = 80, tech = "TECH_THE_WHEEL", district = "DISTRICT_CITY_CENTER", yields = { food = 1, production = 1 },
+    description = "A wheel on the river grinds grain and drives saws." },
+  { id = "BUILDING_WALLS", name = "Ancient Walls", cost = 80, tech = "TECH_MASONRY", district = "DISTRICT_CITY_CENTER", defense = 50,
+    description = "Stone walls that must be breached before the city falls." },
+  { id = "BUILDING_CASTLE", name = "Medieval Walls", cost = 220, tech = "TECH_CASTLES", district = "DISTRICT_CITY_CENTER", requires = ["BUILDING_WALLS"], defense = 100, housing = 1,
+    description = "Towers and a keep behind the old walls." },
+  { id = "BUILDING_STAR_FORT", name = "Renaissance Walls", cost = 300, tech = "TECH_SIEGE_TACTICS", district = "DISTRICT_CITY_CENTER", requires = ["BUILDING_CASTLE"], defense = 100,
+    description = "Low, angled bastions built to shrug off cannon." },
+  { id = "BUILDING_SEWER", name = "Sewer", cost = 200, tech = "TECH_SANITATION", district = "DISTRICT_CITY_CENTER", housing = 2, maintenance = 2,
+    description = "Underground drains that let a city grow tall." },
+  { id = "BUILDING_SOLAR_FARM", name = "Solar Farm", cost = 260, tech = "TECH_COMPUTERS", yields = { production = 3 }, maintenance = 2,
+    description = "Panels that power a Datacenter in this city for +4 Compute." },
+
+  # ------------------------------------------------------------- Campus
+  { id = "BUILDING_LIBRARY", name = "Library", cost = 90, tech = "TECH_WRITING", district = "DISTRICT_CAMPUS", yields = { science = 2 }, great_people = { scientist = 1 }, maintenance = 1,
+    description = "Scrolls and scribes." },
+  { id = "BUILDING_UNIVERSITY", name = "University", cost = 250, tech = "TECH_EDUCATION", district = "DISTRICT_CAMPUS", requires = ["BUILDING_LIBRARY"], yields = { science = 4 }, housing = 1, great_people = { scientist = 1 }, maintenance = 2,
+    description = "Lecture halls and a faculty of masters." },
+  { id = "BUILDING_RESEARCH_LAB", name = "Research Lab", cost = 580, tech = "TECH_CHEMISTRY", district = "DISTRICT_CAMPUS", requires = ["BUILDING_UNIVERSITY"], yields = { science = 5 }, great_people = { scientist = 1 }, maintenance = 3,
+    description = "Instruments and teams for modern experiments." },
+
+  # --------------------------------------------------------- Holy Site
+  { id = "BUILDING_SHRINE", name = "Shrine", cost = 70, tech = "TECH_ASTROLOGY", district = "DISTRICT_HOLY_SITE", yields = { faith = 2 }, great_people = { prophet = 1 }, maintenance = 1,
+    description = "An altar for the city's gods. Lets the city buy Missionaries." },
+  { id = "BUILDING_TEMPLE", name = "Temple", cost = 120, year = -800, district = "DISTRICT_HOLY_SITE", requires = ["BUILDING_SHRINE"], yields = { faith = 4 }, maintenance = 2,
+    description = "A priesthood and a sanctuary. Lets the city buy Apostles and Inquisitors." },
+  # -------------------------------------------------------- Encampment
+  { id = "BUILDING_BARRACKS", name = "Barracks", cost = 90, tech = "TECH_BRONZE_WORKING", district = "DISTRICT_ENCAMPMENT", yields = { production = 1 }, housing = 1, great_people = { general = 1 }, maintenance = 1,
+    description = "Drill yards for foot soldiers." },
+  { id = "BUILDING_STABLE", name = "Stable", cost = 120, tech = "TECH_HORSEBACK_RIDING", district = "DISTRICT_ENCAMPMENT", yields = { production = 1 }, housing = 1, great_people = { general = 1 }, maintenance = 1,
+    description = "Paddocks for cavalry mounts." },
+  { id = "BUILDING_ARMORY", name = "Armory", cost = 195, tech = "TECH_MILITARY_ENGINEERING", district = "DISTRICT_ENCAMPMENT", requires = ["BUILDING_BARRACKS", "BUILDING_STABLE"], yields = { production = 2 }, great_people = { general = 1 }, maintenance = 2,
+    description = "Workshops for arms and armor." },
+  { id = "BUILDING_MILITARY_ACADEMY", name = "Military Academy", cost = 390, tech = "TECH_MILITARY_SCIENCE", district = "DISTRICT_ENCAMPMENT", requires = ["BUILDING_ARMORY"], yields = { production = 3 }, housing = 1, great_people = { general = 1 }, maintenance = 3,
+    description = "An officers' college." },
+
+  # ---------------------------------------------------- Commercial Hub
+  { id = "BUILDING_MARKET", name = "Market", cost = 120, tech = "TECH_CURRENCY", district = "DISTRICT_COMMERCIAL_HUB", yields = { gold = 3 }, great_people = { merchant = 1 },
+    description = "Stalls and a weighing house." },
+  { id = "BUILDING_BANK", name = "Bank", cost = 290, tech = "TECH_BANKING", district = "DISTRICT_COMMERCIAL_HUB", requires = ["BUILDING_MARKET"], yields = { gold = 5 }, great_people = { merchant = 1 },
+    description = "Vaults, loans, and letters of credit." },
+  { id = "BUILDING_STOCK_EXCHANGE", name = "Stock Exchange", cost = 390, tech = "TECH_ECONOMICS", district = "DISTRICT_COMMERCIAL_HUB", requires = ["BUILDING_BANK"], yields = { gold = 7 }, great_people = { merchant = 1 },
+    description = "Shares in the companies of the world." },
+
+  # ------------------------------------------------------------- Harbor
+  { id = "BUILDING_LIGHTHOUSE", name = "Lighthouse", cost = 120, tech = "TECH_CELESTIAL_NAVIGATION", district = "DISTRICT_HARBOR", yields = { food = 1, gold = 1 }, housing = 1, great_people = { admiral = 1 },
+    description = "A beacon that guides ships to port." },
+  { id = "BUILDING_SHIPYARD", name = "Shipyard", cost = 290, tech = "TECH_MASS_PRODUCTION", district = "DISTRICT_HARBOR", requires = ["BUILDING_LIGHTHOUSE"], yields = { production = 2 }, great_people = { admiral = 1 }, maintenance = 2,
+    description = "Slipways and dry docks." },
+  { id = "BUILDING_SEAPORT", name = "Seaport", cost = 580, tech = "TECH_ELECTRICITY", district = "DISTRICT_HARBOR", requires = ["BUILDING_SHIPYARD"], yields = { food = 2, gold = 2 }, housing = 1, great_people = { admiral = 1 }, maintenance = 2,
+    description = "Cranes and container berths." },
+
+  # ---------------------------------------------------- Theater Square
+  { id = "BUILDING_AMPHITHEATER", name = "Amphitheater", cost = 150, year = -500, district = "DISTRICT_THEATER", yields = { culture = 2 }, great_people = { writer = 1 }, maintenance = 1,
+    description = "Tiered seats for drama and poetry." },
+  { id = "BUILDING_MUSEUM_ART", name = "Art Museum", cost = 290, year = 1450, district = "DISTRICT_THEATER", requires = ["BUILDING_AMPHITHEATER"], yields = { culture = 2 }, great_people = { artist = 1 }, maintenance = 2,
+    description = "Galleries for paintings and sculpture." },
+  { id = "BUILDING_MUSEUM_ARTIFACT", name = "Archaeological Museum", cost = 290, year = 1450, district = "DISTRICT_THEATER", requires = ["BUILDING_AMPHITHEATER"], yields = { culture = 2 }, great_people = { artist = 1 }, maintenance = 2,
+    description = "Halls of excavated artifacts." },
+  { id = "BUILDING_BROADCAST_CENTER", name = "Broadcast Center", cost = 580, tech = "TECH_RADIO", district = "DISTRICT_THEATER", requires = ["BUILDING_MUSEUM_ART", "BUILDING_MUSEUM_ARTIFACT"], yields = { culture = 4 }, great_people = { musician = 1 }, maintenance = 3,
+    description = "Radio and television studios." },
+
+  # --------------------------------------------- Entertainment Complex
+  { id = "BUILDING_ARENA", name = "Arena", cost = 150, year = -300, district = "DISTRICT_ENTERTAINMENT_COMPLEX", amenities = 1, maintenance = 1,
+    description = "Games and contests for the crowd." },
+  { id = "BUILDING_ZOO", name = "Zoo", cost = 445, year = 1820, district = "DISTRICT_ENTERTAINMENT_COMPLEX", requires = ["BUILDING_ARENA"], amenities = 1, maintenance = 2,
+    description = "Animals from every continent." },
+  { id = "BUILDING_STADIUM", name = "Stadium", cost = 660, year = 1900, district = "DISTRICT_ENTERTAINMENT_COMPLEX", requires = ["BUILDING_ZOO"], amenities = 2, maintenance = 3,
+    description = "Professional sports under floodlights." },
+
+  # --------------------------------------------------- Industrial Zone
+  { id = "BUILDING_WORKSHOP", name = "Workshop", cost = 195, tech = "TECH_APPRENTICESHIP", district = "DISTRICT_INDUSTRIAL_ZONE", yields = { production = 2 }, great_people = { engineer = 1 }, maintenance = 1,
+    description = "Craftsmen's benches and tools." },
+  { id = "BUILDING_FACTORY", name = "Factory", cost = 390, tech = "TECH_INDUSTRIALIZATION", district = "DISTRICT_INDUSTRIAL_ZONE", requires = ["BUILDING_WORKSHOP"], yields = { production = 3 }, great_people = { engineer = 1 }, maintenance = 3,
+    description = "Steam-driven assembly." },
+  { id = "BUILDING_POWER_PLANT", name = "Power Plant", cost = 580, tech = "TECH_ELECTRICITY", district = "DISTRICT_INDUSTRIAL_ZONE", requires = ["BUILDING_FACTORY"], yields = { production = 4 }, great_people = { engineer = 1 }, maintenance = 4,
+    description = "Electricity for the whole city." },
+
+  # --------------------------------------------------------- Aerodrome
+  { id = "BUILDING_HANGAR", name = "Hangar", cost = 465, tech = "TECH_FLIGHT", district = "DISTRICT_AERODROME", yields = { production = 2 }, maintenance = 2,
+    description = "Shelter and repair for aircraft." },
+  { id = "BUILDING_AIRPORT", name = "Airport", cost = 600, tech = "TECH_ADVANCED_FLIGHT", district = "DISTRICT_AERODROME", requires = ["BUILDING_HANGAR"], yields = { production = 3 }, maintenance = 3,
+    description = "Runways and terminals." },
+
+  # -------------------------------------------------------- Datacenter
+  { id = "BUILDING_GPU_CLUSTER", name = "GPU Cluster", cost = 420, tech = "TECH_ARTIFICIAL_INTELLIGENCE", district = "DISTRICT_DATACENTER", yields = { science = 2 }, maintenance = 2,
+    description = "+8 Compute. Requires Deep Learning from the AI tree." },
+]

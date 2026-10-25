@@ -7,8 +7,7 @@
 #   ~/.local/share/wayciv/assets/{terrain,units,buildings,resources}/ (map art)
 #   ~/.local/share/applications/wayciv.desktop
 #   ~/.local/share/icons/hicolor/scalable/apps/wayciv.svg
-# WayCiv reads its leaders, units and techs from your Civilization VI install
-# at startup (set CIV6_DIR if it isn't in the default Steam library).
+# Everything WayCiv needs is in this repository; no other game is required.
 # Run it again after pulling changes to update the installed copy.
 # ./install.sh --uninstall removes those files.
 set -euo pipefail

@@ -1,14 +1,17 @@
 # WayCiv
 
-A Civilization VI-style 4X game written in Rust, with egui. WayCiv follows
-Civ VI's turn flow and uses its leaders, civilizations, units, buildings,
-districts, wonders, technologies, civics, governments, policies, beliefs, and
-great people. The rules are WayCiv's own, simpler versions.
+A Civilization-style 4X game written in Rust, with egui. WayCiv follows Civ
+VI's turn flow with history's leaders and empires, and its own content and
+simpler rules. It's standalone: no other game needs to be installed.
 
-WayCiv reads that content from **your installed copy of Civilization VI**
-(Steam, Linux) at startup. Nothing from the game is stored in this repository.
-If the game isn't in the default Steam library, set `CIV6_DIR` to its install
-folder.
+All content (33 civilizations, 35 leaders, about 110 units, 38 wonders, 69
+techs, 10 governments, 94 policies, 176 great people, and more) is WayCiv's own
+data in `crates/wayciv-data/data/*.toml`, compiled into the game. Real leaders,
+nations, and places are kept; every ability, stat, description, agenda, and
+line of dialogue is written for WayCiv. There are **no civics**: governments,
+policies, and other former civic unlocks arrive when the calendar reaches
+their year. `cargo run -p wayciv-core --example catalog` prints the whole
+catalog as Markdown.
 
 ```bash
 cargo run --release -p wayciv
@@ -21,12 +24,12 @@ cargo run --release -p wayciv
    rivals, city-states, and seed.
 2. **Turn 1**: found your capital with the Settler (`B`, or the Found City button).
 3. Each turn, as in Civ VI, the End Turn button shows what's blocking it: "Choose
-   Research", "Choose Civic", "Choose Production", "Unit Needs Orders", "Choose
+   Research", "Choose Production", "Unit Needs Orders", "Choose
    Pantheon". Clicking it takes you to the blocker. `Enter` presses it.
 4. AI civilizations and city-states take their turns. Then cities grow and build,
    and science, culture, faith, and gold accumulate.
 5. Meeting leaders, wars, denouncements, and friendship offers open a leader
-   screen with their portrait and their own lines from Civ VI.
+   screen with their portrait and their own lines.
 6. Win by Science (space projects), Culture (tourism), Domination (all original
    capitals), Religion, or Score at the turn limit.
 
@@ -36,8 +39,8 @@ keys scroll, the mouse wheel zooms. The minimap (bottom right) recenters the vie
 | Key | Action | Key | Action |
 |---|---|---|---|
 | `N` | Notifications | `L` | Leaders and relationships |
-| `S` | Research (tech tree) | `C` | Civics tree |
-| `R` | Religion | `A` | AI tree (once unlocked) |
+| `S` | Research (tech tree) | `A` | AI tree (once unlocked) |
+| `R` | Religion | | |
 | `G` | Government | `P` | Great people |
 | `E` | City-states | `V` | Victory progress |
 | `K` | Map key | `Enter` | Next turn, or the next thing that needs a decision |
@@ -48,7 +51,7 @@ keys scroll, the mouse wheel zooms. The minimap (bottom right) recenters the vie
 Pressing a window's key again closes it. Notifications stay off screen until
 you press `N`; new ones appear briefly as toasts at the right edge.
 
-The layout follows Civ VI on the Nintendo Switch: research and civic trackers
+The layout follows Civ VI on the Nintendo Switch: research (and AI) trackers
 top left, leaders top right, the unit or city panel at the bottom left and
 right, and the big Next Turn button with the minimap at the bottom right.
 The menu buttons at the top right show their hotkeys.
@@ -56,7 +59,7 @@ The menu buttons at the top right show their hotkeys.
 Every menu works the same way. A teal strip under the title says what to do
 next. Choices are cards: click one to pick it, a gold frame marks what you
 have, and dimmed cards can't be picked yet (hover for why). A menu closes once
-its decision is made: picking research, a civic, a pantheon, founding a
+its decision is made: picking research, a pantheon, founding a
 religion, confirming policies, sending your last envoy, or choosing what a
 city builds. Policies are Civ VI-style cards (red military, yellow economic,
 green diplomatic, purple great person) that you click into slots, then
@@ -92,11 +95,14 @@ pick a name, a founder belief and a follower belief.
 - **Combat** uses Civ VI's damage formula and wall rules, which were recovered
   from the game's binary in `~/Projects/civ6-decompile`. Promotions are simplified
   to levels (+3 strength each).
-- **Policies, beliefs, and leader abilities** apply Civ VI's most common effects
-  straight from the game data. Examples: production bonuses for unit classes and
-  eras, city and building yields, and district and building production. Other
-  effects show their description with a "(description only)" tag. Reagan's
-  ability is implemented directly.
+- **Policies, governments, beliefs, leader and civ abilities, and wonders** each
+  list their effects in the data (`wayciv_data::Effect`): city and capital
+  yields, district, building and improvement yields, production bonuses, great
+  person points, housing, amenities, combat strength, trade, and more. Every
+  effect applies, and descriptions are generated from the effects.
+- **Governments and policies unlock by calendar year** instead of civics. When
+  a year brings new ones, everyone gets a free policy change and an envoy. The
+  Government screen shows what unlocks next and on which turn.
 - **Great people** use one simplified effect per class, plus WayCiv's modern
   great people: Elon Musk (minor boosts to AI, rockets, and solar), Gwynne
   Shotwell (a big boost to a space race project), Palmer Luckey (a flight of
@@ -129,11 +135,11 @@ pick a name, a founder belief and a follower belief.
   strike from 3 tiles away.
 - **Buying**: right-click anything in a city's production list to buy it with
   Gold. The current build keeps going.
-- **Trade**: Traders (unlocked by Foreign Trade) start routes from your cities to
+- **Trade**: Traders (from 2500 BC) start routes from your cities to
   cities within 15 tiles. Domestic routes bring Food and Production. International
   routes bring Gold, more for destinations with more districts. Routes last 30 turns,
-  then the Trader comes home. Capacity comes from Civ VI's own modifiers (Foreign
-  Trade, Commercial Hubs, Harbors, Colossus, Merchant Republic...). Each route lays
+  then the Trader comes home. Capacity comes from the Palace, Commercial Hubs,
+  Harbors, and effects (Colossus, Merchant Republic, some policies...). Each route lays
   a road, and roads make any land tile cost one move.
 - **Aircraft** are built at and based on Aerodromes (4 slots). They strike anything
   within their operation range and rebase between Aerodromes. Anti-air units next
@@ -166,7 +172,7 @@ The portraits in `assets/leaders/` are original paintings generated with
 Codex image generation, one per leader. A leader without a portrait shows a
 monogram in their civilization's colors.
 
-The icons in `assets/icons/` (resources, units, techs, civics, AI tree items,
+The icons in `assets/icons/` (resources, units, techs, AI tree items,
 beliefs, and the trees themselves) are generated the same way:
 
 ```bash
@@ -198,12 +204,16 @@ vector drawings.
 Pick a game length on the setup screen: 100, 250, 500, 750, or 1000 turns, or
 Infinite. Shorter games run faster: research, production, growth, border
 growth, great people, and faith costs all scale with the length, so every
-length reaches the late eras near its last turn. 500 turns matches Civ VI's
-standard speed. Infinite games have no turn limit and run at 500-turn speed.
-The calendar stretches to fit.
+length reaches the late eras near its last turn. 500 turns is the standard
+pace. Infinite games have no turn limit and run at 500-turn speed.
+
+The calendar runs from 4000 BC to about 2150 AD on the last turn, stretched to
+fit the length. It follows the typical pace of research (in all-AI games the
+average civilization reaches the Modern era around 1940), so year-gated
+governments and policies arrive alongside the techs of their time.
 
 The base rules (for a 300-turn pace) keep the game moving through all eras:
-- Research costs are 60% of Civ VI's.
+- Techs cost 60% of their listed Science.
 - City centers add +2 Food and +2 Production.
 - Each citizen adds Science and Culture that grows with the era, plus 1 Gold per
   2 citizens.
@@ -213,18 +223,19 @@ The base rules (for a 300-turn pace) keep the game moving through all eras:
 
 | Crate | Purpose |
 | --- | --- |
-| `civ6-data` | Builds Civ VI's gameplay database from the install, the same way the game does. Reads text and colors. |
+| `wayciv-data` | WayCiv's content as TOML (`data/`), its types, effects, and validation. |
 | `wayciv-core` | The game: map generation, cities, units, combat, research, religion, diplomacy, AI, victories. No UI. |
 | `wayciv` | The egui app. |
 
 ```bash
 cargo test                                                  # engine + UI flow tests
 cargo run --release -p wayciv-core --example autoplay -- 300 7   # all-AI game
+cargo run -p wayciv-core --example catalog > WayCiv-Content.md   # content catalog
 ```
 
 ## License
 
-WayCiv's code and assets are under the [MIT License](LICENSE). Civilization VI
-and its content belong to Firaxis Games and 2K; none of it is in this
-repository, and WayCiv needs your own installed copy to run. The Earth map is
+WayCiv's code, content, and assets are under the [MIT License](LICENSE). WayCiv
+is inspired by Civilization VI (Firaxis Games and 2K) but contains none of its
+data, text, or art, and doesn't need it to run. The Earth map is
 derived from NOAA ETOPO1 (public domain) and WorldClim 2.1 climate data.

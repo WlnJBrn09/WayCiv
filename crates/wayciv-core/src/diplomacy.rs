@@ -22,81 +22,32 @@ pub enum DiploEvent {
 }
 
 impl DiploEvent {
+    /// The event's key in a leader's `lines` table.
     fn key(self) -> &'static str {
         match self {
-            DiploEvent::FirstMeet => "FIRST_MEET",
-            DiploEvent::Greeting => "GREETING",
-            DiploEvent::DeclareWarFromAi => "DECLARE_WAR_FROM_AI",
-            DiploEvent::DeclareWarFromHuman => "DECLARE_WAR_FROM_HUMAN",
-            DiploEvent::DenounceFromAi => "DENOUNCE_FROM_AI",
-            DiploEvent::DenounceFromHuman => "DENOUNCE_FROM_HUMAN",
-            DiploEvent::AcceptFriendFromHuman => "ACCEPT_DECLARE_FRIEND_FROM_HUMAN",
-            DiploEvent::RejectFriendFromHuman => "REJECT_DECLARE_FRIEND_FROM_HUMAN",
-            DiploEvent::DeclareFriendFromAi => "DECLARE_FRIEND_FROM_AI",
-            DiploEvent::MakePeaceAccept => "MAKE_PEACE_AI_ACCEPT_DEAL",
-            DiploEvent::MakePeaceRefuse => "MAKE_PEACE_AI_REFUSE_DEAL",
-            DiploEvent::MakePeaceFromAi => "MAKE_PEACE_FROM_AI",
-            DiploEvent::Defeat => "DEFEAT_FROM_HUMAN",
+            DiploEvent::FirstMeet => "first_meet",
+            DiploEvent::Greeting => "greeting",
+            DiploEvent::DeclareWarFromAi => "declare_war",
+            DiploEvent::DeclareWarFromHuman => "attacked",
+            DiploEvent::DenounceFromAi => "denounce",
+            DiploEvent::DenounceFromHuman => "denounced",
+            DiploEvent::AcceptFriendFromHuman => "accept_friend",
+            DiploEvent::RejectFriendFromHuman => "reject_friend",
+            DiploEvent::DeclareFriendFromAi => "friend",
+            DiploEvent::MakePeaceAccept => "peace_accept",
+            DiploEvent::MakePeaceRefuse => "peace_refuse",
+            DiploEvent::MakePeaceFromAi => "peace_offer",
+            DiploEvent::Defeat => "defeat",
         }
-    }
-}
-
-/// Ronald Reagan's lines (WayCiv's own; Civ VI has none for him).
-fn reagan_line(event: DiploEvent) -> &'static str {
-    match event {
-        DiploEvent::FirstMeet => {
-            "Well, hello there. I'm Ronald Reagan, and I lead the United States of America. We believe in freedom, and we believe the best is yet to come."
-        }
-        DiploEvent::Greeting => {
-            "It's morning in America, my friend. What can we do for each other today?"
-        }
-        DiploEvent::DeclareWarFromAi => {
-            "We've tried to keep the peace, but peace comes through strength. You leave us no choice."
-        }
-        DiploEvent::DeclareWarFromHuman => {
-            "So it's come to this. History will remember who chose war."
-        }
-        DiploEvent::DenounceFromAi => {
-            "I'm calling it what it is: your conduct is a threat to free people everywhere."
-        }
-        DiploEvent::DenounceFromHuman => {
-            "Words are cheap. We'll judge you by your deeds, and so will the world."
-        }
-        DiploEvent::AcceptFriendFromHuman => {
-            "Trust, but verify. Still, I'm glad to call you a friend."
-        }
-        DiploEvent::RejectFriendFromHuman => {
-            "Not just yet. Friendship has to be earned, and we're not there."
-        }
-        DiploEvent::DeclareFriendFromAi => {
-            "Free nations ought to stand together. What do you say we make it official?"
-        }
-        DiploEvent::MakePeaceAccept => {
-            "Peace it is. Let's put this behind us and get back to building."
-        }
-        DiploEvent::MakePeaceRefuse => {
-            "Peace? Not on those terms. We'll talk again when you mean it."
-        }
-        DiploEvent::MakePeaceFromAi => {
-            "We've proven our resolve. I'm prepared to sit down and talk peace."
-        }
-        DiploEvent::Defeat => "We gave it everything we had. America will rise again.",
     }
 }
 
 impl Game {
-    /// What a leader says for `event`, from Civ VI's text when available.
+    /// What a leader says for `event`: their own line, or a plain one.
     pub fn dialogue(&self, player: PlayerId, event: DiploEvent) -> String {
         let leader = &self.rules.content.leaders[self.players[player].leader];
-        if leader.id == REAGAN {
-            return reagan_line(event).to_string();
-        }
-        for id in [leader.id.as_str(), leader.id.trim_end_matches("_ALT")] {
-            let key = format!("LOC_DIPLO_{}_{}_ANY", event.key(), id);
-            let text = self.rules.text(&key);
-            if text != key {
-                return text;
-            }
+        if let Some(line) = leader.lines.get(event.key()) {
+            return line.clone();
         }
         match event {
             DiploEvent::Greeting | DiploEvent::FirstMeet => format!(
@@ -108,6 +59,9 @@ impl Game {
             DiploEvent::MakePeaceRefuse => "We are not ready for peace.".into(),
             DiploEvent::AcceptFriendFromHuman => "We accept your friendship.".into(),
             DiploEvent::RejectFriendFromHuman => "We must decline.".into(),
+            DiploEvent::DeclareFriendFromAi => "Shall we be friends?".into(),
+            DiploEvent::MakePeaceFromAi => "Perhaps it is time for peace.".into(),
+            DiploEvent::Defeat => "You have defeated us.".into(),
             _ => "...".into(),
         }
     }

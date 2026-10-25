@@ -1170,7 +1170,7 @@ mod tests {
     #[test]
     fn steps_merge_into_one_walk_and_a_fight_lunges() {
         let Some(mut game) = game() else {
-            eprintln!("skipped: Civilization VI is not installed");
+            eprintln!("skipped: content failed to load");
             return;
         };
         let me = game.human();
@@ -1209,7 +1209,7 @@ mod tests {
     #[test]
     fn a_long_walk_is_capped() {
         let Some(mut game) = game() else {
-            eprintln!("skipped: Civilization VI is not installed");
+            eprintln!("skipped: content failed to load");
             return;
         };
         let me = game.human();

@@ -75,7 +75,7 @@ mod tests {
     #[test]
     fn newest_events_survive_the_cap() {
         let Ok(rules) = crate::load_rules() else {
-            eprintln!("skipped: Civilization VI is not installed");
+            eprintln!("skipped: content failed to load");
             return;
         };
         let mut game = crate::new_game(rules, crate::Settings::default());

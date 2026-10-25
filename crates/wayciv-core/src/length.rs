@@ -1,7 +1,7 @@
 //! Game length: how many turns a game lasts. Shorter games run faster:
 //! research, production, growth, borders, great people, and faith all cost
 //! less, in proportion to the length. The rules were balanced for 300
-//! turns; a 500-turn game costs what Civ VI's standard speed does.
+//! turns; a 500-turn game is the standard pace.
 //! Infinite games never end on turns and run at 500-turn speed.
 
 use crate::state::Game;
@@ -70,6 +70,15 @@ impl GameLength {
     }
 }
 
+/// "3000 BC" or "1066 AD".
+pub fn year_label(year: i32) -> String {
+    if year < 0 {
+        format!("{} BC", -year)
+    } else {
+        format!("{year} AD")
+    }
+}
+
 impl Game {
     /// Cost multiplier for this game's length.
     pub fn speed(&self) -> f32 {
@@ -86,20 +95,26 @@ impl Game {
     }
 
     /// The calendar year of a turn (negative is BC). The calendar runs from
-    /// 4000 BC and is stretched to fit the game's length, so 2000 AD or so
-    /// arrives near the last turn; after that it advances a year a turn.
+    /// 4000 BC to about 2150 AD on the last turn, stretched to fit the
+    /// game's length. It follows the typical pace of research (in all-AI
+    /// games the average civilization reaches the Modern era around 1940),
+    /// so year-gated governments and policies arrive alongside the techs of
+    /// their time. Years pass quickly early on and a year a turn from 1950;
+    /// after the last turn (infinite games) it keeps a year a turn.
     pub fn calendar_year(&self, turn: u32) -> i32 {
         let pace = self.settings.length.pace_turns() as f32;
-        // Civ VI's standard calendar is laid out over 500 turns.
+        // The calendar laid out over 500 turns: (turns, years per turn).
+        // 1000 BC at turn 75, 1325 at 150, 1700 at 200, 1880 at 250, 1950
+        // at 300, 2150 at 500.
+        const STEPS: [(f32, f32); 6] = [
+            (75.0, 40.0),
+            (75.0, 31.0),
+            (50.0, 7.5),
+            (50.0, 3.6),
+            (50.0, 1.4),
+            (200.0, 1.0),
+        ];
         let standard = |t: f32| -> f32 {
-            const STEPS: [(f32, f32); 6] = [
-                (75.0, 40.0),
-                (60.0, 25.0),
-                (60.0, 20.0),
-                (60.0, 10.0),
-                (60.0, 5.0),
-                (60.0, 2.0),
-            ];
             let mut year = -4000.0;
             let mut left = t;
             for (span, per) in STEPS {
@@ -118,6 +133,25 @@ impl Game {
         } else {
             standard(500.0).floor() as i32 + (t - pace) as i32
         }
+    }
+
+    /// The current calendar year.
+    pub fn year(&self) -> i32 {
+        self.calendar_year(self.turn)
+    }
+
+    /// Whether the calendar has reached `year` (true when there is none).
+    pub fn reached(&self, year: Option<i32>) -> bool {
+        year.is_none_or(|y| self.year() >= y)
+    }
+
+    /// The first turn on which the calendar reaches `year`.
+    pub fn turn_of_year(&self, year: i32) -> u32 {
+        let mut turn = 1;
+        while self.calendar_year(turn) < year && turn < 100_000 {
+            turn += 1;
+        }
+        turn
     }
 }
 

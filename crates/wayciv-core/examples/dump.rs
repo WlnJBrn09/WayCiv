@@ -40,7 +40,7 @@ fn main() {
                     u.combat,
                     u.ranged_combat,
                     u.prereq_tech,
-                    u.prereq_civic,
+                    u.unlock_year,
                     u.unique_to,
                     u.cost
                 )
@@ -54,19 +54,11 @@ fn main() {
                 )
             }
         }
-        "civic" => {
-            for t in &c.civics {
-                println!(
-                    "{} [{}] {} {} row{} {:?}",
-                    t.id, t.name, t.era, t.cost, t.tree_row, t.prereqs
-                )
-            }
-        }
         "district" => {
             for d in &c.districts {
                 println!(
                     "{} [{}] {:?} {:?} cost{} uniq{:?}",
-                    d.id, d.name, d.prereq_tech, d.prereq_civic, d.cost, d.unique_to
+                    d.id, d.name, d.prereq_tech, d.unlock_year, d.cost, d.unique_to
                 )
             }
         }
@@ -108,7 +100,7 @@ fn main() {
             for b in &c.buildings {
                 println!(
                     "{} [{}] {:?} {:?} {:?} w{}",
-                    b.id, b.name, b.prereq_tech, b.prereq_civic, b.prereq_district, b.wonder
+                    b.id, b.name, b.prereq_tech, b.unlock_year, b.prereq_district, b.wonder
                 )
             }
         }

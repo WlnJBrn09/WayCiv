@@ -48,17 +48,13 @@ pub struct Player {
     pub tech_progress: Vec<i32>,
     pub tech_boosted: Vec<bool>,
     pub research: Option<usize>,
-    pub civics: Vec<bool>,
-    pub civic_progress: Vec<i32>,
-    pub civic_boosted: Vec<bool>,
-    pub civic: Option<usize>,
     /// The AI tree (see `additions`): known items, progress, current pick.
     pub ai_techs: Vec<bool>,
     pub ai_progress: Vec<i32>,
     pub ai_research: Option<usize>,
     pub government: Option<usize>,
     pub policies: Vec<usize>,
-    /// Policies may be changed for free (after completing a civic).
+    /// Policies may be changed for free (after new ones unlock).
     pub policy_change_free: bool,
     pub pantheon: Option<usize>,
     pub religion: Option<usize>,
@@ -105,14 +101,10 @@ impl Player {
         rules.tech(id).is_some_and(|i| self.techs[i])
     }
 
-    pub fn has_civic(&self, rules: &Rules, id: &str) -> bool {
-        rules.civic(id).is_some_and(|i| self.civics[i])
-    }
-
-    /// Whether a tech or civic prerequisite (either may be absent) is met.
-    pub fn meets(&self, rules: &Rules, tech: Option<&str>, civic: Option<&str>) -> bool {
+    /// Whether a tech prerequisite (if any) is known. Calendar-year
+    /// unlocks are checked with `Game::reached`.
+    pub fn meets(&self, rules: &Rules, tech: Option<&str>) -> bool {
         tech.is_none_or(|t| self.has_tech(rules, t))
-            && civic.is_none_or(|c| self.has_civic(rules, c))
     }
 }
 
@@ -367,11 +359,6 @@ impl Game {
         for (i, tech) in content.techs.iter().enumerate() {
             if p.techs[i] {
                 era = era.max(self.rules.era_index(&tech.era));
-            }
-        }
-        for (i, civic) in content.civics.iter().enumerate() {
-            if p.civics[i] {
-                era = era.max(self.rules.era_index(&civic.era));
             }
         }
         era

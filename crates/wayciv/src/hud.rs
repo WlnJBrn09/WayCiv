@@ -271,7 +271,6 @@ impl Session {
         let me = self.me();
         match self.game.blockers(me).first().cloned() {
             Some(Blocker::ChooseResearch) => self.windows.open(Panel::Tech),
-            Some(Blocker::ChooseCivic) => self.windows.open(Panel::Civic),
             Some(Blocker::ChoosePantheon) => self.windows.open(Panel::Religion),
             Some(Blocker::ChooseAiResearch) => self.windows.open(Panel::Ai),
             Some(Blocker::ChooseProduction(city)) => {
@@ -334,7 +333,7 @@ pub fn tile_tooltip(s: &Session, pos: Pos) -> String {
     }
     if let Some(r) = tile.resource {
         let res = &content.resources[r];
-        if game.players[me].meets(&game.rules, res.prereq_tech.as_deref(), None) {
+        if game.players[me].meets(&game.rules, res.prereq_tech.as_deref()) {
             let class = res
                 .class
                 .trim_start_matches("RESOURCECLASS_")
@@ -671,13 +670,11 @@ impl Session {
         let income = self.game.income(me);
         let rate = match tree {
             Tree::Tech => income.yields[3],
-            Tree::Civic => income.yields[4],
             Tree::Ai => self.game.compute(me),
         };
         if rate <= 0.0 {
             return match tree {
                 Tree::Tech => "Needs Science",
-                Tree::Civic => "Needs Culture",
                 Tree::Ai => "Needs Compute",
             }
             .into();
@@ -711,7 +708,7 @@ mod tests {
     #[test]
     fn opening_turns_follow_civ_flow() {
         let Some(mut s) = session() else {
-            eprintln!("skipped: Civilization VI is not installed");
+            eprintln!("skipped: content failed to load");
             return;
         };
         let me = s.me();
@@ -721,7 +718,7 @@ mod tests {
         s.game.perform(settler, &UnitAction::FoundCity).unwrap();
         let city = s.game.player_cities(me).next().expect("capital founded").id;
 
-        // End Turn first asks for research, then civics, then production.
+        // End Turn first asks for research, then production.
         let blockers = s.game.blockers(me);
         assert!(blockers.contains(&Blocker::ChooseResearch));
         assert!(blockers.contains(&Blocker::ChooseProduction(city)));
@@ -734,10 +731,6 @@ mod tests {
             .find(|&i| s.game.researchable(me, Tree::Tech, i))
             .unwrap();
         s.game.set_research(me, Tree::Tech, tech).unwrap();
-        let civic = (0..s.game.rules.content.civics.len())
-            .find(|&i| s.game.researchable(me, Tree::Civic, i))
-            .unwrap();
-        s.game.set_research(me, Tree::Civic, civic).unwrap();
 
         // Clicking the city tile selects it; choose a Warrior.
         let pos = s.game.cities[&city].pos;

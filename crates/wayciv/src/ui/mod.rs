@@ -5,7 +5,7 @@
 //! * `theme`      plates, rings, round buttons and other shared widgets
 //! * `glyph`      vector symbols
 //! * `topbar`     yields, population, turn, year, era and the menu buttons
-//! * `trackers`   Research, Civic and AI circular trackers
+//! * `trackers`   Research and AI circular trackers
 //! * `leaders`    the leader ribbon and the Leaders panel (L)
 //! * `notify`     the Notifications panel (N) and transient toasts
 //! * `minimap`    the minimap

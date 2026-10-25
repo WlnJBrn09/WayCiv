@@ -1,0 +1,850 @@
+# Leaders. Each has an ability (`traits`), an agenda that colors how the AI
+# feels about others, banner colors, and lines for diplomacy events:
+# first_meet, greeting, declare_war (they declare on you), attacked (you
+# declare on them), denounce, denounced, friend (they offer friendship),
+# accept_friend, reject_friend, peace_accept, peace_refuse, peace_offer,
+# defeat. Missing lines fall back to plain ones.
+
+[[leader]]
+id = "LEADER_REAGAN"
+name = "Ronald Reagan"
+civilization = "CIVILIZATION_AMERICA"
+capital = "Washington"
+primary_color = [1, 42, 108]
+secondary_color = [249, 249, 249]
+agenda = { name = "Cold Warrior", description = "Likes civilizations running Democracy. Dislikes civilizations running Communism or Fascism." }
+traits = [{ id = "TRAIT_LEADER_PEACE_THROUGH_STRENGTH", name = "Peace Through Strength", description = "Defense buildup, Reaganomics, and the Great Communicator. Declaring friendship with a civilization grants an envoy and 50 Gold.", effects = [
+  { kind = "unit_production", military = true, percent = 15 },
+  { kind = "combat_in_territory", amount = 5 },
+  { kind = "policy_yield", slot = "economic", yield = "gold", amount = 1 },
+  { kind = "district_yield", district = "DISTRICT_COMMERCIAL_HUB", yield = "production", amount = 2 },
+  { kind = "city_yield", yield = "culture", amount = 2, capital = true },
+] }]
+[leader.lines]
+first_meet = "Well, hello there. I'm Ronald Reagan, and I lead the United States of America. We believe in freedom, and we believe the best is yet to come."
+greeting = "It's morning in America, my friend. What can we do for each other today?"
+declare_war = "We've tried to keep the peace, but peace comes through strength. You leave us no choice."
+attacked = "So it's come to this. History will remember who chose war."
+denounce = "I'm calling it what it is: your conduct is a threat to free people everywhere."
+denounced = "Words are cheap. We'll judge you by your deeds, and so will the world."
+accept_friend = "Trust, but verify. Still, I'm glad to call you a friend."
+reject_friend = "Not just yet. Friendship has to be earned, and we're not there."
+friend = "Free nations ought to stand together. What do you say we make it official?"
+peace_accept = "Peace it is. Let's put this behind us and get back to building."
+peace_refuse = "Peace? Not on those terms. We'll talk again when you mean it."
+peace_offer = "We've proven our resolve. I'm prepared to sit down and talk peace."
+defeat = "We gave it everything we had. America will rise again."
+
+[[leader]]
+id = "LEADER_SALADIN"
+name = "Saladin"
+civilization = "CIVILIZATION_ARABIA"
+capital = "Cairo"
+primary_color = [21, 108, 48]
+secondary_color = [240, 210, 40]
+agenda = { name = "Chivalrous Sultan", description = "Respects rulers who share his faith and keep their word. Scorns those who break treaties." }
+traits = [{ id = "TRAIT_LEADER_SALADIN", name = "Sultan of Egypt and Syria", description = "A generous ruler who funds mosques and colleges.", effects = [
+  { kind = "district_yield", district = "DISTRICT_HOLY_SITE", yield = "science", amount = 1 },
+  { kind = "district_yield", district = "DISTRICT_HOLY_SITE", yield = "culture", amount = 1 },
+  { kind = "city_percent", yield = "faith", percent = 10 },
+] }]
+[leader.lines]
+first_meet = "Peace be upon you, traveler. I am Salah ad-Din Yusuf, Sultan of Egypt and Syria."
+greeting = "You are welcome in my tent. Speak, and be honest."
+declare_war = "You have given me no choice. Let God judge between us on the field."
+attacked = "You strike at me? Then I will answer, and without mercy."
+denounce = "Your treachery is known to all the faithful."
+friend = "An honest friend is worth more than a hundred fortresses. Shall we be friends?"
+peace_accept = "Even enemies may share bread. I accept."
+defeat = "It is as God wills."
+
+[[leader]]
+id = "LEADER_PEDRO"
+name = "Pedro II"
+civilization = "CIVILIZATION_BRAZIL"
+capital = "Rio de Janeiro"
+primary_color = [40, 150, 50]
+secondary_color = [250, 210, 20]
+agenda = { name = "Philosopher King", description = "Admires civilizations with many great people. Dislikes those who neglect learning and the arts." }
+traits = [{ id = "TRAIT_LEADER_PEDRO", name = "The Scholar Emperor", description = "He corresponded with Pasteur and Darwin and sat in on lectures.", effects = [
+  { kind = "great_person_points", class = "scientist", amount = 1 },
+  { kind = "great_person_points", class = "writer", amount = 1 },
+  { kind = "great_person_points", class = "artist", amount = 1 },
+  { kind = "great_person_points", class = "musician", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "Good day! I am Dom Pedro, Emperor of Brazil. Tell me, what are your people reading these days?"
+greeting = "Ah, my friend. Have you any news from your academies?"
+declare_war = "I take no pleasure in this. But Brazil will defend itself."
+attacked = "You choose the sword over reason. A poor choice."
+denounce = "A ruler who scorns knowledge is no ruler of mine to admire."
+friend = "Let us exchange scholars and books, and call ourselves friends."
+peace_accept = "Gladly. There is so much more to learn than to fight."
+defeat = "Brazil will remember its emperor kindly, I hope."
+
+[[leader]]
+id = "LEADER_QIN"
+name = "Qin Shi Huang"
+civilization = "CIVILIZATION_CHINA"
+capital = "Xi'an"
+primary_color = [21, 108, 48]
+secondary_color = [240, 230, 200]
+agenda = { name = "Builder of Walls", description = "Respects those with great wonders. Holds in contempt those with few." }
+traits = [{ id = "TRAIT_LEADER_QIN", name = "First Emperor", description = "One script, one coinage, one measure, one empire.", effects = [
+  { kind = "wonder_production", percent = 15 },
+  { kind = "unit_production", unit = "UNIT_BUILDER", percent = 30 },
+] }]
+[leader.lines]
+first_meet = "You stand before the First Emperor of all under heaven. Kneel, or at least bow."
+greeting = "You may speak. Briefly."
+declare_war = "Your lands will be measured, mapped, and made part of my empire."
+attacked = "Fool. My armies are beyond counting."
+denounce = "Your petty kingdom builds nothing worth remembering."
+friend = "Even the First Emperor has use for a friend. Accept, and prosper."
+peace_accept = "Peace, then. My builders have better things to do."
+defeat = "My tomb will outlast your empire."
+
+[[leader]]
+id = "LEADER_KUBLAI_KHAN_CHINA"
+name = "Kublai Khan"
+civilization = "CIVILIZATION_CHINA"
+capital = "Beijing"
+primary_color = [234, 225, 157]
+secondary_color = [120, 0, 1]
+agenda = { name = "Silk and Steel", description = "Likes civilizations that trade with him. Dislikes those who close their borders to trade." }
+traits = [{ id = "TRAIT_LEADER_KUBLAI", name = "Great Khan of the Yuan", description = "Paper money and the post road stitched an empire together.", effects = [
+  { kind = "trade_capacity", amount = 1 },
+  { kind = "trade_yield", routes = "international", yield = "science", amount = 1 },
+  { kind = "trade_yield", routes = "international", yield = "culture", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "I am Kublai, Khan of Khans and Emperor of the Yuan. My roads reach from the sea to the steppe."
+greeting = "Merchants say good things of you. Is it true?"
+declare_war = "The horde rides again. You should have traded with me."
+attacked = "You dare? My grandfather conquered half the world."
+denounce = "Your roads are empty and your markets closed. Shameful."
+friend = "Let our caravans cross freely. We shall both grow rich."
+peace_accept = "Good. War is bad for business."
+defeat = "The Great Khan falls. Remember Xanadu."
+
+[[leader]]
+id = "LEADER_VICTORIA"
+name = "Victoria"
+civilization = "CIVILIZATION_ENGLAND"
+capital = "London"
+primary_color = [202, 20, 21]
+secondary_color = [249, 249, 249]
+agenda = { name = "Empire of the Seas", description = "Admires civilizations on many coasts. Dislikes those who crowd her colonies." }
+traits = [{ id = "TRAIT_LEADER_VICTORIA", name = "Queen and Empress", description = "An empire on which the sun never set.", effects = [
+  { kind = "unit_production", domain = "sea", percent = 20 },
+  { kind = "unit_production", unit = "UNIT_SETTLER", percent = 15 },
+  { kind = "combat", amount = 3, class = "melee" },
+] }]
+[leader.lines]
+first_meet = "We are Victoria, by the grace of God Queen of the United Kingdom and Empress of India."
+greeting = "We trust you are keeping well."
+declare_war = "We are not amused. The fleet will see to you."
+attacked = "You will regret this impertinence."
+denounce = "Your conduct is beneath a civilized nation."
+friend = "A treaty of friendship would suit us both, we think."
+peace_accept = "Very well. Let it be recorded that the Crown was gracious."
+defeat = "We bow to history, not to you."
+
+[[unit]]
+id = "UNIT_ENGLISH_REDCOAT"
+name = "Redcoat"
+unique = "LEADER_VICTORIA"
+replaces = "UNIT_LINE_INFANTRY"
+cost = 360
+combat = 70
+class = "melee"
+tech = "TECH_MILITARY_SCIENCE"
+resource = "RESOURCE_NITER"
+maintenance = 5
+description = "The scarlet-coated regulars of the British Army."
+
+[[leader]]
+id = "LEADER_CLEOPATRA"
+name = "Cleopatra"
+civilization = "CIVILIZATION_EGYPT"
+capital = "Alexandria"
+primary_color = [1, 79, 81]
+secondary_color = [234, 225, 157]
+agenda = { name = "Pharaoh's Favor", description = "Courts the strongest military powers. Has no patience for the weak." }
+traits = [{ id = "TRAIT_LEADER_CLEOPATRA", name = "Last of the Ptolemies", description = "She held Egypt together with charm, wealth, and Rome's generals.", effects = [
+  { kind = "trade_yield", routes = "international", yield = "gold", amount = 3 },
+  { kind = "trade_yield", routes = "domestic", yield = "food", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "I am Cleopatra, Pharaoh of the Two Lands. Many have sought my favor. Few deserve it."
+greeting = "You return. How interesting."
+declare_war = "Weakness invites conquest. You are weak."
+attacked = "You overestimate yourself. Rome learned that lesson."
+denounce = "You bore me, and you shame yourself."
+friend = "A strong friend on the Nile is a gift. Will you accept it?"
+peace_accept = "You may have peace. For now."
+defeat = "Even Egypt's queen must bow to fate."
+
+[[leader]]
+id = "LEADER_CATHERINE_DE_MEDICI"
+name = "Catherine de' Medici"
+civilization = "CIVILIZATION_FRANCE"
+capital = "Paris"
+primary_color = [0, 79, 206]
+secondary_color = [234, 225, 157]
+agenda = { name = "Courtly Intrigue", description = "Likes those who host splendid wonders and festivals. Suspects those who keep secrets from her." }
+traits = [{ id = "TRAIT_LEADER_CATHERINE", name = "Queen Mother", description = "She governed France through three sons and a court of spies and dancers.", effects = [
+  { kind = "district_yield", district = "DISTRICT_THEATER", yield = "culture", amount = 2 },
+  { kind = "amenities", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "Welcome to the court of France. I am Catherine. Do enjoy the music; everyone else does."
+greeting = "Such a pleasure. What news do you bring me?"
+declare_war = "You were warned, in the politest possible way."
+attacked = "How crude. France will answer in kind."
+denounce = "The whole court is laughing at you."
+friend = "Come, dance with France. We will be the envy of the world."
+peace_accept = "Peace, then, and a ball to celebrate it."
+defeat = "Pity. I had such plans."
+
+[[leader]]
+id = "LEADER_BARBAROSSA"
+name = "Frederick Barbarossa"
+civilization = "CIVILIZATION_GERMANY"
+capital = "Aachen"
+primary_color = [174, 174, 174]
+secondary_color = [24, 24, 24]
+agenda = { name = "Imperial Crown", description = "Dislikes civilizations that befriend city-states he wants. Respects strong armies." }
+traits = [{ id = "TRAIT_LEADER_BARBAROSSA", name = "Holy Roman Emperor", description = "He crossed the Alps again and again to defend his crown.", effects = [
+  { kind = "combat", amount = 4 },
+  { kind = "unit_production", class = "heavy_cavalry", percent = 25 },
+] }]
+[leader.lines]
+first_meet = "I am Frederick, called Red Beard, Emperor of the Romans and King of the Germans."
+greeting = "Greetings. The Empire is listening."
+declare_war = "My knights are already in the saddle."
+attacked = "You wake the sleeping emperor. Unwise."
+denounce = "You have no honor."
+friend = "An alliance would serve us both. Do you agree?"
+peace_accept = "Peace. The Empire has other battles."
+defeat = "I will sleep beneath the mountain until I am needed."
+
+[[leader]]
+id = "LEADER_GORGO"
+name = "Gorgo"
+civilization = "CIVILIZATION_GREECE"
+capital = "Sparta"
+primary_color = [120, 0, 1]
+secondary_color = [116, 163, 243]
+agenda = { name = "Spartan Discipline", description = "Respects civilizations that fight bravely. Despises those who make peace too readily." }
+traits = [{ id = "TRAIT_LEADER_GORGO", name = "Queen of Sparta", description = "Only Spartan women give birth to men.", effects = [
+  { kind = "combat", amount = 3, class = "anti_cavalry" },
+  { kind = "combat", amount = 3, class = "melee" },
+  { kind = "great_person_points", class = "general", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "I am Gorgo of Sparta. We speak plainly here."
+greeting = "Say what you came to say."
+declare_war = "Come back with your shield, or on it."
+attacked = "Good. Sparta was getting restless."
+denounce = "Coward."
+friend = "You have fought well. Sparta will stand beside you."
+peace_accept = "Fine. But keep your spears sharp."
+defeat = "Tell them in Sparta that we fell obeying our laws."
+
+[[leader]]
+id = "LEADER_PERICLES"
+name = "Pericles"
+civilization = "CIVILIZATION_GREECE"
+capital = "Athens"
+primary_color = [116, 163, 243]
+secondary_color = [249, 249, 249]
+agenda = { name = "Golden Age", description = "Likes civilizations with high Culture. Distrusts those who send envoys to his city-states." }
+traits = [{ id = "TRAIT_LEADER_PERICLES", name = "First Citizen", description = "He rebuilt the Acropolis and made Athens the school of Hellas.", effects = [
+  { kind = "city_percent", yield = "culture", percent = 10 },
+  { kind = "wonder_production", percent = 10 },
+] }]
+[leader.lines]
+first_meet = "Greetings. I am Pericles of Athens, the school of all Greece."
+greeting = "Have you seen the new temple on the Acropolis? Magnificent, isn't it?"
+declare_war = "Athens fights for its ideals. Prepare yourself."
+attacked = "Then the assembly votes for war."
+denounce = "You are a barbarian, in thought and deed."
+friend = "Let us make a league of friendship, as free peoples should."
+peace_accept = "Wise. Let us return to building."
+defeat = "Our monuments will speak for us."
+
+[[leader]]
+id = "LEADER_HOJO"
+name = "Hōjō Tokimune"
+civilization = "CIVILIZATION_JAPAN"
+capital = "Kyoto"
+primary_color = [249, 249, 249]
+secondary_color = [180, 0, 20]
+agenda = { name = "Way of the Warrior", description = "Respects civilizations with strong armies and high faith. Looks down on the weak." }
+traits = [{ id = "TRAIT_LEADER_HOJO", name = "Regent of the Shogunate", description = "He turned back two Mongol invasions; storms did the rest.", effects = [
+  { kind = "combat_in_territory", amount = 5 },
+  { kind = "district_yield", district = "DISTRICT_HOLY_SITE", yield = "faith", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "I am Hōjō Tokimune, regent of the shogunate. The gods watch over these islands."
+greeting = "You are welcome, if you come in peace."
+declare_war = "The wind and the sword are with us."
+attacked = "Even the Mongols could not take Japan."
+denounce = "You have no honor and no discipline."
+friend = "You have shown yourself worthy. Let us be friends."
+peace_accept = "Peace. Let the storm pass."
+defeat = "The cherry blossom falls, as all things must."
+
+[[leader]]
+id = "LEADER_MVEMBA"
+name = "Mvemba a Nzinga"
+civilization = "CIVILIZATION_KONGO"
+capital = "Mbanza Kongo"
+primary_color = [247, 216, 1]
+secondary_color = [202, 20, 21]
+agenda = { name = "Seeker of Learning", description = "Likes civilizations that share their faith and learning. Dislikes those who threaten Kongo's trade." }
+traits = [{ id = "TRAIT_LEADER_MVEMBA", name = "Afonso of Kongo", description = "A king who wrote letters to Lisbon and Rome demanding respect.", effects = [
+  { kind = "great_person_points", class = "writer", amount = 1 },
+  { kind = "great_person_points", class = "merchant", amount = 1 },
+  { kind = "city_yield", yield = "faith", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "I am Mvemba a Nzinga, Manikongo of the Kingdom of Kongo. You may call me Afonso."
+greeting = "Welcome. What do you bring to Mbanza Kongo?"
+declare_war = "You leave me no choice but to defend my people."
+attacked = "Kongo will not be taken."
+denounce = "You treat others as goods to be sold. I will not stand for it."
+friend = "Let us trade in knowledge and craft, as equals."
+peace_accept = "Peace is good for every people."
+defeat = "Kongo will remember."
+
+[[leader]]
+id = "LEADER_HARDRADA"
+name = "Harald Hardrada"
+civilization = "CIVILIZATION_NORWAY"
+capital = "Nidaros"
+primary_color = [1, 42, 108]
+secondary_color = [202, 20, 21]
+agenda = { name = "Last of the Vikings", description = "Respects strong navies. Disdains civilizations with weak fleets." }
+traits = [{ id = "TRAIT_LEADER_HARDRADA", name = "Thunder of the North", description = "Varangian guard, king, and raider of every coast.", effects = [
+  { kind = "combat", amount = 4, class = "naval_melee" },
+  { kind = "combat", amount = 2, class = "melee" },
+] }]
+[leader.lines]
+first_meet = "I am Harald, called Hardrada. I have fought from Constantinople to the North Sea."
+greeting = "Ha! You again. Got anything worth plundering?"
+declare_war = "The longships are sailing. Lock your doors."
+attacked = "Finally, a fight!"
+denounce = "You fight like a farmer."
+friend = "You are a worthy warrior. Drink with me and be my friend."
+peace_accept = "Peace! For now. The sea is wide."
+defeat = "A good death. Valhalla awaits."
+
+[[unit]]
+id = "UNIT_NORWEGIAN_LONGSHIP"
+name = "Longship"
+unique = "LEADER_HARDRADA"
+replaces = "UNIT_GALLEY"
+cost = 60
+moves = 4
+combat = 35
+domain = "sea"
+class = "naval_melee"
+tech = "TECH_SAILING"
+maintenance = 1
+description = "A shallow-draft raider that rows up rivers."
+
+[[leader]]
+id = "LEADER_TRAJAN"
+name = "Trajan"
+civilization = "CIVILIZATION_ROME"
+capital = "Rome"
+primary_color = [109, 0, 205]
+secondary_color = [247, 216, 1]
+agenda = { name = "Best of Princes", description = "Admires large empires. Dislikes civilizations with few cities." }
+traits = [{ id = "TRAIT_LEADER_TRAJAN", name = "Optimus Princeps", description = "Under him the empire reached its greatest extent.", effects = [
+  { kind = "city_yield", yield = "culture", amount = 1 },
+  { kind = "district_production", percent = 10 },
+] }]
+[leader.lines]
+first_meet = "Hail. I am Trajan, Emperor of Rome. The Senate sends its greetings, and so do my legions."
+greeting = "Ave. What brings you to Rome?"
+declare_war = "Rome expands. You are in the way."
+attacked = "You have made an enemy of Rome. Few survive that."
+denounce = "You are a small ruler of a small land."
+friend = "Rome has room for friends. Will you be one?"
+peace_accept = "The gates of Janus may close. Peace."
+defeat = "Rome was not built in a day, nor will it fall in one."
+
+[[leader]]
+id = "LEADER_PETER_GREAT"
+name = "Peter the Great"
+civilization = "CIVILIZATION_RUSSIA"
+capital = "St. Petersburg"
+primary_color = [247, 216, 1]
+secondary_color = [24, 24, 24]
+agenda = { name = "Window to the West", description = "Likes civilizations ahead of him in science and culture. Dislikes those behind." }
+traits = [{ id = "TRAIT_LEADER_PETER", name = "The Grand Embassy", description = "He worked incognito in Dutch shipyards to learn how to build a navy.", effects = [
+  { kind = "trade_yield", routes = "international", yield = "science", amount = 2 },
+  { kind = "trade_yield", routes = "international", yield = "culture", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "I am Peter, Tsar of all the Russias. Show me your shipyards and your schools!"
+greeting = "Ah! What have you invented lately?"
+declare_war = "Russia will take what it cannot learn."
+attacked = "You will freeze in the snows of Russia."
+denounce = "You are backward and proud of it. Pathetic."
+friend = "Teach me your ways and I will be your friend."
+peace_accept = "Peace. Back to work!"
+defeat = "My city on the Neva will remember me."
+
+[[leader]]
+id = "LEADER_TOMYRIS"
+name = "Tomyris"
+civilization = "CIVILIZATION_SCYTHIA"
+capital = "Pokrovka"
+primary_color = [255, 178, 60]
+secondary_color = [120, 0, 1]
+agenda = { name = "Blood Oath", description = "Respects those who keep their word. Hates those who attack their friends." }
+traits = [{ id = "TRAIT_LEADER_TOMYRIS", name = "Queen of the Massagetae", description = "She defeated Cyrus the Great in battle.", effects = [
+  { kind = "combat", amount = 3, class = "light_cavalry" },
+  { kind = "combat", amount = 3, class = "ranged" },
+  { kind = "unit_xp", amount = 5 },
+] }]
+[leader.lines]
+first_meet = "I am Tomyris, queen of the horse peoples. Cyrus tried to trick me. Ask him how that went."
+greeting = "Speak quickly. The horses are restless."
+declare_war = "We ride."
+attacked = "You will drink your fill of blood."
+denounce = "Liar. Snake."
+friend = "You keep your word. Ride with me."
+peace_accept = "Peace. Do not betray it."
+defeat = "The steppe will swallow you too, in time."
+
+[[leader]]
+id = "LEADER_PHILIP_II"
+name = "Philip II"
+civilization = "CIVILIZATION_SPAIN"
+capital = "Madrid"
+primary_color = [202, 20, 21]
+secondary_color = [247, 216, 1]
+agenda = { name = "Defender of the Faith", description = "Likes civilizations that share his religion. Detests those who follow another." }
+traits = [{ id = "TRAIT_LEADER_PHILIP", name = "Lord of Two Worlds", description = "He ruled Spain, Portugal, half of Italy, and the Americas.", effects = [
+  { kind = "combat", amount = 3 },
+  { kind = "unit_production", domain = "sea", percent = 15 },
+] }]
+[leader.lines]
+first_meet = "I am Philip, King of Spain, of Portugal, of the Indies, and defender of the true faith."
+greeting = "God keep you. What is your business?"
+declare_war = "For God and for Spain!"
+attacked = "You will learn what Spain's tercios can do."
+denounce = "You are a heretic and a danger to the world."
+friend = "Let our crowns be friends, under God."
+peace_accept = "Peace. God wills it."
+defeat = "The sun sets, even on Spain."
+
+[[leader]]
+id = "LEADER_GILGAMESH"
+name = "Gilgamesh"
+civilization = "CIVILIZATION_SUMERIA"
+capital = "Uruk"
+primary_color = [1, 42, 108]
+secondary_color = [255, 129, 18]
+agenda = { name = "Hero's Companion", description = "Likes civilizations who are his friends and fight beside him. Hates those who betray friends." }
+traits = [{ id = "TRAIT_LEADER_GILGAMESH", name = "King of Uruk", description = "Two-thirds god, one-third man, builder of great walls.", effects = [
+  { kind = "combat", amount = 2 },
+  { kind = "city_yield", yield = "production", amount = 1, capital = true },
+  { kind = "city_yield", yield = "science", amount = 1, capital = true },
+] }]
+[leader.lines]
+first_meet = "I am Gilgamesh, King of Uruk of the great walls! Will you be my friend, or my next great adventure?"
+greeting = "Friend! Any monsters that need slaying?"
+declare_war = "A new adventure begins, and you are the monster."
+attacked = "You've made a mighty enemy."
+denounce = "You are no friend of mine."
+friend = "Every hero needs a companion. Will you be mine?"
+peace_accept = "Peace! There are other adventures."
+defeat = "Even heroes do not live forever."
+
+[[leader]]
+id = "LEADER_MONTEZUMA"
+name = "Montezuma"
+civilization = "CIVILIZATION_AZTEC"
+capital = "Tenochtitlan"
+primary_color = [125, 236, 227]
+secondary_color = [120, 0, 1]
+agenda = { name = "Treasures of the Earth", description = "Wants the luxuries others have. Dislikes those who hoard what he lacks." }
+traits = [{ id = "TRAIT_LEADER_MONTEZUMA", name = "Speaker of the Mexica", description = "Tribute flowed into Tenochtitlan from a hundred towns.", effects = [
+  { kind = "amenities", amount = 1 },
+  { kind = "combat", amount = 2 },
+] }]
+[leader.lines]
+first_meet = "I am Moctezuma, Huey Tlatoani of the Mexica. The gods demand much, and so do I."
+greeting = "Have you brought tribute?"
+declare_war = "The gods hunger. You will feed them."
+attacked = "You will be dragged up the temple steps."
+denounce = "You are worthless to me."
+friend = "Share your riches with me and we will be friends."
+peace_accept = "Peace, for a price."
+defeat = "The fifth sun sets."
+
+[[leader]]
+id = "LEADER_JADWIGA"
+name = "Jadwiga"
+civilization = "CIVILIZATION_POLAND"
+capital = "Kraków"
+primary_color = [120, 0, 1]
+secondary_color = [229, 117, 116]
+agenda = { name = "Patron Saint", description = "Likes civilizations who follow her religion and found universities. Dislikes those who persecute believers." }
+traits = [{ id = "TRAIT_LEADER_JADWIGA", name = "King of Poland", description = "Crowned as king, not queen, she united Poland and Lithuania.", effects = [
+  { kind = "district_yield", district = "DISTRICT_HOLY_SITE", yield = "faith", amount = 1 },
+  { kind = "building_yield", building = "BUILDING_UNIVERSITY", yield = "science", amount = 1 },
+  { kind = "great_person_points", class = "prophet", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "I am Jadwiga, King of Poland. Yes, King. Welcome to Kraków."
+greeting = "God bless you. How may Poland help?"
+declare_war = "I pray for you, even as we march."
+attacked = "Poland has survived worse than you."
+denounce = "Your cruelty offends heaven."
+friend = "Let us be friends, as Poland and Lithuania are."
+peace_accept = "Peace, and thanks be to God."
+defeat = "My jewels will build a university yet."
+
+[[leader]]
+id = "LEADER_JOHN_CURTIN"
+name = "John Curtin"
+civilization = "CIVILIZATION_AUSTRALIA"
+capital = "Canberra"
+primary_color = [21, 108, 48]
+secondary_color = [247, 216, 1]
+agenda = { name = "Never Again Undefended", description = "Respects those who liberate cities. Hates those who attack him." }
+traits = [{ id = "TRAIT_LEADER_CURTIN", name = "Wartime Prime Minister", description = "He looked to America and built Australia's defense.", effects = [
+  { kind = "combat_in_territory", amount = 4 },
+  { kind = "city_percent", yield = "production", percent = 5 },
+] }]
+[leader.lines]
+first_meet = "G'day. John Curtin, Prime Minister of Australia. Nice to meet you."
+greeting = "How's it going, mate?"
+declare_war = "You've pushed us too far. Australia's coming for you."
+attacked = "Right. You've picked a fight with the wrong country."
+denounce = "Fair dinkum, you're a menace."
+friend = "Reckon we'd make good mates. What do you say?"
+peace_accept = "Good on you. Let's call it even."
+defeat = "We gave it a fair go."
+
+[[leader]]
+id = "LEADER_ALEXANDER"
+name = "Alexander"
+civilization = "CIVILIZATION_MACEDON"
+capital = "Pella"
+primary_color = [250, 210, 60]
+secondary_color = [120, 40, 140]
+agenda = { name = "No More Worlds to Conquer", description = "Likes civilizations at war with others. Dislikes peaceful ones." }
+traits = [{ id = "TRAIT_LEADER_ALEXANDER", name = "Undefeated", description = "He never lost a battle.", effects = [
+  { kind = "combat", amount = 3 },
+  { kind = "unit_xp", amount = 5 },
+  { kind = "great_person_points", class = "general", amount = 2 },
+] }]
+[leader.lines]
+first_meet = "I am Alexander, King of Macedon, Pharaoh of Egypt, King of Persia. And you are?"
+greeting = "Have you come to join my campaign?"
+declare_war = "Another kingdom, another victory."
+attacked = "Good. I was growing bored."
+denounce = "You cower behind your walls."
+friend = "Ride with me to the ends of the earth!"
+peace_accept = "Peace, until the next campaign."
+defeat = "I am dying from the treatment of too many physicians."
+
+[[unit]]
+id = "UNIT_MACEDONIAN_HETAIROI"
+name = "Companion Cavalry"
+unique = "LEADER_ALEXANDER"
+replaces = "UNIT_HORSEMAN"
+cost = 100
+moves = 4
+combat = 40
+class = "heavy_cavalry"
+tech = "TECH_HORSEBACK_RIDING"
+resource = "RESOURCE_HORSES"
+maintenance = 2
+description = "Alexander's own shock cavalry."
+
+[[leader]]
+id = "LEADER_CYRUS"
+name = "Cyrus"
+civilization = "CIVILIZATION_PERSIA"
+capital = "Pasargadae"
+primary_color = [140, 40, 140]
+secondary_color = [250, 210, 60]
+agenda = { name = "King of Kings", description = "Looks for weak neighbors to absorb. Respects those he cannot." }
+traits = [{ id = "TRAIT_LEADER_CYRUS", name = "Liberator of Babylon", description = "He freed captives and let conquered peoples keep their gods.", effects = [
+  { kind = "amenities", amount = 1 },
+  { kind = "combat", amount = 2 },
+  { kind = "city_yield", yield = "culture", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "I am Cyrus, King of Kings, King of the four corners of the world."
+greeting = "Peace to you. Persia's roads are open."
+declare_war = "Your people will be happier under my rule."
+attacked = "You make a grave mistake."
+denounce = "You are an unworthy neighbor."
+friend = "Let us be friends while it suits us both."
+peace_accept = "Peace is the mark of a great king."
+defeat = "I, Cyrus, built an empire. Grudge me not this little earth."
+
+[[leader]]
+id = "LEADER_AMANITORE"
+name = "Amanitore"
+civilization = "CIVILIZATION_NUBIA"
+capital = "Meroë"
+primary_color = [250, 220, 120]
+secondary_color = [30, 60, 120]
+agenda = { name = "Builder Queen", description = "Likes civilizations with many districts. Dislikes those with few." }
+traits = [{ id = "TRAIT_LEADER_AMANITORE", name = "Kandake of Meroë", description = "She rebuilt the temples of Nubia.", effects = [
+  { kind = "district_production", percent = 25 },
+] }]
+[leader.lines]
+first_meet = "I am Amanitore, Kandake of Kush. My archers are the finest in the world."
+greeting = "Welcome. Do you build, or only destroy?"
+declare_war = "My archers have found a new target."
+attacked = "Nubia's bows are drawn."
+denounce = "You build nothing and leave nothing."
+friend = "Let us build together."
+peace_accept = "Peace. There is much to rebuild."
+defeat = "The pyramids of Meroë will remain."
+
+[[leader]]
+id = "LEADER_GITARJA"
+name = "Gitarja"
+civilization = "CIVILIZATION_INDONESIA"
+capital = "Majapahit"
+primary_color = [120, 0, 1]
+secondary_color = [0, 192, 155]
+agenda = { name = "Island Empress", description = "Likes those who stay off her seas. Dislikes those who settle her coasts." }
+traits = [{ id = "TRAIT_LEADER_GITARJA", name = "Queen of Majapahit", description = "Her fleets ruled the archipelago.", effects = [
+  { kind = "unit_production", domain = "sea", percent = 25 },
+  { kind = "district_yield", district = "DISTRICT_HARBOR", yield = "faith", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "I am Tribhuwana Wijayatunggadewi, Queen of Majapahit. You may call me Gitarja."
+greeting = "The seas are calm today. What brings you?"
+declare_war = "My fleets will drive you from the islands."
+attacked = "The sea is mine. You will drown in it."
+denounce = "You trespass on my waters."
+friend = "Our ships may sail together in friendship."
+peace_accept = "Peace, and calm seas."
+defeat = "The tides turn."
+
+[[leader]]
+id = "LEADER_JAYAVARMAN"
+name = "Jayavarman VII"
+civilization = "CIVILIZATION_KHMER"
+capital = "Angkor Thom"
+primary_color = [117, 0, 115]
+secondary_color = [255, 129, 18]
+agenda = { name = "Healer King", description = "Likes those who care for their cities. Dislikes those with unhappy people." }
+traits = [{ id = "TRAIT_LEADER_JAYAVARMAN", name = "Builder of Hospitals", description = "He built a hundred hospitals and rest houses along the roads.", effects = [
+  { kind = "housing", amount = 1 },
+  { kind = "district_yield", district = "DISTRICT_HOLY_SITE", yield = "food", amount = 2 },
+] }]
+[leader.lines]
+first_meet = "I am Jayavarman, King of the Khmer. The suffering of my people is my own suffering."
+greeting = "Peace and health to you."
+declare_war = "You force my hand. I am sorry for what comes."
+attacked = "Then we must defend Angkor."
+denounce = "Your people suffer, and you do nothing."
+friend = "Let us be friends and care for our people together."
+peace_accept = "Peace. Let the healing begin."
+defeat = "The temples will remember."
+
+[[leader]]
+id = "LEADER_MENELIK"
+name = "Menelik II"
+civilization = "CIVILIZATION_ETHIOPIA"
+capital = "Addis Ababa"
+primary_color = [247, 216, 1]
+secondary_color = [21, 108, 48]
+agenda = { name = "Victor of Adwa", description = "Respects those who stay independent. Dislikes empires that conquer." }
+traits = [{ id = "TRAIT_LEADER_MENELIK", name = "Lion of Judah", description = "He defeated an invading European army at Adwa.", effects = [
+  { kind = "combat_in_territory", amount = 4 },
+  { kind = "city_yield", yield = "science", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "I am Menelik, King of Kings of Ethiopia. My country has never been conquered."
+greeting = "You are welcome in the highlands."
+declare_war = "Ethiopia will defend itself, as it always has."
+attacked = "Remember Adwa."
+denounce = "You are a conqueror, and we know your kind."
+friend = "Let us be friends, as free nations."
+peace_accept = "Peace. Ethiopia stands."
+defeat = "Ethiopia will stretch out her hands."
+
+[[leader]]
+id = "LEADER_BASIL"
+name = "Basil II"
+civilization = "CIVILIZATION_BYZANTIUM"
+capital = "Constantinople"
+primary_color = [55, 0, 101]
+secondary_color = [234, 225, 157]
+agenda = { name = "Guardian of the City", description = "Likes those who share his faith. Hates those who threaten it." }
+traits = [{ id = "TRAIT_LEADER_BASIL", name = "Slayer of Bulgars", description = "Fifty years on the throne, most of them at war.", effects = [
+  { kind = "combat", amount = 3, class = "heavy_cavalry" },
+  { kind = "great_person_points", class = "prophet", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "I am Basil, Emperor of the Romans, born in the purple."
+greeting = "The Queen of Cities greets you."
+declare_war = "The Empire's patience has ended."
+attacked = "Constantinople has broken stronger foes than you."
+denounce = "You are an enemy of the true faith."
+friend = "The Empire offers its friendship. Accept it."
+peace_accept = "Peace, by the Emperor's grace."
+defeat = "The walls fall at last."
+
+[[unit]]
+id = "UNIT_BYZANTINE_TAGMA"
+name = "Tagma"
+unique = "LEADER_BASIL"
+replaces = "UNIT_KNIGHT"
+cost = 180
+moves = 4
+combat = 50
+class = "heavy_cavalry"
+year = 950
+maintenance = 3
+description = "The imperial guard regiments of heavy cavalry. Need no Iron."
+
+[[leader]]
+id = "LEADER_AMBIORIX"
+name = "Ambiorix"
+civilization = "CIVILIZATION_GAUL"
+capital = "Aduatuca"
+primary_color = [21, 108, 48]
+secondary_color = [125, 236, 227]
+agenda = { name = "Bane of Caesar", description = "Respects armies as large as his own. Dislikes those who neglect theirs." }
+traits = [{ id = "TRAIT_LEADER_AMBIORIX", name = "King of the Eburones", description = "He destroyed a Roman legion in an ambush.", effects = [
+  { kind = "combat", amount = 3, class = "melee" },
+  { kind = "unit_production", military = true, percent = 10 },
+] }]
+[leader.lines]
+first_meet = "I am Ambiorix, king of the Eburones. Even Caesar feared me."
+greeting = "What do you want?"
+declare_war = "The tribes have gathered. You are finished."
+attacked = "You'll meet the same fate as Caesar's legion."
+denounce = "You're a coward with a small army."
+friend = "A strong friend! Let us stand together."
+peace_accept = "Peace. For now."
+defeat = "The forest will hide my people."
+
+[[leader]]
+id = "LEADER_HAMMURABI"
+name = "Hammurabi"
+civilization = "CIVILIZATION_BABYLON"
+capital = "Babylon"
+primary_color = [40, 90, 160]
+secondary_color = [250, 210, 60]
+agenda = { name = "Lawgiver", description = "Likes civilizations with many districts and great people. Dislikes the lawless." }
+traits = [{ id = "TRAIT_LEADER_HAMMURABI", name = "Code of Laws", description = "An eye for an eye, carved in stone for everyone to read.", effects = [
+  { kind = "district_production", percent = 15 },
+  { kind = "great_person_points", class = "scientist", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "I am Hammurabi, King of Babylon. My laws are written for all to see."
+greeting = "Peace be with you. Do you obey the law?"
+declare_war = "Justice demands it."
+attacked = "Lawlessness will be punished."
+denounce = "You are a lawbreaker."
+friend = "Let us make a pact, written in stone."
+peace_accept = "Peace, by the law."
+defeat = "My laws will outlive me."
+
+[[leader]]
+id = "LEADER_SIMON_BOLIVAR"
+name = "Simón Bolívar"
+civilization = "CIVILIZATION_GRAN_COLOMBIA"
+capital = "Bogotá"
+primary_color = [1, 42, 108]
+secondary_color = [247, 216, 1]
+agenda = { name = "The Liberator", description = "Dislikes civilizations that rule over other peoples. Likes free nations." }
+traits = [{ id = "TRAIT_LEADER_BOLIVAR", name = "El Libertador", description = "He freed six nations from Spanish rule.", effects = [
+  { kind = "combat", amount = 2, class = "light_cavalry" },
+  { kind = "combat_in_territory", amount = 2 },
+  { kind = "great_person_points", class = "general", amount = 1 },
+] }]
+[leader.lines]
+first_meet = "I am Simón Bolívar, Liberator of the Americas!"
+greeting = "Greetings, friend of liberty!"
+declare_war = "For liberty! Forward!"
+attacked = "Tyrant! We have beaten empires before."
+denounce = "You chain your people. You are a tyrant."
+friend = "Free nations must be friends."
+peace_accept = "Peace, and liberty."
+defeat = "I have plowed the sea."
+
+[[leader]]
+id = "LEADER_LADY_SIX_SKY"
+name = "Lady Six Sky"
+civilization = "CIVILIZATION_MAYA"
+capital = "Naranjo"
+primary_color = [116, 163, 243]
+secondary_color = [1, 79, 81]
+agenda = { name = "Keeper of Her Cities", description = "Likes those who stay far away. Dislikes neighbors who settle close." }
+traits = [{ id = "TRAIT_LEADER_SIX_SKY", name = "Lady of Naranjo", description = "She restored a fallen city and led it to war.", effects = [
+  { kind = "city_yield", yield = "science", amount = 1 },
+  { kind = "combat_in_territory", amount = 3 },
+] }]
+[leader.lines]
+first_meet = "I am Lady Six Sky of Naranjo. The stars told me you would come."
+greeting = "The calendar turns. What do you want?"
+declare_war = "The stars favor war. So be it."
+attacked = "You will be carved into my monuments, kneeling."
+denounce = "You crowd my lands. Leave."
+friend = "Stay at a distance, and we can be friends."
+peace_accept = "Peace. The stars agree."
+defeat = "The cycle ends."
+
+[[leader]]
+id = "LEADER_JOAO_III"
+name = "João III"
+civilization = "CIVILIZATION_PORTUGAL"
+capital = "Lisbon"
+primary_color = [249, 249, 249]
+secondary_color = [1, 42, 108]
+agenda = { name = "Navigator's Heir", description = "Likes those he trades with. Dislikes those who close their ports." }
+traits = [{ id = "TRAIT_LEADER_JOAO", name = "The Pious Colonizer", description = "Trading posts from Brazil to Macau.", effects = [
+  { kind = "trade_capacity", amount = 1 },
+  { kind = "unit_production", domain = "sea", percent = 20 },
+] }]
+[leader.lines]
+first_meet = "I am João, King of Portugal and lord of the trade of Ethiopia, Arabia, Persia, and India."
+greeting = "Welcome! Have you a port for my ships?"
+declare_war = "My ships will close your ports for you."
+attacked = "Portugal's navy will make you regret this."
+denounce = "Your ports are shut. You are no partner of ours."
+friend = "Open your ports and we will be friends."
+peace_accept = "Peace, and fair winds."
+defeat = "The age of discovery ends."
+
+[[leader]]
+id = "LEADER_LADY_TRIEU"
+name = "Bà Triệu"
+civilization = "CIVILIZATION_VIETNAM"
+capital = "Thăng Long"
+primary_color = [247, 216, 1]
+secondary_color = [117, 0, 115]
+agenda = { name = "Defender of the Homeland", description = "Dislikes those who invade. Respects those who defend." }
+traits = [{ id = "TRAIT_LEADER_TRIEU", name = "Lady General", description = "She rode an elephant into battle against occupation.", effects = [
+  { kind = "combat_in_territory", amount = 5 },
+  { kind = "unit_production", class = "ranged", percent = 20 },
+] }]
+[leader.lines]
+first_meet = "I am Triệu Thị Trinh. I would rather ride the storm than be a slave."
+greeting = "What do you want?"
+declare_war = "We will drive you out."
+attacked = "Every village will fight you."
+denounce = "Invader."
+friend = "You respect our land. Let us be friends."
+peace_accept = "Peace. Go home."
+defeat = "The storm passes. We will rise again."
