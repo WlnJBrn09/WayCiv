@@ -11,6 +11,7 @@ pointy-top with circumradius PLOT_R and sits at the origin.
 """
 import math
 import os
+import random
 import struct
 import zlib
 from contextlib import contextmanager
@@ -20,10 +21,13 @@ import bpy
 import numpy as np
 from mathutils import Matrix, Vector
 
+import matlib
+from matlib import G, M  # noqa: F401
+
 PLOT_R = 0.90          # circumradius of the plot hex (world 1.0 = tile radius)
 CAM_ELEV = 42.0        # camera elevation, degrees
 VIEW_W = 2.2           # sprite width in world units
-SPRITE_PX = (256, 320)  # final sprite size
+SPRITE_PX = (320, 400)  # final sprite size
 GROUND_FRAC = 0.60     # ground centre sits this far down the sprite
 SS = 2                 # supersampling factor
 STRETCH = 1.0 / math.sin(math.radians(CAM_ELEV))
@@ -33,83 +37,6 @@ STRETCH = 1.0 / math.sin(math.radians(CAM_ELEV))
 # colours and materials
 # --------------------------------------------------------------------------
 
-def lin(c):
-    """sRGB 0..1 -> linear."""
-    return tuple((x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4) for x in c)
-
-
-def hexc(h):
-    h = h.lstrip('#')
-    return tuple(int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
-
-
-PAL = {
-    'stone': ('#cdbd9c', 0.85), 'stone2': ('#a89a7e', 0.9), 'stoneD': ('#7f735e', 0.9),
-    'marble': ('#ece6d8', 0.5), 'sand': ('#e0c88f', 0.95), 'sandD': ('#c4a56a', 0.95),
-    'brick': ('#b5603f', 0.9), 'brickD': ('#8a4630', 0.9), 'adobe': ('#d9a46a', 0.95),
-    'terra': ('#c4492a', 0.8), 'terraD': ('#9a3320', 0.8),
-    'wood': ('#7b5230', 0.8), 'woodL': ('#a8794a', 0.8), 'woodD': ('#4d3320', 0.85),
-    'thatch': ('#c9a652', 0.95), 'slate': ('#4f5a6b', 0.7), 'slateL': ('#7d8aa0', 0.6),
-    'grass': ('#6fa23c', 1.0), 'grassD': ('#4d8029', 1.0), 'dirt': ('#8c6a45', 1.0),
-    'leaf': ('#3f8a2c', 0.9), 'leafD': ('#2c6a20', 0.9), 'leafL': ('#7bb544', 0.9),
-    'pave': ('#b8ad98', 0.9), 'paveD': ('#988d7a', 0.9), 'paveL': ('#d6ccb8', 0.9),
-    'gold': ('#e8b83a', 0.3, 0.9), 'goldD': ('#b8861e', 0.4, 0.9),
-    'bronze': ('#a8703a', 0.4, 0.8), 'copper': ('#c26a45', 0.45, 0.8), 'verdi': ('#4fa592', 0.5, 0.5),
-    'iron': ('#555a62', 0.5, 0.7), 'steel': ('#9aa4b2', 0.35, 0.8), 'dark': ('#2b2d33', 0.7),
-    'white': ('#f4f1ea', 0.7), 'red': ('#c0392b', 0.7), 'blue': ('#2f6fb8', 0.7),
-    'royal': ('#274a9a', 0.6), 'purple': ('#7a3f9a', 0.7), 'green': ('#2f8a4a', 0.7),
-    'water': ('#3f8fc4', 0.15), 'waterD': ('#2a6a9a', 0.15), 'foam': ('#d8eef2', 0.6),
-    'glass': ('#8ec8e8', 0.1), 'glassD': ('#3a6e96', 0.1),
-    'concrete': ('#b9b9b4', 0.9), 'concreteD': ('#8c8c88', 0.9), 'asphalt': ('#3a3b40', 0.95),
-    'yellow': ('#e8c030', 0.7), 'orange': ('#e07a28', 0.7), 'jade': ('#5aa88a', 0.5),
-    'cream': ('#efe3c0', 0.8), 'rose': ('#d98a8a', 0.8), 'turq': ('#3aa6b0', 0.6),
-    'acc': ('#ffffff', 0.6), 'accD': ('#ffffff', 0.6),
-    'earth': ('#9a7a52', 1.0), 'snow': ('#f0f4f8', 0.9), 'rock': ('#8a8478', 0.95),
-}
-
-_mats = {}
-MASK_MODE = False
-
-
-def M(name, rgb=None, rough=None, metal=None, emit=None, emit_strength=6.0):
-    """A material by palette name (or custom `rgb`); cached per scene."""
-    key = (name, rgb, rough, metal, emit, MASK_MODE)
-    if key in _mats:
-        return _mats[key]
-    spec = PAL.get(name, ('#c0c0c0', 0.8))
-    base = hexc(spec[0]) if rgb is None else (hexc(rgb) if isinstance(rgb, str) else rgb)
-    r = spec[1] if rough is None else rough
-    m = spec[2] if (metal is None and len(spec) > 2) else (metal or 0.0)
-    mat = bpy.data.materials.new(f"{name}{len(_mats)}")
-    mat.use_nodes = True
-    nt = mat.node_tree
-    for n in list(nt.nodes):
-        nt.nodes.remove(n)
-    out = nt.nodes.new('ShaderNodeOutputMaterial')
-    if MASK_MODE:
-        e = nt.nodes.new('ShaderNodeEmission')
-        v = 1.0 if name.startswith('acc') else 0.0
-        e.inputs['Color'].default_value = (v, v, v, 1)
-        e.inputs['Strength'].default_value = 1.0
-        nt.links.new(e.outputs[0], out.inputs[0])
-    elif emit:
-        e = nt.nodes.new('ShaderNodeEmission')
-        ec = hexc(emit) if isinstance(emit, str) else emit
-        e.inputs['Color'].default_value = (*lin(ec), 1)
-        e.inputs['Strength'].default_value = emit_strength
-        nt.links.new(e.outputs[0], out.inputs[0])
-    else:
-        p = nt.nodes.new('ShaderNodeBsdfPrincipled')
-        p.inputs['Base Color'].default_value = (*lin(base), 1)
-        p.inputs['Roughness'].default_value = r
-        p.inputs['Metallic'].default_value = m
-        if 'Specular IOR Level' in p.inputs:
-            p.inputs['Specular IOR Level'].default_value = 0.3
-        nt.links.new(p.outputs[0], out.inputs[0])
-    _mats[key] = mat
-    return mat
-
-
 # --------------------------------------------------------------------------
 # geometry accumulation
 # --------------------------------------------------------------------------
@@ -117,15 +44,14 @@ def M(name, rgb=None, rough=None, metal=None, emit=None, emit_strength=6.0):
 _bm = {}
 _stack = [Matrix.Identity(4)]
 _lights = []   # (location, color, power, size) point lights in local scene space
-USE_CATCHER = False  # shadows on a transparent plot (harbors on water)
+CONTENT_SCALE = 1.0  # builders draw in plot units; districts are drawn a little larger
 
 
 def reset():
-    global _bm, _stack, _mats, _lights, USE_CATCHER
-    USE_CATCHER = False
+    global _bm, _stack, _lights
+    matlib.reset()
     _bm = {}
-    _stack = [Matrix.Identity(4)]
-    _mats = {}
+    _stack = [Matrix.Diagonal((CONTENT_SCALE, CONTENT_SCALE, CONTENT_SCALE, 1.0))]
     _lights = []
 
 
@@ -316,27 +242,48 @@ def _hex_pts(r):
     return [(r * math.cos(math.radians(90 + 60 * i)), r * math.sin(math.radians(90 + 60 * i))) for i in range(6)]
 
 
-def hexslab(r, z, h, mat, x=0.0, y=0.0):
-    """Pointy-top hexagonal slab (circumradius r)."""
-    ext(_hex_pts(r), z, h, mat, x=x, y=y)
+def blob(x, y, z, r, mat, seed=0, sub=2, squash=0.85, jitter=0.16):
+    """A lumpy smooth ball (foliage, bushes, haystacks) resting on z."""
+    rnd = random.Random(seed)
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=sub, radius=1.0)
+    for v in bm.verts:
+        v.co *= 1.0 + (rnd.random() - 0.5) * 2 * jitter
+    T = _stack[-1]
+    tgt = _b(mat)
+    vmap = {}
+    for v in bm.verts:
+        vmap[v.index] = tgt.verts.new(T @ Vector((x + v.co.x * r, y + v.co.y * r, z + r * squash + v.co.z * r * squash)))
+    for f in bm.faces:
+        fn = tgt.faces.new([vmap[v.index] for v in f.verts])
+        fn.smooth = True
+    bm.free()
 
 
 def tree(x, y, s=1.0, kind='round', z=0.0):
+    seed = int(abs(x * 977 + y * 613)) % 1000
+    rnd = random.Random(seed)
     if kind == 'round':
-        cyl(x, y, z, 0.025 * s, 0.1 * s, M('woodD'), n=6)
-        sphere(x, y, z + 0.07 * s, 0.1 * s, M('leaf'), n=10, rings=6)
+        cyl(x, y, z, 0.02 * s, 0.1 * s, M('woodD'), n=6, r2=0.014 * s)
+        pick = ['leaf', 'leafD', 'leafL'][seed % 3]
+        blob(x, y, z + 0.05 * s, 0.1 * s, M(pick), seed)
+        for k in range(3):
+            a = rnd.random() * 6.28
+            blob(x + 0.07 * s * math.cos(a), y + 0.07 * s * math.sin(a), z + (0.08 + 0.04 * k) * s, 0.065 * s,
+                 M(['leafL', 'leaf', 'leafD'][(seed + k) % 3]), seed + k + 1, sub=1)
+    elif kind == 'bush':
+        blob(x, y, z, 0.07 * s, M(['leaf', 'leafD'][seed % 2]), seed, sub=1)
     elif kind == 'pine':
         cyl(x, y, z, 0.02 * s, 0.06 * s, M('woodD'), n=6)
-        cone(x, y, z + 0.05 * s, 0.1 * s, 0.14 * s, M('leafD'), n=9)
-        cone(x, y, z + 0.13 * s, 0.075 * s, 0.13 * s, M('leaf'), n=9)
+        for i, (rr, hh, zz) in enumerate([(0.1, 0.11, 0.04), (0.08, 0.1, 0.11), (0.056, 0.1, 0.18)]):
+            cone(x, y, z + zz * s, rr * s, hh * s, M('leafD' if i % 2 == 0 else 'leaf'), n=10)
     elif kind == 'palm':
         lathe(x, y, z, [(0.025 * s, 0), (0.015 * s, 0.2 * s)], M('woodL'), n=6)
-        for k in range(6):
-            with at(x, y, z + 0.2 * s, rot=60 * k):
-                _face(M('leaf'), [(0, -0.02 * s, 0), (0.17 * s, -0.01 * s, -0.06 * s), (0.2 * s, 0.0, -0.09 * s),
-                                  (0.17 * s, 0.01 * s, -0.06 * s), (0, 0.02 * s, 0)])
-                _face(M('leaf'), [(0, 0.02 * s, 0), (0.17 * s, 0.01 * s, -0.06 * s), (0.2 * s, 0.0, -0.09 * s),
-                                  (0.17 * s, -0.01 * s, -0.06 * s), (0, -0.02 * s, 0)])
+        for k in range(7):
+            with at(x, y, z + 0.2 * s, rot=360 / 7 * k):
+                for sgn in (-1, 1):
+                    _face(M('leaf'), [(0, sgn * 0.02 * s, 0), (0.17 * s, sgn * 0.012 * s, -0.05 * s), (0.22 * s, 0.0, -0.1 * s),
+                                      (0.17 * s, -sgn * 0.012 * s, -0.05 * s), (0, -sgn * 0.02 * s, 0)])
 
 
 def person(x, y, z, mat, s=1.0):
@@ -356,23 +303,24 @@ def glow(x, y, z, w, d, h, color, rot=0.0, strength=6.0):
 # plots
 # --------------------------------------------------------------------------
 
-def plot(base='pave', top=None, side='stoneD', r=PLOT_R, h=0.07, rim='stone2', inset=0.045):
-    """The hexagonal plot every district/wonder sits on.  Returns the ground height.
-    `base` is the surface material (or, when `top` is given, the slab's side colour)."""
-    if top is None:
-        top = base
-    else:
-        side = base
-    ext(_hex_pts(r), -h, h, M(side))
-    ext(_hex_pts(r - inset * 0.3), 0.0, 0.012, M(rim))
-    ext(_hex_pts(r - inset), 0.012, 0.006, M(top))
-    return 0.018
+GROUND_KIND = {
+    'earth': ('dirt', 1.0), 'dirt': ('dirt', 1.0), 'grass': ('grass', 1.0), 'grassD': ('grass', 0.85),
+    'pave': ('cobble', 1.0), 'paveL': ('cobble', 1.12), 'paveD': ('cobble', 0.85), 'stone': ('cobble', 1.0),
+    'stone2': ('cobble', 0.9), 'stoneD': ('cobble', 0.75), 'sand': ('sand', 1.0), 'sandD': ('sand', 0.88),
+    'concrete': ('slab', 1.0), 'concreteD': ('slab', 0.85), 'asphalt': ('dark', 1.0), 'marble': ('marble', 1.0),
+    'cream': ('marble', 1.0),
+}
 
 
-def road_strip(x0, y0, x1, y1, w, z, mat):
-    dx, dy = x1 - x0, y1 - y0
-    L = math.hypot(dx, dy)
-    box((x0 + x1) / 2, (y0 + y1) / 2, z, L, w, 0.008, mat, rot=math.degrees(math.atan2(dy, dx)))
+def plot(base='pave', top=None, r_in=0.66, r_out=0.9, **_ignored):
+    """The ground patch every district/wonder sits on: textured, fading to nothing at its rim so it
+    melts into the terrain.  Returns the ground height."""
+    kind, tone = GROUND_KIND.get(top or base, ('cobble', 1.0))
+    scaled = _stack[:]
+    _stack[:] = [Matrix.Identity(4)]
+    _face(G(kind, tone, r_in, r_out), [(px, py, 0.004) for px, py in _hex_pts(1.05)])
+    _stack[:] = scaled
+    return 0.008
 
 
 # --------------------------------------------------------------------------
@@ -389,10 +337,10 @@ def realise():
         mesh.materials.append(mat)
         bpy.context.scene.collection.objects.link(ob)
     _bm.clear()
-    if USE_CATCHER and not MASK_MODE:
+    if not matlib.MASK_MODE:  # shadows fall on the transparent terrain around the ground patch
         mesh = bpy.data.meshes.new("catcher")
         bm = bmesh.new()
-        r = PLOT_R * 1.05
+        r = 0.98
         bm.faces.new([bm.verts.new((r * math.cos(math.radians(90 + 60 * i)), r * math.sin(math.radians(90 + 60 * i)), 0.0))
                       for i in range(6)])
         bm.to_mesh(mesh)
@@ -468,12 +416,12 @@ def _setup_lights(sc, mask):
         bg.inputs['Color'].default_value = (0, 0, 0, 1)
         bg.inputs['Strength'].default_value = 0.0
         return
-    bg.inputs['Color'].default_value = (0.62, 0.72, 0.9, 1)
-    bg.inputs['Strength'].default_value = 0.75
+    bg.inputs['Color'].default_value = (0.58, 0.70, 0.92, 1)
+    bg.inputs['Strength'].default_value = 0.8
     sun = bpy.data.lights.new("sun", 'SUN')
-    sun.energy = 3.4
-    sun.angle = math.radians(7)
-    sun.color = (1.0, 0.95, 0.86)
+    sun.energy = 3.7
+    sun.angle = math.radians(9)
+    sun.color = (1.0, 0.93, 0.80)
     so = bpy.data.objects.new("sun", sun)
     sc.collection.objects.link(so)
     # light from the upper left (north-west), a bit toward the viewer's side
@@ -519,9 +467,28 @@ def _down(a):
     return out
 
 
+def _grade(a):
+    """Warm, slightly saturated grade plus a light unsharp mask on the colour channels."""
+    rgb = a[..., :3]
+    lum = rgb.mean(axis=2, keepdims=True)
+    rgb = lum + (rgb - lum) * 1.1
+    blur = (np.roll(rgb, 1, 0) + np.roll(rgb, -1, 0) + np.roll(rgb, 1, 1) + np.roll(rgb, -1, 1) + 4 * rgb) / 8.0
+    rgb = rgb + (rgb - blur) * 0.55
+    out = a.copy()
+    out[..., :3] = np.clip(rgb, 0.0, 1.0)
+    return out
+
+
 def write_png(path, rgba8):
     h, w, _ = rgba8.shape
-    raw = b''.join(b'\x00' + rgba8[y].tobytes() for y in range(h))
+    rows = rgba8.reshape(h, w * 4)
+    up = np.vstack([np.zeros((1, w * 4), np.uint8), rows[:-1]])
+    sub = rows.copy()
+    sub[:, 4:] -= rows[:, :-4]
+    cands = [rows, sub, rows - up]                       # PNG filters None, Sub, Up (uint8 wraps)
+    cost = np.stack([np.abs(c.astype(np.int8).astype(np.int32)).sum(axis=1) for c in cands])
+    best = cost.argmin(axis=0)
+    raw = b''.join(bytes([int(best[y])]) + cands[best[y]][y].tobytes() for y in range(h))
 
     def chunk(t, d):
         c = struct.pack('>I', len(d)) + t + d
@@ -535,11 +502,10 @@ def write_png(path, rgba8):
 
 def render(builder, out_base, samples=40, tint=False, tmp='/tmp'):
     """Build the scene with `builder()`, render, write `out_base.png` (+ `_tint.png`)."""
-    global MASK_MODE
     passes = [False] + ([True] if tint else [])
     imgs = []
     for mask in passes:
-        MASK_MODE = mask
+        matlib.MASK_MODE = mask
         clear_scene()
         reset()
         builder()
@@ -556,7 +522,7 @@ def render(builder, out_base, samples=40, tint=False, tmp='/tmp'):
         sc.render.filepath = tmpf
         bpy.ops.render.render(write_still=True)
         imgs.append(_down(_read_png(tmpf)))
-    beauty = imgs[0]
+    beauty = _grade(imgs[0])
     a = beauty[..., 3:4]
     if tint:
         m = np.clip(imgs[1][..., 0:1] * imgs[1][..., 3:4], 0, 1)  # accent coverage (premultiplied)

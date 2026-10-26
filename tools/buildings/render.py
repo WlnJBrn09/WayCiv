@@ -34,7 +34,7 @@ def main():
             i += 1
     os.makedirs(out, exist_ok=True)
     sprites = {}
-    for modname in ('districts', 'wonders', 'cities'):
+    for modname in ('districts', 'districts_infra', 'districts_special', 'wonders_ancient', 'wonders_medieval', 'wonders_modern', 'cities'):
         try:
             mod = importlib.import_module(modname)
         except ModuleNotFoundError as e:
@@ -45,6 +45,7 @@ def main():
     for name, (builder, tint) in sprites.items():
         if only and not any(name == o or name.startswith(o) for o in only):
             continue
+        bl.CONTENT_SCALE = 1.2 if name.startswith('district_') else 1.0
         t0 = time.time()
         bl.render(builder, os.path.join(out, name), samples=samples, tint=tint, tmp=os.environ.get('TMPDIR', '/tmp'))
         print('rendered %s in %.1fs' % (name, time.time() - t0), flush=True)
