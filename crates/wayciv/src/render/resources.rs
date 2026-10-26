@@ -5,11 +5,12 @@
 //! use; anything missing falls back to simple painted shapes.
 
 use super::TileCtx;
-use super::hex::{abbreviation, hex, world_dir};
+use super::hex::{abbreviation, world_dir};
+use super::mesh;
 use crate::icons::Icons;
 use egui::epaint::{Mesh, Vertex};
 use egui::{
-    Align2, Color32, FontId, Pos2, Rect, Shape, Stroke, TextureHandle, TextureOptions, pos2, vec2,
+    Align2, Color32, FontId, Pos2, Rect, Shape, Stroke, TextureHandle, TextureOptions, Vec2, pos2, vec2,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -118,16 +119,44 @@ enum RoadKind {
     Rail,
 }
 
-/// Layer 2b: roads, through the tile center toward neighboring roads and
-/// cities. Style follows the viewer's technology.
-pub fn draw_road(_art: &mut ResourceArt, painter: &egui::Painter, t: &TileCtx) {
-    let (game, c, z) = (t.game, t.c, t.z);
-    if !t.tile().road {
-        return;
+/// Colors of one road surface.
+struct Surface {
+    /// Dark verge, soft at the outside.
+    verge: Color32,
+    /// Worn shoulder between verge and body.
+    shoulder: Color32,
+    body: Color32,
+    /// Ruts, joints and other marks along the body.
+    mark: Color32,
+}
+
+fn surface(kind: RoadKind) -> Surface {
+    match kind {
+        RoadKind::Dirt => Surface {
+            verge: Color32::from_rgb(96, 70, 40),
+            shoulder: Color32::from_rgb(150, 118, 74),
+            body: Color32::from_rgb(188, 154, 104),
+            mark: Color32::from_rgb(132, 98, 58),
+        },
+        RoadKind::Paved => Surface {
+            verge: Color32::from_rgb(78, 66, 54),
+            shoulder: Color32::from_rgb(146, 130, 108),
+            body: Color32::from_rgb(190, 174, 148),
+            mark: Color32::from_rgb(104, 90, 74),
+        },
+        RoadKind::Rail => Surface {
+            verge: Color32::from_rgb(56, 52, 48),
+            shoulder: Color32::from_rgb(104, 98, 90),
+            body: Color32::from_rgb(132, 124, 112),
+            mark: Color32::from_rgb(66, 46, 30),
+        },
     }
-    let rules = &game.rules;
-    let player = &game.players[t.viewer];
-    let kind = if player.has_tech(rules, "TECH_INDUSTRIALIZATION") {
+}
+
+fn road_kind(t: &TileCtx) -> RoadKind {
+    let rules = &t.game.rules;
+    let player = &t.game.players[t.viewer];
+    if player.has_tech(rules, "TECH_INDUSTRIALIZATION") {
         RoadKind::Rail
     } else if player.has_tech(rules, "TECH_ENGINEERING")
         || player.has_tech(rules, "TECH_CONSTRUCTION")
@@ -135,109 +164,229 @@ pub fn draw_road(_art: &mut ResourceArt, painter: &egui::Painter, t: &TileCtx) {
         RoadKind::Paved
     } else {
         RoadKind::Dirt
-    };
-    let road = |p: wayciv_core::Pos| game.map.tile(p).road || game.city_at(p).is_some();
-    let ends: Vec<Pos2> = (0..6)
-        .filter(|&dir| t.neighbor(dir).is_some_and(road))
-        .map(|dir| c + world_dir(dir) * z * 0.5)
-        .collect();
-    let w = (z * 0.14).max(1.8);
+    }
+}
 
-    // Polylines through the center; two ends bend smoothly through it.
-    let mut paths: Vec<Vec<Pos2>> = Vec::new();
-    match ends.len() {
-        0 => {}
-        2 => {
-            let (a, b) = (ends[0], ends[1]);
-            let n = 8;
-            paths.push(
-                (0..=n)
-                    .map(|i| {
-                        let t = i as f32 / n as f32;
-                        let u = 1.0 - t;
-                        // Quadratic bezier with the control point at the center.
-                        (a.to_vec2() * (u * u)
-                            + c.to_vec2() * (2.0 * u * t)
-                            + b.to_vec2() * (t * t))
-                            .to_pos2()
-                    })
-                    .collect(),
-            );
-        }
-        _ => {
-            for e in &ends {
-                paths.push(vec![c, *e]);
-            }
-        }
-    }
-    let hub = ends.len() != 2;
-    let (edge, body, mid) = match kind {
-        RoadKind::Dirt => (
-            Color32::from_rgba_unmultiplied(86, 58, 32, 210),
-            Color32::from_rgb(178, 138, 86),
-            Color32::from_rgba_unmultiplied(206, 170, 118, 150),
-        ),
-        RoadKind::Paved => (
-            Color32::from_rgba_unmultiplied(70, 66, 62, 220),
-            Color32::from_rgb(168, 160, 146),
-            Color32::from_rgba_unmultiplied(214, 206, 188, 170),
-        ),
-        RoadKind::Rail => (
-            Color32::from_rgba_unmultiplied(60, 56, 52, 220),
-            Color32::from_rgb(120, 112, 102),
-            Color32::from_rgb(70, 50, 34),
-        ),
+/// Smooth value noise in 0..1 along `u`, keyed by `seed`.
+fn wobble(seed: u32, u: f32) -> f32 {
+    let h = |k: u32| {
+        (seed
+            .wrapping_add(k.wrapping_mul(2_246_822_519))
+            .wrapping_mul(2_654_435_761)
+            >> 8) as f32
+            / 16_777_216.0
     };
-    let (ew, bw) = (w * 1.45, w);
+    let (i, f) = (u.floor(), u.fract());
+    let f = f * f * (3.0 - 2.0 * f);
+    h(i as u32) * (1.0 - f) + h(i as u32 + 1) * f
+}
+
+/// Unit normals along a polyline.
+fn normals(pts: &[Pos2]) -> Vec<Vec2> {
+    let n = pts.len();
+    (0..n)
+        .map(|i| {
+            let d = (pts[(i + 1).min(n - 1)] - pts[i.saturating_sub(1)]).normalized();
+            vec2(-d.y, d.x)
+        })
+        .collect()
+}
+
+/// A ribbon along `pts` with a color for each lateral offset (in px) of
+/// `profile`; transparent rim colors give soft edges. `tone` scales the
+/// brightness along the path (0 to 1).
+fn ribbon(mesh: &mut Mesh, pts: &[Pos2], profile: &[(f32, Color32)], tone: &dyn Fn(f32) -> f32) {
+    let n = pts.len();
+    if n < 2 {
+        return;
+    }
+    let norms = normals(pts);
+    let base = mesh.vertices.len() as u32;
+    let across = profile.len() as u32;
+    for (i, &p) in pts.iter().enumerate() {
+        let k = tone(i as f32 / (n - 1) as f32);
+        for &(off, col) in profile {
+            let lit = |v: u8| (v as f32 * k).min(255.0) as u8;
+            let col = Color32::from_rgba_premultiplied(lit(col.r()), lit(col.g()), lit(col.b()), col.a());
+            mesh.colored_vertex(p + norms[i] * off, col);
+        }
+    }
+    for i in 0..(n as u32 - 1) {
+        for j in 0..across - 1 {
+            let a = base + i * across + j;
+            let b = base + (i + 1) * across + j;
+            mesh.add_triangle(a, b, b + 1);
+            mesh.add_triangle(a, b + 1, a + 1);
+        }
+    }
+}
+
+/// `pts` pushed sideways by `off(i)` px.
+fn offset(pts: &[Pos2], off: impl Fn(usize) -> f32) -> Vec<Pos2> {
+    let norms = normals(pts);
+    pts.iter()
+        .enumerate()
+        .map(|(i, &p)| p + norms[i] * off(i))
+        .collect()
+}
+
+/// Layer 2b: roads, through the tile center toward neighboring roads and
+/// cities. Style follows the viewer's technology. Tiles with a field draw
+/// theirs after the field instead (see `draw_improvement`).
+pub fn draw_road(_art: &mut ResourceArt, painter: &egui::Painter, t: &TileCtx) {
+    if improvement_of(t).is_some_and(|n| layout_of(&n) == Layout::Field) {
+        return;
+    }
+    paint_road(painter, t);
+}
+
+fn paint_road(painter: &egui::Painter, t: &TileCtx) {
+    let (game, c, z) = (t.game, t.c, t.z);
+    if !t.tile().road {
+        return;
+    }
+    let kind = road_kind(t);
+    let road = |p: wayciv_core::Pos| game.map.tile(p).road || game.city_at(p).is_some();
+    let dirs: Vec<usize> = (0..6)
+        .filter(|&dir| t.neighbor(dir).is_some_and(road))
+        .collect();
+    if dirs.is_empty() {
+        return;
+    }
+    let seed = hash(t);
+    let w = (z * 0.105).max(1.6);
+    let sf = surface(kind);
+    let fade = |c: Color32, k: f32| c.gamma_multiply(k);
+    let clear = Color32::TRANSPARENT;
+
+    // Each spoke leaves the center and reaches the edge midpoint, bending a
+    // little in between; the bend vanishes at the edge, so neighbors join up.
+    let spoke = |dir: usize| -> Vec<Pos2> {
+        let end = c + world_dir(dir) * z * 0.5;
+        let bend = (wobble(seed.wrapping_add(dir as u32 * 31), 0.5) - 0.5) * 0.34 * z;
+        let n = 10;
+        let line: Vec<Pos2> = (0..=n).map(|i| c + (end - c) * (i as f32 / n as f32)).collect();
+        let norms = normals(&line);
+        line.iter()
+            .enumerate()
+            .map(|(i, &p)| p + norms[i] * bend * (std::f32::consts::PI * i as f32 / n as f32).sin())
+            .collect()
+    };
+    let paths: Vec<Vec<Pos2>> = if dirs.len() == 2 {
+        // Two ends: one smooth curve through the center.
+        let (a, b) = (
+            c + world_dir(dirs[0]) * z * 0.5,
+            c + world_dir(dirs[1]) * z * 0.5,
+        );
+        let n = 16;
+        vec![
+            (0..=n)
+                .map(|i| {
+                    let t = i as f32 / n as f32;
+                    let u = 1.0 - t;
+                    (a.to_vec2() * (u * u) + c.to_vec2() * (2.0 * u * t) + b.to_vec2() * (t * t))
+                        .to_pos2()
+                })
+                .collect(),
+        ]
+    } else {
+        dirs.iter().map(|&d| spoke(d)).collect()
+    };
+
+    // Wear varies slowly along the road.
+    let tone = move |u: f32| 0.93 + 0.14 * wobble(seed, u * 3.0);
+    let profile: Vec<(f32, Color32)> = match kind {
+        RoadKind::Dirt => vec![
+            (-2.0 * w, clear),
+            (-1.35 * w, fade(sf.verge, 0.45)),
+            (-0.85 * w, fade(sf.shoulder, 0.92)),
+            (-0.45 * w, sf.body),
+            (0.45 * w, sf.body),
+            (0.85 * w, fade(sf.shoulder, 0.92)),
+            (1.35 * w, fade(sf.verge, 0.45)),
+            (2.0 * w, clear),
+        ],
+        RoadKind::Paved | RoadKind::Rail => {
+            let rim = if kind == RoadKind::Paved { 0.95 } else { 0.9 };
+            vec![
+                (-1.7 * w, clear),
+                (-1.25 * w, fade(sf.verge, 0.5)),
+                (-rim * w, sf.verge),
+                (-0.7 * w, sf.shoulder),
+                (-0.5 * w, sf.body),
+                (0.5 * w, sf.body),
+                (0.7 * w, sf.shoulder),
+                (rim * w, sf.verge),
+                (1.25 * w, fade(sf.verge, 0.5)),
+                (1.7 * w, clear),
+            ]
+        }
+    };
+    let mut mesh = Mesh::default();
     for p in &paths {
-        painter.add(Shape::line(p.clone(), Stroke::new(ew, edge)));
+        ribbon(&mut mesh, p, &profile, &tone);
     }
-    if hub {
-        painter.circle_filled(c, ew / 2.0, edge);
+    // Junction: a soft round patch so spokes blend at the hub.
+    if dirs.len() != 2 {
+        mesh::puff(&mut mesh, c, w * 1.5, sf.body);
     }
-    for p in &paths {
-        painter.add(Shape::line(p.clone(), Stroke::new(bw, body)));
-    }
-    if hub {
-        painter.circle_filled(c, bw / 2.0, body);
-    }
+    painter.add(Shape::mesh(mesh));
     if z < 18.0 {
         return;
     }
-    match kind {
-        RoadKind::Dirt | RoadKind::Paved => {
-            for p in &paths {
-                painter.add(Shape::line(p.clone(), Stroke::new(bw * 0.3, mid)));
-            }
-        }
-        RoadKind::Rail => {
-            for p in &paths {
-                // Sleepers every few pixels, then two steel rails.
-                let pts = resample(p, (z * 0.12).max(3.0));
-                for pair in pts.windows(2) {
-                    let d = (pair[1] - pair[0]).normalized();
-                    let n = vec2(-d.y, d.x) * bw * 0.62;
-                    painter.line_segment(
-                        [pair[0] - n, pair[0] + n],
-                        Stroke::new((z * 0.04).max(1.0), mid),
-                    );
-                }
+
+    // Surface detail.
+    let mut mesh = Mesh::default();
+    let mut pebbles: Vec<(Pos2, f32)> = Vec::new();
+    for (pi, p) in paths.iter().enumerate() {
+        let salt = seed.wrapping_add(pi as u32 * 9);
+        match kind {
+            RoadKind::Dirt => {
+                // Two wheel ruts and a few pebbles.
+                let rut = [(-0.4 * w, clear), (0.0, fade(sf.mark, 0.55)), (0.4 * w, clear)];
                 for side in [-1.0, 1.0] {
-                    let off: Vec<Pos2> = pts
-                        .windows(2)
-                        .flat_map(|pair| {
-                            let d = (pair[1] - pair[0]).normalized();
-                            let n = vec2(-d.y, d.x) * bw * 0.26 * side;
-                            [pair[0] + n, pair[1] + n]
-                        })
-                        .collect();
-                    painter.add(Shape::line(
-                        off,
-                        Stroke::new((z * 0.025).max(0.8), Color32::from_rgb(214, 216, 222)),
-                    ));
+                    let off = offset(p, |i| side * 0.3 * w + (wobble(salt, i as f32 * 0.5) - 0.5) * 0.12 * w);
+                    ribbon(&mut mesh, &off, &rut, &|_| 1.0);
+                }
+                for (i, q) in resample(p, (z * 0.2).max(5.0)).into_iter().enumerate() {
+                    let h = salt.wrapping_add(i as u32).wrapping_mul(2_654_435_761);
+                    let dx = ((h >> 8) % 100) as f32 / 100.0 - 0.5;
+                    let dy = ((h >> 16) % 100) as f32 / 100.0 - 0.5;
+                    pebbles.push((q + vec2(dx, dy) * 1.8 * w, (z * 0.02).max(0.9)));
+                }
+            }
+            RoadKind::Paved => {
+                // Cobbles: staggered short joints across the road.
+                for (i, q) in resample(p, (z * 0.07).max(3.0)).windows(2).enumerate() {
+                    let d = (q[1] - q[0]).normalized();
+                    let n = vec2(-d.y, d.x);
+                    let stagger = if i % 2 == 0 { 0.2 } else { -0.2 };
+                    for k in -1..=1 {
+                        let a = q[0] + n * (k as f32 * 0.4 + stagger) * w;
+                        mesh::line(&mut mesh, a, a + d * z * 0.022, (z * 0.016).max(0.7), fade(sf.mark, 0.5));
+                    }
+                }
+            }
+            RoadKind::Rail => {
+                for pair in resample(p, (z * 0.075).max(3.0)).windows(2) {
+                    let d = (pair[1] - pair[0]).normalized();
+                    let n = vec2(-d.y, d.x) * w * 0.72;
+                    mesh::line(&mut mesh, pair[0] - n, pair[0] + n, (z * 0.032).max(1.0), sf.mark);
+                }
+                let steel = [
+                    (-0.1 * w, clear),
+                    (0.0, Color32::from_rgb(214, 218, 226)),
+                    (0.1 * w, clear),
+                ];
+                for side in [-1.0, 1.0] {
+                    ribbon(&mut mesh, &offset(p, |_| side * 0.3 * w), &steel, &|_| 1.0);
                 }
             }
         }
+    }
+    painter.add(Shape::mesh(mesh));
+    for (q, r) in pebbles {
+        painter.circle_filled(q, r, fade(sf.mark, 0.7));
     }
 }
 
@@ -301,6 +450,51 @@ fn improvement_of(t: &TileCtx) -> Option<String> {
         .map(|i| sprite_name(&t.game.rules.content.improvements[i].id))
 }
 
+/// Where the farmhouse stands in a field decal, in hex radii from the
+/// center (screen axes), before the decal's rotation.
+const YARD: Vec2 = vec2(-0.42, -0.34);
+
+/// Draws a field decal (rotated to the tile's hash), the road across it, and
+/// the farmhouse on its yard. The art follows the viewer's era; some tiles
+/// keep an older look.
+fn draw_field(
+    art: &mut ResourceArt,
+    painter: &egui::Painter,
+    t: &TileCtx,
+    name: &str,
+    tint: Color32,
+    h: u32,
+) {
+    let (c, z) = (t.c, t.z);
+    let ctx = painter.ctx().clone();
+    let mut era: usize = match t.game.era_of(t.viewer) {
+        0 | 1 => 0,
+        2 | 3 => 1,
+        4 | 5 => 2,
+        _ => 3,
+    };
+    if h % 3 == 0 {
+        era = era.saturating_sub(1);
+    }
+    let look = (h >> 9) & 1;
+    let decal = if name == "imp_farm" {
+        format!("imp_farm_{era}_{look}")
+    } else {
+        format!("imp_plantation_{look}")
+    };
+    let turns = h % 6;
+    if let Some(tex) = art.tex(&ctx, "improvements", &decal) {
+        blit(painter, tex, c, DECAL * z, tint, turns);
+    }
+    paint_road(painter, t);
+    let (s, co) = (turns as f32 * std::f32::consts::FRAC_PI_3).sin_cos();
+    let at = c + vec2(YARD.x * co - YARD.y * s, YARD.x * s + YARD.y * co) * z;
+    let scale = if t.tile().resource.is_some() { 0.46 } else { 0.68 };
+    if let Some(tex) = art.tex(&ctx, "improvements", &format!("imp_farmhouse_{era}")) {
+        blit(painter, tex, at, SPRITE * z * scale, tint, 0);
+    }
+}
+
 fn smoke(painter: &egui::Painter, at: Pos2, z: f32, seed: u32) {
     for k in 0..4u32 {
         let wob = ((seed.wrapping_add(k * 97) % 100) as f32 / 100.0 - 0.5) * 0.12;
@@ -330,17 +524,18 @@ pub fn draw_improvement(art: &mut ResourceArt, painter: &egui::Painter, t: &Tile
 
     // Tiny zoom: a flat patch or dot of the sprite's average color.
     if z < 14.0 {
-        let avg = art
-            .tex(&ctx, "improvements", &name)
-            .map(|x| x.avg)
-            .unwrap_or(Color32::from_rgb(140, 100, 60));
+        let avg = match name.as_str() {
+            "imp_farm" => Color32::from_rgb(156, 146, 72),
+            "imp_plantation" => Color32::from_rgb(88, 142, 62),
+            _ => art
+                .tex(&ctx, "improvements", &name)
+                .map(|x| x.avg)
+                .unwrap_or(Color32::from_rgb(140, 100, 60)),
+        };
         if layout == Layout::Field {
-            painter.add(hex(
-                c,
-                z * 0.85,
-                Color32::from_rgba_unmultiplied(avg.r(), avg.g(), avg.b(), 190),
-                Stroke::NONE,
-            ));
+            let mut blob = Mesh::default();
+            mesh::puff(&mut blob, c, z * 1.05, avg);
+            painter.add(Shape::mesh(blob));
         } else {
             let col = if camp {
                 Color32::from_rgb(190, 40, 34)
@@ -358,13 +553,10 @@ pub fn draw_improvement(art: &mut ResourceArt, painter: &egui::Painter, t: &Tile
     }
 
     if camp {
-        // A faint red warning ring so camps read at a glance.
-        painter.add(hex(
-            c,
-            z * 0.9,
-            Color32::from_rgba_unmultiplied(170, 30, 28, 36),
-            Stroke::new((z * 0.04).max(1.0), Color32::from_rgba_unmultiplied(200, 40, 34, 150)),
-        ));
+        // A soft red glow so camps read at a glance.
+        let mut glow = Mesh::default();
+        mesh::puff(&mut glow, c, z * 1.0, Color32::from_rgba_unmultiplied(190, 34, 30, 70));
+        painter.add(Shape::mesh(glow));
     }
     let tint = if pillaged {
         Color32::from_rgb(150, 138, 130)
@@ -375,11 +567,11 @@ pub fn draw_improvement(art: &mut ResourceArt, painter: &egui::Painter, t: &Tile
     let side = layout == Layout::Side && has_resource;
     let at = if side { c + vec2(-0.2 * z, 0.08 * z) } else { c };
     let scale = if side { 0.86 } else { 1.0 };
-    let drew = if let Some(tex) = art.tex(&ctx, "improvements", &name) {
-        match layout {
-            Layout::Field => blit(painter, tex, c, DECAL * z, tint, h % 6),
-            _ => blit(painter, tex, at, SPRITE * z * scale, tint, 0),
-        }
+    let drew = if layout == Layout::Field {
+        draw_field(art, painter, t, &name, tint, h);
+        true
+    } else if let Some(tex) = art.tex(&ctx, "improvements", &name) {
+        blit(painter, tex, at, SPRITE * z * scale, tint, 0);
         true
     } else if let Some(tex) = art.tex(&ctx, "improvements", "imp_generic") {
         blit(painter, tex, at, SPRITE * z * scale, tint, 0);

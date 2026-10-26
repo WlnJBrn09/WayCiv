@@ -117,8 +117,7 @@ def uranium(b):
 def antiquity(b):
     st = mat("ruin", c("#d4c4a0"), 0.9, col2=c("#a89874"), scale=6, bump=0.5)
     st2 = mat("ruin2", c("#bfae88"), 0.9, col2=c("#8a7c5a"), scale=6, bump=0.5)
-    sand = mat("ruinsand", c("#d8c08a"), 1.0, col2=c("#c0a870"), scale=10)
-    b.blob(sand, (0, 0, -0.02), (0.62, 0.5, 0.06))
+    soft_ground(b, "#d8c08a", "#c0a870", 0.62, 0.81)
     # broken columns
     b.cyl(st, (-0.28, 0.12, 0.0), (-0.28, 0.12, 0.5), 0.09, 0.08, seg=10)
     b.box(st2, (-0.28, 0.12, 0.54), (0.24, 0.24, 0.07))

@@ -26,122 +26,90 @@ def hex_edge(b, m, r, h, t, z=0.0):
     b.wall_run(m, pts + [pts[0]], h, t)
 
 
-# ------------------------------------------------------------- fields
-
-def field_plots(b, plots, crop_cols, seed=1):
-    """plots: list of (cx, cy, w, h, angle, kind)."""
-    rng = random.Random(seed)
-    soil = mat("tilled", c("#7a5a38"), 1.0, col2=c("#5a4028"), scale=12, bump=0.2)
-    for (cx, cy, w, h, ang, kind) in plots:
-        ca, sa = math.cos(ang), math.sin(ang)
-        col = crop_cols[kind % len(crop_cols)]
-        cm = mat("crop" + col, c(col), 0.7, col2=c(col), scale=20, bump=0.3)
-        # soil bed
-        b.box(soil, (cx, cy, 0.005), (w, h, 0.012), yaw=ang)
-        nrows = max(2, int(h / 0.105))
-        for i in range(nrows):
-            ly = -h / 2 + (i + 0.5) * h / nrows
-            px, py = cx - ly * sa, cy + ly * ca
-            # a raised ridge row of crop
-            b.box(cm, (px, py, 0.03), (w * 0.94, 0.06, 0.05), yaw=ang)
-            # tufts along the row
-            nt = max(2, int(w / 0.1))
-            for k in range(nt):
-                lx = -w / 2 + (k + 0.5) * w / nt
-                b.blob(cm, (px + lx * ca, py + lx * sa, 0.06), (0.045, 0.035, 0.05), seg=6)
-
-
-@model("imp_farm")
-def farm(b):
-    plots = [(-0.38, 0.38, 0.5, 0.42, 0.0, 0), (0.28, 0.45, 0.56, 0.38, 0.0, 1), (-0.5, -0.05, 0.4, 0.55, 1.5708, 1),
-             (0.05, 0.02, 0.5, 0.5, 0.0, 2), (0.52, -0.1, 0.38, 0.55, 1.5708, 0), (-0.28, -0.52, 0.55, 0.38, 0.0, 2), (0.3, -0.55, 0.5, 0.34, 0.0, 1)]
-    soil = mat("tilled", c("#7a5c3a"), 1.0, col2=c("#664a2e"), scale=12, bump=0.2)
-    b.poly(soil, hex_pts(0.97), z=0.0, h=0.008)
-    field_plots(b, plots, ["#78ae4a", "#cdb460", "#9ab450"])
-    return {"top_down": True, "ortho": 2.0, "fit": False, "no_catcher": True, "mask": 0.93, "samples": 32}
-
-
-@model("imp_plantation")
-def plantation(b):
-    soil = mat("tilled", c("#7a5a38"), 1.0, col2=c("#5a4028"), scale=12, bump=0.2)
-    b.poly(soil, hex_pts(0.86), z=0.0, h=0.01)
-    lm = mat("shrub", c("#3f8a2e"), 0.6, col2=c("#2f7022"), scale=14, bump=0.3, sss=0.2)
-    lt = mat("shrubt", c("#8cc84a"), 0.6)
-    for row in range(-3, 4):
-        y = row * 0.22
-        half = 0.78 if abs(y) < 0.43 else (1.0 - abs(y)) * 1.732 - 0.08
-        if half < 0.1:
-            continue
-        n = int(half * 2 / 0.19)
-        for k in range(n):
-            x = -half + (k + 0.5) * 2 * half / n
-            b.blob(lm, (x, y, 0.07), (0.1, 0.09, 0.08), seg=8)
-            b.blob(lt, (x, y, 0.13), (0.06, 0.055, 0.03), seg=6)
-    return {"top_down": True, "ortho": 2.0, "fit": False, "no_catcher": True, "mask": 0.9, "samples": 32}
+# Farm and plantation fields live in fields.py.
 
 
 @model("imp_pasture")
 def pasture(b):
-    gm = mat("pastureg", c("#8cc050"), 1.0, col2=c("#6aa038"), scale=8)
-    b.poly(gm, hex_pts(0.64), z=0.0, h=0.012)
-    pts = hex_pts(0.66)
-    for i in range(6):
-        fence_line(b, pts[i], pts[(i + 1) % 6], h=0.13, rails=2)
-    # trough and haystack at the back
-    wd = wood_mat()
-    b.box(wd, (-0.28, 0.32, 0.04), (0.2, 0.07, 0.08))
-    hm = mat("hay", c("#d8b848"), 1.0, col2=c("#b89430"), scale=40, bump=0.6)
-    b.blob(hm, (0.3, 0.3, 0.07), (0.12, 0.1, 0.09), seg=10)
-    return {"fit": False, "catcher": 1.0, "ystretch": True}
+    """A fenced paddock with a gate, trough and hay; the herd is the resource."""
+    soft_ground(b, "#7eaf4a", "#639238", 0.78, 0.9, z=0.0, scale=7)
+    rx, ry = 0.7, 0.62
+    n = 22
+    pts = [(rx * math.cos(2 * math.pi * i / n + 0.3), ry * math.sin(2 * math.pi * i / n + 0.3)) for i in range(n)]
+    for i in range(n):
+        if i in (n // 2 + 3, n // 2 + 4):
+            continue  # the gate
+        fence_line(b, pts[i], pts[(i + 1) % n], h=0.12, rails=2, post_r=0.014)
+    gd = pts[n // 2 + 3]
+    wd = wood_mat("#9a6a38", "#6a4620")
+    b.box(wd, (gd[0], gd[1], 0.06), (0.03, 0.03, 0.14))
+    b.box(wd, (-0.3, 0.3, 0.04), (0.22, 0.07, 0.08))
+    b.box(mat("trough", c("#4a7aa0"), 0.1, coat=1.0), (-0.3, 0.3, 0.075), (0.18, 0.045, 0.01))
+    hm = mat("hay", c("#dcbc50"), 1.0, col2=c("#b89430"), scale=40, bump=0.6)
+    b.blob(hm, (0.34, 0.32, 0.07), (0.12, 0.1, 0.09), seg=10)
+    b.blob(hm, (0.46, 0.2, 0.05), (0.08, 0.07, 0.06), seg=10)
+    tree(b, (-0.52, 0.3, 0), 0.62, "#4a8a30", s=1.2)
+    gm = grass_mat("#7aa84a", "#5a8a34")
+    for p_ in [(-0.4, -0.1), (0.1, -0.3), (0.5, -0.05), (0.0, 0.18)]:
+        b.tuft(gm, (p_[0], p_[1], 0), 0.12, 6, 0.08)
+    return {"fit": False, "catcher": 1.2, "ystretch": True}
 
 
 # -------------------------------------------------------------- mining
 
 @model("imp_mine")
 def mine(b):
-    rm = rock_mat("#8c7a66", "#5e4e40")
-    b.rock(rm, (0.0, 0.34, 0.2), (0.46, 0.3, 0.34), 1, rough=0.16)
-    b.rock(rm, (-0.4, 0.0, 0.1), (0.2, 0.17, 0.16), 2)
-    wd = wood_mat("#8a5a2c", "#5a3a18")
+    """A timbered adit in a rocky hillside, spoil heaps and an ore cart."""
+    ground_patch(b, "#7a6a54", "#5a4c3a", 0.62, seed=40)
+    rm = rock_mat("#9a8670", "#625244")
+    b.rock(rm, (0.0, 0.3, 0.2), (0.5, 0.32, 0.36), 1, rough=0.16)
+    b.rock(rm, (-0.42, 0.04, 0.1), (0.22, 0.18, 0.17), 2)
+    b.rock(rm, (0.4, 0.1, 0.09), (0.18, 0.16, 0.15), 3)
+    gm = grass_mat("#6a9a3e", "#4e7e2e")
+    b.blob(gm, (-0.06, 0.38, 0.5), (0.26, 0.17, 0.08), seg=10)
+    b.blob(gm, (0.2, 0.3, 0.44), (0.16, 0.12, 0.06), seg=8)
+    wd = wood_mat("#9a6a38", "#5a3a18")
     dk = mat("darkhole", c("#0a0806"), 1.0)
-    # shaft: dark opening framed by timbers
-    b.box(dk, (0.0, 0.04, 0.15), (0.32, 0.1, 0.3))
-    for x in (-0.18, 0.18):
-        b.box(wd, (x, -0.1, 0.16), (0.06, 0.07, 0.32))
-    b.box(wd, (0.0, -0.1, 0.33), (0.44, 0.08, 0.06))
-    b.box(wd, (0.0, -0.1, 0.4), (0.34, 0.07, 0.04))
-    # rails and cart
+    b.box(dk, (0.0, 0.03, 0.15), (0.32, 0.1, 0.3))
+    for x in (-0.19, 0.19):
+        b.box(wd, (x, -0.1, 0.16), (0.06, 0.07, 0.34))
+    b.box(wd, (0.0, -0.1, 0.34), (0.46, 0.08, 0.06))
+    b.box(wd, (0.0, -0.1, 0.4), (0.36, 0.07, 0.04))
+    lm = mat("lantern", c("#ffc860"), 0.4, emit=5.0, emit_col=c("#ffb040"))
+    b.blob(lm, (0.24, -0.14, 0.26), (0.02, 0.02, 0.03), seg=6)
     ir = mat("irondk", c("#4a4a50"), 0.4, metal=0.8)
     for x in (-0.06, 0.06):
-        b.box(ir, (x, -0.38, 0.012), (0.018, 0.5, 0.018))
+        b.box(ir, (x, -0.36, 0.012), (0.018, 0.5, 0.018))
     for i in range(6):
-        b.box(wd, (0.0, -0.2 - i * 0.075, 0.006), (0.22, 0.03, 0.012))
-    b.box(wd, (0.0, -0.42, 0.09), (0.19, 0.24, 0.1))
-    ore = mat("oreheap", c("#6a6a70"), 0.5, col2=c("#a8a8b0"), scale=30, bump=0.8)
-    b.blob(ore, (0.0, -0.42, 0.15), (0.09, 0.11, 0.05), seg=8)
-    for x, y in [(-0.07, -0.5), (0.07, -0.5), (-0.07, -0.34), (0.07, -0.34)]:
-        b.cyl(ir, (x - 0.1 * 0, y, 0.04), (x, y, 0.04), 0.03, 0.03, seg=8)
-    # pickaxe leaning + ore pile
-    b.cyl(wd, (0.4, -0.08, 0.0), (0.33, -0.08, 0.3), 0.012, 0.012, seg=5)
-    b.box(ir, (0.32, -0.08, 0.31), (0.12, 0.02, 0.03), yaw=0.0)
-    for i, (x, y) in enumerate([(0.38, -0.3), (0.45, -0.22), (0.3, -0.28)]):
-        b.rock(ore, (x, y, 0.05), (0.07, 0.06, 0.05), 5 + i)
+        b.box(wd, (0.0, -0.18 - i * 0.075, 0.006), (0.22, 0.03, 0.012))
+    b.box(wd, (0.0, -0.4, 0.09), (0.19, 0.24, 0.1))
+    ore = mat("oreheap", c("#6a6a70"), 0.5, col2=c("#b0a8a0"), scale=30, bump=0.8)
+    b.blob(ore, (0.0, -0.4, 0.15), (0.09, 0.11, 0.05), seg=8)
+    for x, y in [(-0.07, -0.48), (0.07, -0.48), (-0.07, -0.32), (0.07, -0.32)]:
+        b.cyl(ir, (x, y, 0.04), (x, y, 0.04), 0.03, 0.03, seg=8)
+    spoil = mat("spoil", c("#8a7a68"), 1.0, col2=c("#6a5a4a"), scale=40, bump=0.8)
+    for i, (x, y, r) in enumerate([(0.38, -0.3, 0.1), (0.5, -0.18, 0.07), (0.28, -0.36, 0.06), (-0.4, -0.3, 0.08)]):
+        b.rock(spoil, (x, y, r * 0.5), (r, r * 0.9, r * 0.7), 5 + i, subdiv=1)
+    b.cyl(wd, (0.4, 0.0, 0.0), (0.35, 0.0, 0.3), 0.012, 0.012, seg=5)
+    b.box(ir, (0.34, 0.0, 0.31), (0.12, 0.02, 0.03))
     return {"fit": False}
 
 
 @model("imp_quarry")
 def quarry(b):
-    st = mat("qstone", c("#d0c8b4"), 0.9, col2=c("#a8a08c"), scale=6, bump=0.3)
-    st2 = mat("qstone2", c("#b8b09a"), 0.9, col2=c("#8a826e"), scale=6, bump=0.3)
-    ds = mat("qdark", c("#7a725e"), 1.0)
-    # pit: terraced stepped cut, deepest at the front
-    b.box(ds, (0.0, 0.0, 0.0), (1.0, 0.8, 0.03))
-    for i, (w, d, x, y) in enumerate([(0.9, 0.38, 0.0, 0.3), (0.72, 0.3, -0.05, 0.08), (0.5, 0.26, -0.1, -0.12)]):
+    """A terraced limestone cut with a wooden derrick and dressed blocks."""
+    ground_patch(b, "#a89870", "#8a7a58", 0.7, seed=41)
+    st = mat("qstone", c("#e0cfa4"), 0.9, col2=c("#c0aa7c"), scale=6, bump=0.5)
+    st2 = mat("qstone2", c("#cbb88c"), 0.9, col2=c("#a89468"), scale=6, bump=0.5)
+    ds = mat("qdark", c("#8a7a5a"), 1.0, col2=c("#6a5a40"), scale=10, bump=0.3)
+    b.box(ds, (0.0, -0.02, 0.0), (0.95, 0.74, 0.03))
+    for i, (w, d, x, y) in enumerate([(0.9, 0.34, 0.0, 0.34), (0.72, 0.28, -0.05, 0.12), (0.52, 0.24, -0.1, -0.08)]):
         b.box(st if i % 2 == 0 else st2, (x, y, 0.07 + i * 0.07), (w, d, 0.14 + i * 0.14))
-    # cut blocks
-    for (x, y, yaw, z) in [(0.38, -0.2, 0.2, 0.08), (0.32, -0.1, 0.4, 0.08), (0.36, -0.15, 0.3, 0.2), (-0.4, -0.3, -0.3, 0.07)]:
+        # horizontal cut marks along the face
+        for k in range(1, 3):
+            b.box(st2 if i % 2 == 0 else st, (x, y - d / 2 - 0.004, 0.14 * k + i * 0.03), (w * 0.98, 0.01, 0.012))
+    for (x, y, yaw, z) in [(0.38, -0.2, 0.2, 0.08), (0.32, -0.1, 0.4, 0.08), (0.36, -0.15, 0.3, 0.2), (-0.4, -0.3, -0.3, 0.07), (-0.3, -0.34, 0.2, 0.07)]:
         b.box(st, (x, y, z), (0.2, 0.15, 0.14), yaw=yaw)
-    # crane / derrick
     wd = wood_mat()
     b.cyl(wd, (0.0, -0.3, 0), (0.0, -0.3, 0.55), 0.025, 0.025, seg=6)
     b.cyl(wd, (0.0, -0.3, 0.52), (0.22, -0.28, 0.52), 0.02, 0.02, seg=6)
@@ -185,8 +153,9 @@ def lumber_mill(b):
     ground_patch(b, "#7a6240", "#5a4630", 0.62, seed=3)
     wd = wood_mat("#9a6a38", "#6a4620")
     log = wood_mat("#7a5028", "#4a2e14")
-    roof = mat("shingle", c("#6a4a30"), 0.9, col2=c("#4a3220"), scale=25, bump=0.4)
+    roof = mat("shingle", c("#9a5a38"), 0.85, col2=c("#6a3a26"), scale=25, bump=0.4)
     house(b, -0.1, 0.18, 0.46, 0.3, 0.2, wd, roof, rh=0.2, door=False)
+    b.box(mat("lmwin", c("#2a1c10"), 0.9), (-0.1, 0.028, 0.12), (0.14, 0.01, 0.12))
     # saw blade
     ir = mat("sawm", c("#c8ccd0"), 0.25, metal=1.0)
     b.cyl(ir, (0.18, -0.15, 0.2), (0.18, -0.145, 0.2), 0.12, 0.12, seg=18)
@@ -201,28 +170,39 @@ def lumber_mill(b):
     return {"fit": False}
 
 
+def boat(b, x, y, yaw, s, sail_col, hull_col="#8a5a30"):
+    hull = mat("hull" + hull_col, c(hull_col), 0.7, col2=c("#5a3818"), scale=6, wave=True)
+    trim = mat("hulltrim", c("#d8c8a0"), 0.8)
+    sail = mat("sail" + sail_col, c(sail_col), 0.95)
+    P = lib._P(x, y, yaw, s)
+    # a pointed hull: three overlapping lobes, the bow raised
+    b.blob(hull, P(0, 0, 0.04), (0.22 * s, 0.08 * s, 0.05 * s), yaw, seg=14)
+    b.blob(hull, P(0.2, 0, 0.065), (0.1 * s, 0.045 * s, 0.045 * s), yaw, seg=10)
+    b.blob(hull, P(-0.2, 0, 0.06), (0.07 * s, 0.06 * s, 0.045 * s), yaw, seg=10)
+    b.blob(trim, P(0, 0, 0.082), (0.21 * s, 0.07 * s, 0.01 * s), yaw, seg=14)
+    wd = wood_mat()
+    b.cyl(wd, P(0.03, 0, 0.07), P(0.03, 0, 0.52), 0.011 * s, 0.008 * s, seg=5)
+    b.cyl(wd, P(-0.1, 0, 0.2), P(0.16, 0, 0.17), 0.007 * s, 0.007 * s, seg=4)
+    lib.tri(b, sail, P(0.04, 0.0, 0.2), P(0.2, 0.0, 0.16), P(0.04, 0.0, 0.5))
+    lib.tri(b, sail, P(0.02, 0.0, 0.2), P(-0.12, 0.0, 0.18), P(0.02, 0.0, 0.46))
+    fm = mat("fishc", c("#a8c4d8"), 0.3, metal=0.4)
+    for k in range(3):
+        b.blob(fm, P(-0.1 + k * 0.05, 0.02 * (k - 1), 0.1), (0.04 * s, 0.015 * s, 0.015 * s), yaw, seg=6)
+    # wake trailing behind
+    wk = soft_mat("wake", (0.92, 0.97, 1.0), scale=6, r_in=0.05, r_out=0.4, ry=0.3, bump=0.0, rough=0.4, warp=0.3, opacity=0.6)
+    soft_disc(b, wk, P(-0.42, 0, 0.012), 0.4 * s, 0.3)
+
+
 @model("imp_fishing_boats")
 def fishing_boats(b):
-    water_rings(b, 0.7, 2)
-    hull = mat("hull", c("#8a5a30"), 0.7, col2=c("#5a3818"), scale=6, wave=True)
-    trim = mat("hulltrim", c("#d8c8a0"), 0.8)
-    sail = mat("sail2", c("#f0e8d4"), 0.95)
-    sail_r = mat("sailr", c("#c0402e"), 0.9)
-    for (x, y, yaw, s, sl) in [(-0.12, 0.12, 0.3, 1.2, sail), (0.22, -0.2, 2.4, 0.95, sail_r)]:
-        P = lib._P(x, y, yaw, s)
-        b.blob(hull, P(0, 0, 0.04), (0.22 * s, 0.08 * s, 0.05 * s), yaw, seg=12)
-        b.blob(trim, P(0, 0, 0.075), (0.2 * s, 0.07 * s, 0.01 * s), yaw, seg=12)
-        b.cyl(wood_mat(), P(0.02, 0, 0.06), P(0.02, 0, 0.5), 0.012 * s, 0.01 * s, seg=5)
-        # triangular sails
-        lib.tri(b, sl, P(0.03, 0.0, 0.14), P(0.2, 0.0, 0.12), P(0.03, 0.0, 0.5))
-        lib.tri(b, sl, P(0.0, 0.0, 0.14), P(-0.16, 0.0, 0.12), P(0.0, 0.0, 0.46))
-        # catch
-        fm = mat("fishc", c("#9ab8d0"), 0.3, metal=0.4)
-        b.blob(fm, P(-0.08, 0.02, 0.1), (0.04 * s, 0.015 * s, 0.015 * s), yaw, seg=6)
-    # floating net buoys
+    water_rings(b, 0.78, 1)
+    boat(b, -0.12, 0.14, 0.3, 1.15, "#f0e8d4")
+    boat(b, 0.22, -0.22, 2.7, 0.9, "#c0402e", "#6a4a30")
     bm_ = mat("buoy", c("#e04a2a"), 0.5)
-    for (x, y) in [(0.35, 0.2), (0.28, 0.3), (0.4, 0.1), (-0.4, -0.2)]:
+    nm = mat("net", c("#c8b888"), 0.9)
+    for (x, y) in [(0.38, 0.2), (0.28, 0.3), (0.42, 0.08), (-0.42, -0.2)]:
         b.blob(bm_, (x, y, 0.03), (0.03, 0.03, 0.03), seg=6)
+    b.ring(nm, (0.36, 0.2, 0.012), 0.1, 0.012, seg=20)
     return {"fit": False}
 
 
@@ -301,9 +281,9 @@ def airstrip(b):
     asph = mat("asph", c("#3a3c42"), 0.9, col2=c("#4a4c52"), scale=20, bump=0.1)
     ln = mat("rwline", c("#f0f0e8"), 0.7)
     gr = mat("apron", c("#6a6c70"), 0.9)
-    ground_patch(b, "#6a9a44", "#527a34", 1.1, seed=22)
-    b.box(asph, (0.0, 0.0, 0.015), (1.3, 0.24, 0.02), yaw=0.52)
-    for i in range(-5, 6):
+    ground_patch(b, "#6a9a44", "#527a34", 0.6, seed=22)
+    b.box(asph, (0.0, 0.0, 0.015), (1.05, 0.22, 0.02), yaw=0.52)
+    for i in range(-4, 5):
         b.box(ln, (math.cos(0.52) * i * 0.11, math.sin(0.52) * i * 0.11, 0.028), (0.06, 0.02, 0.004), yaw=0.52)
     b.box(gr, (-0.18, 0.28, 0.015), (0.4, 0.26, 0.02))
     # hangar
@@ -347,8 +327,7 @@ def missile_silo(b):
 
 @model("imp_beach_resort")
 def beach_resort(b):
-    sand = mat("rsand", c("#e8d49a"), 1.0, col2=c("#d0b878"), scale=14)
-    b.blob(sand, (0, 0, -0.02), (0.75, 0.6, 0.05))
+    soft_ground(b, "#e8d49a", "#d0b878", 0.75, 0.80)
     wl = mat("hotelw", c("#f4f0e8"), 0.7)
     b.box(wl, (-0.1, 0.25, 0.2), (0.6, 0.22, 0.4))
     rm = mat("hotelr", c("#2a9ab8"), 0.5)
@@ -451,8 +430,7 @@ def roman_fort(b):
 @model("imp_sphinx")
 def sphinx(b):
     sn = mat("sphinx", c("#d8b878"), 0.95, col2=c("#b89858"), scale=8, bump=0.4)
-    sand = mat("ssand", c("#e0c88a"), 1.0, col2=c("#c8b070"), scale=10)
-    b.blob(sand, (0, 0, -0.02), (0.75, 0.6, 0.05))
+    soft_ground(b, "#e0c88a", "#c8b070", 0.75, 0.80)
     P = lib._P(0, 0, 0.0, 1.0)
     b.blob(sn, (0, 0.0, 0.13), (0.38, 0.14, 0.12), 0.0)
     b.box(sn, (0.0, 0.0, 0.05), (0.7, 0.26, 0.1))
@@ -520,8 +498,7 @@ def outback_station(b):
 
 @model("imp_pairidaeza")
 def pairidaeza(b):
-    gm = mat("pgrass", c("#7ab04a"), 1.0, col2=c("#5a9438"), scale=8)
-    b.poly(gm, hex_pts(0.7), z=0.0, h=0.012)
+    soft_ground(b, "#7ab04a", "#5a9438", 0.62, 0.86, z=0.0, scale=8)
     wl = mat("pwall", c("#d8c8a0"), 0.9)
     pts = hex_pts(0.72)
     b.wall_run(wl, pts + [pts[0]], 0.1, 0.05)
@@ -539,8 +516,7 @@ def pairidaeza(b):
 
 @model("imp_pyramid")
 def pyramid_nubian(b):
-    sand = mat("psand", c("#e0c88a"), 1.0, col2=c("#c8b070"), scale=10)
-    b.blob(sand, (0, 0, -0.02), (0.7, 0.55, 0.05))
+    soft_ground(b, "#e0c88a", "#c8b070", 0.7, 0.79)
     st = mat("npyr", c("#c8a468"), 0.95, col2=c("#a88448"), scale=8, bump=0.4)
     for (x, y, w, h) in [(-0.2, 0.05, 0.4, 0.5), (0.22, -0.1, 0.32, 0.4), (0.15, 0.3, 0.22, 0.28)]:
         b.cyl(st, (x, y, 0), (x, y, h), w * 0.7, 0.0, seg=4, smooth=False)

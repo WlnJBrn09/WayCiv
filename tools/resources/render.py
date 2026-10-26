@@ -22,7 +22,7 @@ only = set(args[1:])
 os.makedirs(out, exist_ok=True)
 
 models = {}
-for modname in ("res_bonus", "res_lux", "res_strat", "improvements"):
+for modname in ("res_bonus", "res_lux", "res_strat", "improvements", "fields"):
     try:
         mod = importlib.import_module(modname)
     except ModuleNotFoundError as e:
@@ -62,7 +62,7 @@ for name, fn in models.items():
     opts = fn(b) or {}
     sc = lib.setup_render(
         res=opts.get("res", 256),
-        samples=opts.get("samples", 24),
+        samples=opts.get("samples", 40),
         top_down=opts.get("top_down", False),
         ortho=opts.get("ortho", 1.7),
         elev=opts.get("elev", 52.0),

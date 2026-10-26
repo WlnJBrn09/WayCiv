@@ -462,9 +462,9 @@ def hex_pts(r=1.0, n=6, off=30.0):
 
 
 def water_rings(b, r=0.7, n=2):
-    wm = mat("foam", (0.9, 0.97, 1.0), 0.3, alpha=0.55, emit=0.15)
-    for i in range(n):
-        b.ring(wm, (0, 0, 0.012 + 0.002 * i), r + 0.16 * i, 0.035, seg=44)
+    """A faint, soft foam halo on the sea around a floating prop."""
+    fm = soft_mat("foam", (0.7, 0.88, 0.96), scale=6, r_in=r * 0.5, r_out=r * 1.2, ry=0.9, bump=0.0, rough=0.4, warp=0.3, opacity=0.26)
+    soft_disc(b, fm, (0, 0, 0.01), r * 1.2, 0.9)
 
 
 # ---------------------------------------------------------------- animals
@@ -703,15 +703,113 @@ def stepped(b, m, x, y, z, w, tiers=4, th=0.1, shrink=0.78, yaw=0.0, m2=None):
         b.box(mm, (x, y, z + th * (i + 0.5)), (w * shrink ** i, w * shrink ** i, th), yaw=yaw)
 
 
-def ground_patch(b, col="#8a6a44", col2="#6a4e30", r=0.5, z=0.0, seed=1, ry=0.78):
-    """A ragged dirt patch under a structure."""
-    gm = mat("gpatch" + col, c(col), 1.0, col2=c(col2), scale=8, bump=0.2)
-    r *= 0.82
-    rng = random.Random(seed)
-    b.blob(gm, (0, 0, z - 0.01), (r, r * ry, 0.035), seg=20)
-    for i in range(6):
-        a = i * 1.05 + rng.random()
-        b.blob(gm, (math.cos(a) * r * 0.75, math.sin(a) * r * 0.62, z - 0.012), (r * 0.35, r * 0.3, 0.03), seg=10)
+def soft_mat(name, col, col2=None, scale=8.0, r_in=0.55, r_out=1.0, ry=1.0, bump=0.2, rough=1.0, warp=0.22, opacity=1.0):
+    """Ground material whose alpha fades to nothing between r_in and r_out
+    (object-space distance, ry squashes y), with a noisy edge, so a patch
+    melts into whatever terrain the sprite is drawn on."""
+    key = ("soft", name, tuple(col), tuple(col2) if col2 else None, scale, r_in, r_out, ry, bump, rough, warp, opacity)
+    if key in MATS:
+        return MATS[key]
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    bsdf = _principled(nt)
+    out = next(n for n in nt.nodes if n.type == "OUTPUT_MATERIAL")
+    bsdf.inputs["Roughness"].default_value = rough
+    bsdf.inputs["Base Color"].default_value = (col[0], col[1], col[2], 1)
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    mp = nt.nodes.new("ShaderNodeMapping")
+    mp.inputs["Scale"].default_value = (1.0, 1.0 / ry, 0.0)
+    nt.links.new(tc.outputs["Object"], mp.inputs["Vector"])
+    ln = nt.nodes.new("ShaderNodeVectorMath")
+    ln.operation = "LENGTH"
+    nt.links.new(mp.outputs["Vector"], ln.inputs[0])
+    noise = nt.nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = scale * 0.7
+    noise.inputs["Detail"].default_value = 3.0
+    nt.links.new(tc.outputs["Object"], noise.inputs["Vector"])
+    # radius + (noise - 0.5) * warp
+    sub = nt.nodes.new("ShaderNodeMath")
+    sub.operation = "SUBTRACT"
+    sub.inputs[1].default_value = 0.5
+    nt.links.new(noise.outputs["Fac"], sub.inputs[0])
+    mul = nt.nodes.new("ShaderNodeMath")
+    mul.operation = "MULTIPLY"
+    mul.inputs[1].default_value = warp
+    nt.links.new(sub.outputs[0], mul.inputs[0])
+    add = nt.nodes.new("ShaderNodeMath")
+    add.operation = "ADD"
+    nt.links.new(ln.outputs["Value"], add.inputs[0])
+    nt.links.new(mul.outputs[0], add.inputs[1])
+    rng = nt.nodes.new("ShaderNodeMapRange")
+    rng.inputs["From Min"].default_value = r_in
+    rng.inputs["From Max"].default_value = r_out
+    rng.inputs["To Min"].default_value = opacity
+    rng.inputs["To Max"].default_value = 0.0
+    rng.clamp = True
+    nt.links.new(add.outputs[0], rng.inputs["Value"])
+    if col2 is not None:
+        n2 = nt.nodes.new("ShaderNodeTexNoise")
+        n2.inputs["Scale"].default_value = scale
+        n2.inputs["Detail"].default_value = 5.0
+        nt.links.new(tc.outputs["Object"], n2.inputs["Vector"])
+        mix = nt.nodes.new("ShaderNodeMix")
+        mix.data_type = "RGBA"
+        mix.inputs[6].default_value = (col[0], col[1], col[2], 1)
+        mix.inputs[7].default_value = (col2[0], col2[1], col2[2], 1)
+        nt.links.new(n2.outputs["Fac"], mix.inputs[0])
+        nt.links.new(mix.outputs[2], bsdf.inputs["Base Color"])
+    if bump > 0:
+        bp = nt.nodes.new("ShaderNodeBump")
+        bp.inputs["Strength"].default_value = bump
+        bp.inputs["Distance"].default_value = 0.05
+        n3 = nt.nodes.new("ShaderNodeTexNoise")
+        n3.inputs["Scale"].default_value = scale * 3
+        n3.inputs["Detail"].default_value = 6.0
+        nt.links.new(tc.outputs["Object"], n3.inputs["Vector"])
+        nt.links.new(n3.outputs["Fac"], bp.inputs["Height"])
+        nt.links.new(bp.outputs["Normal"], bsdf.inputs["Normal"])
+    tr = nt.nodes.new("ShaderNodeBsdfTransparent")
+    ms = nt.nodes.new("ShaderNodeMixShader")
+    nt.links.new(rng.outputs["Result"], ms.inputs[0])
+    nt.links.new(tr.outputs["BSDF"], ms.inputs[1])
+    nt.links.new(bsdf.outputs["BSDF"], ms.inputs[2])
+    nt.links.new(ms.outputs["Shader"], out.inputs["Surface"])
+    MATS[key] = m
+    return m
+
+
+def soft_disc(b, m, pos, r, ry=1.0, h=0.012, seg=48):
+    """A flat disc (radius r, squashed by ry) for a soft_mat ground."""
+    bm = b._b(m)
+    ctr = bm.verts.new((pos[0], pos[1], pos[2] + h))
+    ring = [bm.verts.new((pos[0] + math.cos(2 * math.pi * i / seg) * r,
+                          pos[1] + math.sin(2 * math.pi * i / seg) * r * ry, pos[2] + h)) for i in range(seg)]
+    for i in range(seg):
+        bm.faces.new([ctr, ring[i], ring[(i + 1) % seg]])
+
+
+def soft_ground(b, col, col2, rx, ry=0.8, z=-0.01, scale=10):
+    """A sand / grass pad under a prop, fading out at its rim."""
+    R = rx * 1.3
+    gm = soft_mat("sg" + col, c(col), col2=c(col2), scale=scale, r_in=R * 0.5, r_out=R, ry=ry)
+    soft_disc(b, gm, (0, 0, z), R, ry)
+
+
+def ground_patch(b, col="#8a6a44", col2="#6a4e30", r=0.5, z=0.0, seed=1, ry=0.78, grass=True):
+    """A dirt patch under a structure that fades softly into the terrain,
+    ringed by a few grass tufts so it never reads as a plate."""
+    R = r * 1.28
+    gm_r = soft_mat("gpatch" + col + "r", c(col), col2=c(col2), scale=7, r_in=R * 0.52, r_out=R, ry=ry)
+    soft_disc(b, gm_r, (0, 0, z - 0.004), R, ry)
+    if grass:
+        rng = random.Random(seed)
+        tm = leaf_mat("#6a9a3a")
+        for i in range(14):
+            a = rng.random() * 6.283
+            d = R * (0.62 + 0.3 * rng.random())
+            b.tuft(tm, (math.cos(a) * d, math.sin(a) * d * ry, z), h=0.09 + 0.05 * rng.random(), n=4, spread=0.035)
+    return gm_r
 
 
 def hut_round(b, x, y, r=0.12, h=0.1, wall=None, roof=None):

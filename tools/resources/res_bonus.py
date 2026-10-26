@@ -33,19 +33,23 @@ def wheat(b):
 
 @model("resource_rice")
 def rice(b):
-    soil = mat("paddyw", c("#6fa0a8"), 0.1, metal=0.0, col2=c("#8dbab8"), scale=3, alpha=0.9)
-    mud = mat("mud", c("#7a5a38"), 0.95, col2=c("#5a4128"), scale=8)
-    b.poly(soil, hex_pts(0.6), z=0.0, h=0.03)
-    b.wall_run(mud, hex_pts(0.6) + [hex_pts(0.6)[0]], 0.07, 0.07)
+    """Flooded paddies in muddy bunds, young rice standing in the water."""
+    soft_ground(b, "#7a5a38", "#5e4228", 0.62, 0.85, z=-0.01, scale=8)
+    water = mat("paddyw", c("#6fa0a8"), 0.05, col2=c("#8dbab8"), scale=3, coat=0.6)
+    mud = mat("mud", c("#7a5a38"), 0.95, col2=c("#5a4128"), scale=8, bump=0.3)
     lm = mat("rice", c("#7cc03a"), 0.6, col2=c("#b4d848"), scale=25)
-    for row in range(-3, 4):
-        for k in range(-3, 4):
-            x, y = row * 0.15, k * 0.15 + (0.07 if row % 2 else 0)
-            if x * x * 0.8 + y * y > 0.4:
-                continue
-            for j in range(3):
-                a = j * 2.1 + row
-                b.cyl(lm, (x, y, 0.03), (x + math.cos(a) * 0.05, y + math.sin(a) * 0.05, 0.2 + 0.03 * ((row + k) % 2)), 0.012, 0.002, seg=3)
+    for (cx, cy, w, h, ang) in [(-0.2, 0.18, 0.46, 0.3, 0.1), (0.24, 0.2, 0.34, 0.3, -0.1), (-0.06, -0.2, 0.62, 0.3, 0.05)]:
+        ca, sa = math.cos(ang), math.sin(ang)
+        b.box(mud, (cx, cy, 0.02), (w + 0.08, h + 0.08, 0.04), yaw=ang)
+        b.box(water, (cx, cy, 0.042), (w, h, 0.012), yaw=ang)
+        for i in range(int(w / 0.1)):
+            for j in range(int(h / 0.1)):
+                lx = -w / 2 + 0.06 + i * 0.1
+                ly = -h / 2 + 0.06 + j * 0.1
+                x, y = cx + lx * ca - ly * sa, cy + lx * sa + ly * ca
+                for k in range(3):
+                    a = k * 2.1 + i
+                    b.cyl(lm, (x, y, 0.045), (x + math.cos(a) * 0.04, y + math.sin(a) * 0.04, 0.17 + 0.02 * ((i + j) % 2)), 0.009, 0.002, seg=3)
     return {}
 
 
@@ -136,8 +140,7 @@ def fish_res(b):
 @model("resource_crabs")
 def crabs(b):
     water_rings(b, 0.62, 2)
-    sand = mat("sand", c("#d8c08a"), 0.95, col2=c("#c0a870"), scale=15)
-    b.blob(sand, (0, 0, -0.01), (0.55, 0.45, 0.05))
+    soft_ground(b, "#d8c08a", "#c0a870", 0.55, 0.82)
     cm = mat("crab", c("#e0522a"), 0.4, col2=c("#b83a1e"), scale=12, coat=0.3)
     em = mat("ceye", c("#101010"), 0.2)
     for (x, y, yaw, s) in [(-0.12, 0.05, 0.4, 1.3), (0.2, -0.12, 2.6, 1.0)]:

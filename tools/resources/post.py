@@ -5,15 +5,15 @@
 
   sprites/<id>.png        map sprites of resources        (160 px, RGBA)
   icons/<id>.png          class-coloured circular badges  (128 px, RGBA)
-  improvements/<id>.png   improvement and camp sprites    (160/192 px)
+  improvements/<id>.png   improvement and camp sprites    (160 px; field decals 224 px)
 Needs Pillow + numpy.
 """
-import math
 import os
 import sys
+import zlib
 
 import numpy as np
-from PIL import Image, ImageChops, ImageDraw, ImageFilter
+from PIL import Image, ImageChops, ImageDraw
 
 RAW, OUT = sys.argv[1], sys.argv[2]
 
@@ -100,19 +100,33 @@ def make_icon(raw, klass_name, size=128):
     return premul_resize(badge, size)
 
 
-def soften_hex(im, inset=0.0, feather=10):
-    """Fade the edge of a top-down hex decal into the terrain."""
+def noise_field(W, seed, cells=(5, 11, 23)):
+    """Smooth value noise in [-1, 1], a few octaves."""
+    rng = np.random.default_rng(seed)
+    out = np.zeros((W, W), np.float32)
+    amp = 1.0
+    for n in cells:
+        g = Image.fromarray((rng.random((n, n)) * 255).astype(np.uint8), "L").resize((W, W), Image.BICUBIC)
+        out += (np.asarray(g).astype(np.float32) / 127.5 - 1.0) * amp
+        amp *= 0.5
+    return out / sum(0.5 ** i for i in range(len(cells)))
+
+
+def soften_field(im, seed, inner=0.74, outer=0.98, warp=0.13):
+    """Fade a top-down field decal out toward (and past) the hex edge along a
+    wobbly, noise-warped outline so it grows out of the terrain."""
     W = im.width
-    S = W * 2
-    # pointy-top hex of radius R (px), ortho 2.0 -> R = W/2 * mask
-    R = W / 2 * inset if inset else W / 2 * 0.9
-    m = Image.new("L", (W, W), 0)
-    pts = [(W / 2 + R * math.cos(math.radians(30 + 60 * i)), W / 2 - R * math.sin(math.radians(30 + 60 * i))) for i in range(6)]
-    ImageDraw.Draw(m).polygon(pts, fill=255)
-    m = m.filter(ImageFilter.GaussianBlur(feather))
-    out = im.copy()
-    out.putalpha(ImageChops.multiply(im.getchannel("A"), m))
-    return out
+    yy, xx = np.mgrid[0:W, 0:W].astype(np.float32)
+    x = (xx - W / 2) / (W / 2)
+    y = -(yy - W / 2) / (W / 2)
+    d = np.maximum(np.abs(x), np.maximum(np.abs(0.5 * x + 0.866 * y), np.abs(0.5 * x - 0.866 * y))) / 0.866
+    d = d * 0.82 + np.hypot(x, y) * 0.18  # rounds the corners
+    d = d + noise_field(W, seed) * warp
+    m = np.clip((outer - d) / (outer - inner), 0, 1)
+    m = m * m * (3 - 2 * m)
+    a = np.asarray(im).astype(np.float32)
+    a[..., 3] *= m
+    return Image.fromarray(a.astype(np.uint8), "RGBA")
 
 
 def main():
@@ -125,9 +139,8 @@ def main():
             premul_resize(raw, 160).save(os.path.join(OUT, "sprites", name + ".png"), optimize=True)
             make_icon(raw, klass(name)).save(os.path.join(OUT, "icons", name + ".png"), optimize=True)
         else:
-            fieldlike = name in ("imp_farm", "imp_plantation")
-            if fieldlike:
-                im = premul_resize(soften_hex(raw, 0.93 if name == "imp_farm" else 0.88, 5), 192)
+            if name.startswith(("imp_farm_", "imp_plantation_")):
+                im = premul_resize(soften_field(raw, zlib.crc32(name.encode())), 224)
             else:
                 im = premul_resize(raw, 160)
             im.save(os.path.join(OUT, "improvements", name + ".png"), optimize=True)
