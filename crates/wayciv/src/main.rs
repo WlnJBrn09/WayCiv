@@ -56,6 +56,8 @@ pub struct App {
     demo: Option<String>,
     /// Test hook: `WAYCIV_PERF=1` measures the frame cost (see `perf_hook`).
     perf: Option<Perf>,
+    /// Test hook: take the snapshot on the loading screen too.
+    hold_loading: bool,
 }
 
 /// The frame on which `WAYCIV_ANIM_DEMO` starts its scene.
@@ -73,11 +75,24 @@ impl App {
         palette::style(&cc.egui_ctx);
         let (tx, rx) = mpsc::channel();
         let ctx = cc.egui_ctx.clone();
-        std::thread::spawn(move || {
-            let result = wayciv_core::load_rules().map_err(|e| e.to_string());
-            let _ = tx.send(result);
-            ctx.request_repaint();
-        });
+        // Test hook: `WAYCIV_STAGE=loading` or `failed` stays on that screen.
+        let stage = std::env::var("WAYCIV_STAGE").ok();
+        let hold_loading = stage.as_deref() == Some("loading");
+        match stage.as_deref() {
+            Some("loading") => std::mem::forget(tx),
+            Some("failed") => {
+                let _ = tx.send(Err(
+                    "data/units.toml: line 12: unknown field `moovs`".to_string(),
+                ));
+            }
+            _ => {
+                std::thread::spawn(move || {
+                    let result = wayciv_core::load_rules().map_err(|e| e.to_string());
+                    let _ = tx.send(result);
+                    ctx.request_repaint();
+                });
+            }
+        }
         let snapshot = std::env::var("WAYCIV_SNAPSHOT").ok().map(|p| (p, 0));
         let ms = |s: &str| s.trim().parse::<u64>().ok();
         let mut shots: Vec<u64> = std::env::var("WAYCIV_SNAPSHOT_AT")
@@ -117,6 +132,7 @@ impl App {
             snapshot_frames,
             demo: std::env::var("WAYCIV_ANIM_DEMO").ok(),
             perf,
+            hold_loading,
         }
     }
 
@@ -328,7 +344,7 @@ impl App {
         let Some((path, frames)) = &mut self.snapshot else {
             return;
         };
-        if matches!(self.stage, Stage::Loading(_)) {
+        if matches!(self.stage, Stage::Loading(_)) && !self.hold_loading {
             ctx.request_repaint();
             return;
         }
@@ -512,21 +528,8 @@ impl eframe::App for App {
 impl App {
     fn show(&mut self, ui: &mut egui::Ui) {
         match &mut self.stage {
-            Stage::Loading(_) => {
-                egui::CentralPanel::default().show(ui, |ui| {
-                    ui.centered_and_justified(|ui| {
-                        ui.heading("Loading...")
-                    });
-                });
-            }
-            Stage::Failed(error) => {
-                let error = error.clone();
-                egui::CentralPanel::default().show(ui, |ui| {
-                    ui.heading("WayCiv couldn't load its content");
-                    ui.label(error);
-                    ui.label("The content is compiled into the game from crates/wayciv-data/data; this means a data file has an error. Rebuild after fixing it.");
-                });
-            }
+            Stage::Loading(_) => screens::loading(ui),
+            Stage::Failed(error) => screens::failed(ui, error),
             Stage::Setup(_) => setup_screen::show(self, ui),
             Stage::Playing(_) => hud::show(self, ui),
         }

@@ -2,8 +2,8 @@
 //! great people, city-states, victory, diplomacy, and leader pop-ups.
 
 use crate::hud::Session;
-use crate::palette::{self, GOLD, TEXT, YIELD_COLORS};
-use crate::portraits::Portraits;
+use crate::palette::{self, GOLD, YIELD_COLORS};
+use crate::portraits::{self, Portraits};
 use crate::ui::glyph::Glyph;
 use crate::ui::{self, TOP_BAR, anim, theme};
 use egui::{
@@ -132,54 +132,62 @@ fn themed_window(
         screen.width() - 40.0,
         screen.height() - TOP_BAR - 40.0,
     ));
-    let pos = pos2(
-        screen.center().x - size.x / 2.0,
-        TOP_BAR + (screen.height() - TOP_BAR - size.y) / 2.0,
+    let center = pos2(
+        screen.center().x,
+        TOP_BAR + (screen.height() - TOP_BAR) / 2.0,
     );
     let mut open = true;
+    // The window is `size` wide and hugs its contents up to `size` tall.
     let shown = egui::Window::new(title)
         .title_bar(false)
-        .frame(theme::plate_frame().inner_margin(16))
-        .default_size(size)
-        .default_pos(pos)
+        .frame(egui::Frame::NONE)
+        .resizable(false)
+        .pivot(Align2::CENTER_CENTER)
+        .fixed_pos(center)
         .collapsible(false)
         .fade_in(false)
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                let (rect, _) = ui.allocate_exact_size(vec2(34.0, 34.0), Sense::hover());
-                theme::disc(
-                    ui.painter(),
-                    rect.center(),
-                    16.0,
-                    palette::NAVY_RAISED,
-                    palette::GOLD_DIM,
-                );
-                ui::glyph::paint(ui.painter(), glyph, rect.center(), 9.0, GOLD);
-                ui.label(RichText::new(title).size(26.0).strong().color(GOLD));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if theme::round_button(ui, 34.0, Glyph::Cross, palette::TEXT, None, true)
-                        .on_hover_text("Close (Esc)")
-                        .clicked()
-                    {
-                        open = false;
-                    }
-                    if let Some(k) = key {
-                        let (rect, _) = ui.allocate_exact_size(vec2(30.0, 22.0), Sense::hover());
-                        theme::keycap(ui.painter(), rect.center(), k);
-                    }
+            theme::plate_ui(ui, 20, |ui| {
+                ui.set_width(size.x - 40.0);
+                ui.set_max_height(size.y - 40.0);
+                ui.horizontal(|ui| {
+                    let (rect, _) = ui.allocate_exact_size(vec2(48.0, 48.0), Sense::hover());
+                    theme::disc(
+                        ui.painter(),
+                        rect.center(),
+                        22.0,
+                        palette::NAVY_RAISED,
+                        palette::GOLD,
+                    );
+                    ui::glyph::paint(ui.painter(), glyph, rect.center(), 11.0, GOLD);
+                    ui.add_space(6.0);
+                    ui.label(theme::title(title, 30.0));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if theme::round_button(ui, 38.0, Glyph::Cross, palette::TEXT, None, true)
+                            .on_hover_text("Close (Esc)")
+                            .clicked()
+                        {
+                            open = false;
+                        }
+                        if let Some(k) = key {
+                            let (rect, _) =
+                                ui.allocate_exact_size(vec2(30.0, 22.0), Sense::hover());
+                            theme::keycap(ui.painter(), rect.center(), k);
+                        }
+                    });
                 });
+                let y = ui.cursor().top() + 6.0;
+                theme::divider(
+                    ui.painter(),
+                    ui.min_rect().left(),
+                    ui.max_rect().right(),
+                    y,
+                    palette::with_alpha(GOLD, 230),
+                );
+                ui.add_space(16.0);
+                add(ui);
             });
-            let y = ui.cursor().top() + 2.0;
-            ui.painter().line_segment(
-                [
-                    pos2(ui.min_rect().left(), y),
-                    pos2(ui.max_rect().right(), y),
-                ],
-                Stroke::new(1.5, palette::GOLD_DIM),
-            );
-            ui.add_space(8.0);
-            add(ui);
         });
     if let Some(r) = shown {
         anim::window_fx(ctx, Id::unique(("window", title)), r.response.layer_id, r.response.rect);
@@ -288,8 +296,7 @@ fn windows_inner(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context
         s.windows.leaders &= open;
     }
     if let Some(other) = s.windows.diplomacy {
-        let name = s.game.players[other].name.clone();
-        let open = themed_window(ctx, &name, Glyph::Crown, None, vec2(860.0, 560.0), |ui| {
+        let open = themed_window(ctx, "Diplomacy", Glyph::Crown, None, vec2(1040.0, 640.0), |ui| {
             diplomacy(s, portraits, ui, other)
         });
         if !open {
@@ -477,10 +484,13 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                     };
                     line.width += 1.2 * lit_t;
                     line.color = anim::mix(line.color, GOLD, lit_t);
+                    let path = vec![from, mid, Pos2::new(mid.x, to.y), to];
                     painter.add(egui::Shape::line(
-                        vec![from, mid, Pos2::new(mid.x, to.y), to],
-                        line,
+                        path.clone(),
+                        Stroke::new(line.width + 3.0, Color32::from_black_alpha(140)),
                     ));
+                    painter.add(egui::Shape::line(path, line));
+                    painter.circle_filled(to, 3.5, line.color);
                 }
             }
         }
@@ -544,7 +554,13 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                     );
                 }
             }
-            painter.rect_filled(rect, 14.0, anim::mix(fill, fill.gamma_multiply(1.35), hot));
+            theme::well(
+                &painter,
+                rect,
+                14.0,
+                anim::mix(fill, fill.gamma_multiply(1.3), hot),
+                Color32::TRANSPARENT,
+            );
             painter.rect_stroke(
                 rect,
                 14.0,
@@ -575,15 +591,29 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                 );
             }
             painter.circle_stroke(ic, h / 2.0 - 7.0, Stroke::new(1.5, edge));
+            painter.circle_stroke(
+                ic,
+                h / 2.0 - 5.5,
+                Stroke::new(1.0, Color32::from_black_alpha(150)),
+            );
             let text_x = h + 4.0;
-            let name = ui::trackers::fit(&painter, &item.name, 15.5, w - text_x - 10.0);
+            let name = ui::trackers::fit(&painter, &item.name, 15.5, w - text_x - 30.0);
             painter.text(
                 rect.min + vec2(text_x, 17.0),
                 Align2::LEFT_CENTER,
                 name,
-                FontId::proportional(15.5),
+                palette::bold(15.0),
                 text,
             );
+            if known {
+                // A check mark in the corner of researched items.
+                let c = rect.right_top() + vec2(-17.0, 17.0);
+                theme::disc(&painter, c, 8.5, palette::GOOD.gamma_multiply(0.5), palette::GOOD);
+                painter.add(egui::Shape::line(
+                    vec![c + vec2(-3.5, 0.0), c + vec2(-1.0, 3.0), c + vec2(3.5, -3.0)],
+                    Stroke::new(2.0, Color32::WHITE),
+                ));
+            }
             let cost = s.game.research_cost(tree, i);
             let (status, status_color) = if known {
                 ("Researched".to_string(), palette::GOOD)
@@ -629,7 +659,7 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                     ui::trackers::fit(&painter, &format!("Boost: {b}"), 11.5, w - text_x - 12.0)
                 };
                 painter.text(
-                    rect.min + vec2(text_x, 53.0),
+                    rect.min + vec2(text_x, 50.0),
                     Align2::LEFT_CENTER,
                     label,
                     FontId::proportional(11.5),
@@ -644,11 +674,12 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
             if !known && progress > 0 {
                 let frac = (progress as f32 / cost.max(1) as f32).min(1.0);
                 let frac = anim::smooth(&ctx, id.with("bar"), frac, 8.0);
-                let bar = Rect::from_min_size(
-                    rect.left_bottom() + vec2(16.0, -7.0),
-                    vec2((w - 32.0) * frac, 3.5),
+                theme::bar(
+                    &painter,
+                    Rect::from_min_size(rect.left_bottom() + vec2(16.0, -7.0), vec2(w - 32.0, 4.0)),
+                    frac,
+                    accent,
                 );
-                painter.rect_filled(bar, 2.0, accent);
             }
             let mut tip = if known {
                 item.name.clone()
@@ -699,108 +730,223 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
     picked
 }
 
+/// A leader or civilization trait: a gold name over its description.
+fn trait_block(ui: &mut egui::Ui, name: &str, desc: &str) {
+    theme::well_ui(
+        ui,
+        10,
+        palette::NAVY_RAISED,
+        palette::with_alpha(palette::GOLD_DIM, 150),
+        |ui| {
+            ui.set_width(ui.available_width());
+            ui.label(theme::bold(name, 15.0).color(GOLD));
+            if !desc.is_empty() {
+                ui.label(RichText::new(desc).size(14.0).color(palette::TEXT_DIM));
+            }
+        },
+    );
+}
+
+/// A leader's quotation in a well with an opening quotation mark.
+fn quote(ui: &mut egui::Ui, line: &str, size: f32) {
+    theme::well_ui(
+        ui,
+        14,
+        Color32::from_rgb(14, 24, 40),
+        palette::with_alpha(palette::TEAL, 90),
+        |ui| {
+            ui.set_width(ui.available_width());
+            ui.add(
+                egui::Label::new(
+                    RichText::new(format!("\u{201C}{line}\u{201D}"))
+                        .italics()
+                        .size(size)
+                        .color(palette::TEXT),
+                )
+                .wrap(),
+            );
+        },
+    );
+}
+
+/// Their opinion of you as a bar from hostile to friendly, with score and
+/// city count beside it.
+fn opinion(ui: &mut egui::Ui, rel: &ui::leaders::Relationship, score: i32, cities: usize) {
+    theme::well_ui(
+        ui,
+        10,
+        palette::NAVY_RAISED,
+        palette::with_alpha(palette::GOLD_DIM, 150),
+        |ui| {
+            ui.set_width(ui.available_width());
+            let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 38.0), Sense::hover());
+            let painter = ui.painter();
+            theme::text(painter, rect.left_top() + vec2(0.0, 8.0), Align2::LEFT_CENTER, "Their opinion of you", 13.5, palette::TEXT_DIM);
+            theme::text_bold(painter, rect.right_top() + vec2(0.0, 8.0), Align2::RIGHT_CENTER, format!("{}  ({:+})", rel.mood, rel.opinion), 14.5, rel.mood_color);
+            let bar = Rect::from_min_size(rect.left_top() + vec2(0.0, 24.0), vec2(rect.width(), 10.0));
+            painter.rect_filled(bar, 5.0, Color32::from_black_alpha(120));
+            let mid = bar.center().x;
+            let end = mid + bar.width() / 2.0 * rel.opinion as f32 / 100.0;
+            let (l, r) = if end >= mid { (mid, end) } else { (end, mid) };
+            painter.add(theme::gradient_rect(
+                Rect::from_min_max(pos2(l, bar.top() + 1.0), pos2(r.max(l + 3.0), bar.bottom() - 1.0)),
+                4.0,
+                rel.mood_color.lerp_to_gamma(Color32::WHITE, 0.3),
+                rel.mood_color.gamma_multiply(0.7),
+            ));
+            painter.line_segment(
+                [pos2(mid, bar.top() - 3.0), pos2(mid, bar.bottom() + 3.0)],
+                Stroke::new(1.5, palette::TEXT_DIM),
+            );
+            painter.rect_stroke(bar, 5.0, Stroke::new(1.0, Color32::from_black_alpha(170)), StrokeKind::Outside);
+            ui.label(
+                RichText::new(format!("Score {score}   Cities {cities}"))
+                    .size(13.5)
+                    .color(palette::TEXT_DIM),
+            );
+        },
+    );
+}
+
 fn diplomacy(s: &mut Session, portraits: &mut Portraits, ui: &mut egui::Ui, other: PlayerId) {
     let me = s.me();
     let o = s.game.players[other].clone();
     let leader = s.game.rules.content.leaders[o.leader].clone();
     let rel = ui::leaders::relationship(s, other);
-    ui.horizontal(|ui| {
-        let (rect, _) = ui.allocate_exact_size(vec2(300.0, 300.0), Sense::hover());
-        let painter = ui.painter().clone();
-        theme::portrait_disc(
-            &painter,
-            portraits,
-            rect.center(),
-            140.0,
-            &leader.id,
-            &leader.name,
-            (o.primary, o.secondary),
-        );
-        painter.circle_stroke(rect.center(), 143.0, Stroke::new(5.0, rel.status_color));
-        painter.circle_stroke(rect.center(), 148.0, Stroke::new(1.5, palette::GOLD_DIM));
+    let at_war = s.game.players[me].at_war_with(other);
+    let side = (ui.available_height() - 110.0).clamp(240.0, 440.0);
+    ui.horizontal_top(|ui| {
         ui.vertical(|ui| {
-            ui.set_width(420.0);
-            ui.label(RichText::new(&leader.name).color(GOLD).size(30.0).strong());
-            ui.label(RichText::new(&o.civ_name).size(19.0));
-            ui.add_space(4.0);
+            let frame = portraits::FRAME;
+            let (rect, _) = ui.allocate_exact_size(
+                vec2(side + 2.0 * frame, side + 2.0 * frame),
+                Sense::hover(),
+            );
+            portraits.paint(
+                ui,
+                rect.shrink(frame),
+                &leader.id,
+                &leader.name,
+                (o.primary, o.secondary),
+            );
+            ui.add_space(6.0);
             ui.horizontal(|ui| {
                 theme::tag(ui, rel.status, rel.status_color);
                 theme::tag(ui, rel.mood, rel.mood_color);
             });
-            ui.add_space(4.0);
-            ui.label(
-                RichText::new(format!(
-                    "\"{}\"",
-                    s.game.dialogue(other, DiploEvent::Greeting)
-                ))
-                .italics()
-                .size(15.5),
-            );
-            ui.add_space(4.0);
-            ui.label(RichText::new(&rel.detail).color(palette::TEXT_DIM));
-            if let Some((name, desc)) = &leader.agenda {
-                ui.add_space(4.0);
-                ui.label(
-                    RichText::new(format!("Agenda: {name}"))
-                        .strong()
-                        .color(GOLD),
-                );
-                ui.label(desc);
-            }
-            for t in &leader.traits {
-                ui.label(RichText::new(&t.name).strong().color(GOLD))
-                    .on_hover_text(&t.description);
-            }
+        });
+        ui.add_space(10.0);
+        ui.vertical(|ui| {
+            ui.set_width(ui.available_width());
+            egui::ScrollArea::vertical()
+                .max_height(side + 40.0)
+                .auto_shrink([false, true])
+                .show(ui, |ui| {
+                    ui.spacing_mut().item_spacing.y = 8.0;
+                    ui.label(theme::title(&leader.name, 34.0));
+                    ui.horizontal(|ui| {
+                        for color in [o.primary, o.secondary] {
+                            let (rect, _) =
+                                ui.allocate_exact_size(vec2(16.0, 16.0), Sense::hover());
+                            theme::disc(
+                                ui.painter(),
+                                rect.center(),
+                                7.0,
+                                palette::rgb(color),
+                                palette::GOLD_DIM,
+                            );
+                        }
+                        ui.label(theme::bold(&o.civ_name, 19.0));
+                    });
+                    let greeting = s.game.dialogue(other, DiploEvent::Greeting);
+                    quote(ui, &greeting, 17.0);
+                    ui.label(RichText::new(&rel.detail).color(palette::TEXT_DIM));
+                    opinion(ui, &rel, s.game.score(other), s.game.player_cities(other).count());
+                    if let Some((name, desc)) = &leader.agenda {
+                        trait_block(ui, &format!("Agenda: {name}"), desc);
+                    }
+                    for t in &leader.traits {
+                        trait_block(ui, &t.name, &t.description);
+                    }
+                });
         });
     });
-    ui.separator();
-    let at_war = s.game.players[me].at_war_with(other);
+    let y = ui.cursor().top() + 4.0;
+    theme::divider(
+        ui.painter(),
+        ui.min_rect().left(),
+        ui.max_rect().right(),
+        y,
+        palette::with_alpha(palette::GOLD_DIM, 220),
+    );
+    ui.add_space(14.0);
     ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 12.0;
+        let say = |s: &mut Session, event: DiploEvent| {
+            let line = s.game.dialogue(other, event);
+            s.toast(format!("{}: \"{line}\"", leader.name));
+        };
         if !at_war {
             if !s.game.players[me].relations[other].friendship
-                && ui.button("Declare Friendship").clicked()
+                && theme::pill_button(
+                    ui,
+                    Some(Glyph::Heart),
+                    "Declare Friendship",
+                    palette::GOOD,
+                    170.0,
+                )
+                .clicked()
             {
                 let accepted = s.game.propose_friendship(me, other);
-                let line = s.game.dialogue(
-                    other,
+                say(
+                    s,
                     if accepted {
                         DiploEvent::AcceptFriendFromHuman
                     } else {
                         DiploEvent::RejectFriendFromHuman
                     },
                 );
-                s.toast(format!("{}: \"{line}\"", leader.name));
             }
-            if !s.game.players[me].relations[other].denounced && ui.button("Denounce").clicked() {
+            if !s.game.players[me].relations[other].denounced
+                && theme::pill_button(
+                    ui,
+                    Some(Glyph::Bell),
+                    "Denounce",
+                    Color32::from_rgb(240, 150, 60),
+                    140.0,
+                )
+                .clicked()
+            {
                 s.game.denounce(me, other);
-                let line = s.game.dialogue(other, DiploEvent::DenounceFromHuman);
-                s.toast(format!("{}: \"{line}\"", leader.name));
+                say(s, DiploEvent::DenounceFromHuman);
             }
-            if ui
-                .button(RichText::new("Declare War").color(Color32::from_rgb(240, 90, 80)))
+            if theme::pill_button(ui, Some(Glyph::Swords), "Declare War", palette::BAD, 150.0)
                 .clicked()
             {
                 s.game.declare_war(me, other);
-                let line = s.game.dialogue(other, DiploEvent::DeclareWarFromHuman);
-                s.toast(format!("{}: \"{line}\"", leader.name));
+                say(s, DiploEvent::DeclareWarFromHuman);
             }
         } else {
             let can = s.game.can_make_peace(me, other);
-            if ui
-                .add_enabled(can, egui::Button::new("Propose Peace"))
-                .on_disabled_hover_text("Wars last at least 10 turns.")
-                .clicked()
-            {
+            let response = theme::pill_button_if(
+                ui,
+                Some(Glyph::Shield),
+                "Propose Peace",
+                palette::TEAL,
+                170.0,
+                can,
+            )
+            .on_disabled_hover_text("Wars last at least 10 turns.");
+            if response.clicked() {
                 let accepted = s.game.propose_peace(me, other);
-                let line = s.game.dialogue(
-                    other,
+                say(
+                    s,
                     if accepted {
                         DiploEvent::MakePeaceAccept
                     } else {
                         DiploEvent::MakePeaceRefuse
                     },
                 );
-                s.toast(format!("{}: \"{line}\"", leader.name));
             }
         }
     });
@@ -821,57 +967,96 @@ fn leader_popup(
     let key = Id::unique("leader_popup");
     // `windows` dims the screen itself so the backdrop eases in and out.
     let shown = egui::Modal::new(key)
-        .frame(theme::plate_frame().inner_margin(20))
         .backdrop_color(Color32::TRANSPARENT)
+        .frame(egui::Frame::NONE)
         .show(ctx, |ui| {
-            ui.set_width(860.0);
-            ui.horizontal(|ui| {
-                let (rect, _) = ui.allocate_exact_size(vec2(380.0, 380.0), Sense::hover());
-                let painter = ui.painter().clone();
-                theme::portrait_disc(
-                    &painter,
-                    portraits,
-                    rect.center(),
-                    180.0,
-                    &leader.id,
-                    &leader.name,
-                    (o.primary, o.secondary),
-                );
-                painter.circle_stroke(rect.center(), 184.0, Stroke::new(5.0, palette::GOLD));
-                ui.vertical(|ui| {
-                    ui.set_width(420.0);
-                    ui.heading(RichText::new(&leader.name).color(GOLD).size(28.0));
-                    ui.label(RichText::new(&o.civ_name).size(18.0));
-                    ui.add_space(12.0);
-                    ui.label(RichText::new(format!("\"{line}\"")).italics().size(17.0));
-                    ui.add_space(16.0);
-                    match event {
-                        DiploEvent::DeclareFriendFromAi => {
+            theme::plate_ui(ui, 24, |ui| {
+                ui.set_width(880.0);
+                let side = (ctx.content_rect().height() - 220.0).clamp(240.0, 380.0);
+                ui.horizontal_top(|ui| {
+                    let frame = portraits::FRAME;
+                    let (rect, _) = ui.allocate_exact_size(
+                        vec2(side + 2.0 * frame, side + 2.0 * frame),
+                        Sense::hover(),
+                    );
+                    portraits.paint(
+                        ui,
+                        rect.shrink(frame),
+                        &leader.id,
+                        &leader.name,
+                        (o.primary, o.secondary),
+                    );
+                    ui.add_space(8.0);
+                    ui.vertical(|ui| {
+                        ui.set_width(ui.available_width());
+                        ui.spacing_mut().item_spacing.y = 10.0;
+                        ui.label(theme::title(&leader.name, 34.0));
+                        ui.label(theme::bold(&o.civ_name, 19.0));
+                        quote(ui, &line, 18.0);
+                        if event == DiploEvent::DeclareFriendFromAi {
                             ui.label(format!(
                                 "{} proposes a declaration of friendship.",
                                 leader.name
                             ));
-                            ui.horizontal(|ui| {
-                                if theme::pill_button(ui, None, "Accept", TEXT, 120.0).clicked() {
-                                    s.game.propose_friendship(other, me);
-                                    close = true;
+                        }
+                        ui.add_space(6.0);
+                        ui.horizontal(|ui| {
+                            ui.spacing_mut().item_spacing.x = 12.0;
+                            match event {
+                                DiploEvent::DeclareFriendFromAi => {
+                                    if theme::pill_button(
+                                        ui,
+                                        Some(Glyph::Heart),
+                                        "Accept",
+                                        palette::GOOD,
+                                        130.0,
+                                    )
+                                    .clicked()
+                                    {
+                                        s.game.propose_friendship(other, me);
+                                        close = true;
+                                    }
+                                    if theme::pill_button(
+                                        ui,
+                                        None,
+                                        "Decline",
+                                        palette::TEXT_DIM,
+                                        130.0,
+                                    )
+                                    .clicked()
+                                    {
+                                        close = true;
+                                    }
                                 }
-                                if theme::pill_button(ui, None, "Decline", TEXT, 120.0).clicked() {
-                                    close = true;
+                                DiploEvent::DeclareWarFromAi => {
+                                    if theme::pill_button(
+                                        ui,
+                                        Some(Glyph::Swords),
+                                        "So be it.",
+                                        palette::BAD,
+                                        150.0,
+                                    )
+                                    .clicked()
+                                    {
+                                        close = true;
+                                    }
                                 }
-                            });
-                        }
-                        DiploEvent::DeclareWarFromAi => {
-                            if theme::pill_button(ui, None, "So be it.", TEXT, 140.0).clicked() {
-                                close = true;
+                                _ => {
+                                    if theme::pill_button(
+                                        ui,
+                                        None,
+                                        "Farewell",
+                                        palette::TEXT,
+                                        150.0,
+                                    )
+                                    .clicked()
+                                    {
+                                        close = true;
+                                    }
+                                }
                             }
-                        }
-                        _ => {
-                            if theme::pill_button(ui, None, "Farewell", TEXT, 140.0).clicked() {
-                                close = true;
-                            }
-                        }
-                    }
+                        });
+                    });
                 });
             });
         });
@@ -883,3 +1068,100 @@ fn leader_popup(
 
 #[allow(dead_code)]
 fn unused(_: &Game) {}
+
+/// The game's name in gold display type with a soft shadow, centered on `c`.
+fn wordmark(painter: &egui::Painter, c: Pos2, size: f32) {
+    theme::text_display(
+        painter,
+        c + vec2(0.0, size * 0.04),
+        Align2::CENTER_CENTER,
+        "WAYCIV",
+        size,
+        Color32::from_black_alpha(170),
+    );
+    theme::text_display(painter, c, Align2::CENTER_CENTER, "WAYCIV", size, palette::GOLD_HI);
+}
+
+/// The loading screen: the wordmark over a hexagon emblem circled by a
+/// spinner.
+pub fn loading(ui: &mut egui::Ui) {
+    let rect = ui.max_rect();
+    let painter = ui.painter().clone();
+    theme::backdrop(&painter, rect);
+    let t = ui.input(|i| i.time) as f32;
+    let c = pos2(rect.center().x, rect.center().y - 70.0);
+    theme::disc(&painter, c, 44.0, palette::NAVY_RAISED, GOLD);
+    ui::glyph::paint(&painter, Glyph::Hex, c, 18.0, GOLD);
+    // A comet of gold circling the emblem.
+    let head = t * 3.2;
+    for i in 0..24 {
+        let a = head - i as f32 * 0.07;
+        let alpha = (255.0 * (1.0 - i as f32 / 24.0).powi(2)) as u8;
+        painter.circle_filled(
+            c + vec2(a.cos(), a.sin()) * 58.0,
+            3.6 - i as f32 * 0.1,
+            palette::with_alpha(palette::GOLD_HI, alpha),
+        );
+    }
+    wordmark(&painter, pos2(rect.center().x, c.y + 120.0), 76.0);
+    theme::divider(
+        &painter,
+        rect.center().x - 260.0,
+        rect.center().x + 260.0,
+        c.y + 178.0,
+        palette::with_alpha(GOLD, 220),
+    );
+    theme::text(
+        &painter,
+        pos2(rect.center().x, c.y + 212.0),
+        Align2::CENTER_CENTER,
+        "Loading...",
+        17.0,
+        palette::TEXT_DIM,
+    );
+    ui.ctx().request_repaint();
+}
+
+/// Shown when the game's content can't be read.
+pub fn failed(ui: &mut egui::Ui, error: &str) {
+    let rect = ui.max_rect();
+    theme::backdrop(ui.painter(), rect);
+    let width = 760.0_f32.min(rect.width() - 40.0);
+    let top = (rect.center().y - 150.0).max(rect.top() + 100.0);
+    wordmark(ui.painter(), pos2(rect.center().x, top - 56.0), 56.0);
+    let area = Rect::from_min_size(
+        pos2(rect.center().x - width / 2.0, top),
+        vec2(width, rect.bottom() - top),
+    );
+    ui.scope_builder(egui::UiBuilder::new().max_rect(area), |ui| {
+        theme::plate_ui(ui, 26, |ui| {
+            ui.set_width(width - 52.0);
+            ui.label(theme::title("WayCiv couldn't load its content", 30.0));
+            let y = ui.cursor().top() + 6.0;
+            theme::divider(
+                ui.painter(),
+                ui.min_rect().left(),
+                ui.max_rect().right(),
+                y,
+                palette::with_alpha(GOLD, 220),
+            );
+            ui.add_space(18.0);
+            theme::well_ui(
+                ui,
+                12,
+                Color32::from_rgb(40, 16, 18),
+                palette::with_alpha(palette::BAD, 160),
+                |ui| {
+                    ui.set_width(ui.available_width());
+                    ui.label(RichText::new(error).size(14.5).color(palette::BAD));
+                },
+            );
+            ui.add_space(12.0);
+            ui.label(
+                RichText::new("The content is compiled into the game from crates/wayciv-data/data; this means a data file has an error. Rebuild after fixing it.")
+                    .size(15.5)
+                    .color(palette::TEXT),
+            );
+        });
+    });
+}

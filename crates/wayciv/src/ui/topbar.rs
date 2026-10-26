@@ -5,7 +5,7 @@ use super::glyph::Glyph;
 use super::{TOP_BAR, theme};
 use crate::hud::Session;
 use crate::palette::{
-    self, BAD, GOLD, GOLD_DIM, GOOD, NAVY, NAVY_RAISED, TEXT, TEXT_DIM, YIELD_COLORS,
+    self, BAD, GOLD, GOLD_DIM, GOLD_HI, GOOD, NAVY_RAISED, TEXT, TEXT_DIM, YIELD_COLORS,
 };
 use crate::screens::Panel;
 use egui::{Align2, Color32, FontId, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
@@ -24,7 +24,7 @@ struct Chip {
 pub fn show(s: &mut Session, ui: &mut Ui) {
     egui::Panel::top("top_bar")
         .exact_size(TOP_BAR)
-        .frame(egui::Frame::new().fill(palette::with_alpha(NAVY, 250)))
+        .frame(egui::Frame::NONE)
         .show(ui, |ui| bar(s, ui));
 }
 
@@ -111,20 +111,26 @@ fn chips(s: &Session) -> Vec<Chip> {
 fn bar(s: &mut Session, ui: &mut Ui) {
     let rect = ui.max_rect();
     let painter = ui.painter().clone();
-    painter.line_segment(
-        [
-            rect.left_bottom() - vec2(0.0, 1.0),
-            rect.right_bottom() - vec2(0.0, 1.0),
-        ],
-        Stroke::new(2.0, GOLD_DIM),
-    );
-    painter.line_segment(
-        [
-            rect.left_bottom() - vec2(0.0, 4.0),
-            rect.right_bottom() - vec2(0.0, 4.0),
-        ],
-        Stroke::new(1.0, palette::with_alpha(palette::TEAL, 60)),
-    );
+    painter.add(theme::gradient_rect(
+        rect,
+        0.0,
+        Color32::from_rgb(27, 44, 70),
+        Color32::from_rgb(8, 14, 26),
+    ));
+    // Beveled gold trim along the bottom edge.
+    let edge = |dy: f32, width: f32, color: Color32| {
+        painter.line_segment(
+            [
+                rect.left_bottom() - vec2(0.0, dy),
+                rect.right_bottom() - vec2(0.0, dy),
+            ],
+            Stroke::new(width, color),
+        );
+    };
+    edge(0.5, 1.0, Color32::from_black_alpha(230));
+    edge(2.0, 2.0, GOLD_DIM);
+    edge(3.8, 1.0, palette::with_alpha(GOLD_HI, 110));
+    edge(6.5, 1.0, palette::with_alpha(palette::TEAL, 46));
     let cy = rect.center().y - 1.0;
     let me = s.me();
 
@@ -160,7 +166,7 @@ fn bar(s: &mut Session, ui: &mut Ui) {
         .map(|e| e.name.clone())
         .unwrap_or_default();
     let year = crate::hud::year(game);
-    let turn_galley = painter.layout_no_wrap(format!("Turn {}", game.turn), FontId::proportional(20.0), GOLD);
+    let turn_galley = painter.layout_no_wrap(format!("Turn {}", game.turn), palette::display(21.0), GOLD);
     let sub_text = |with_era: bool| {
         if with_era && !era.is_empty() {
             format!("{year}  -  {era}")
@@ -179,7 +185,7 @@ fn bar(s: &mut Session, ui: &mut Ui) {
         for e in [true, false] {
             let sub = painter.layout_no_wrap(sub_text(e), FontId::proportional(13.0), TEXT_DIM);
             let block = turn_galley.size().x.max(sub.size().x);
-            let need = 12.0 + total(&chips) + 24.0 + block + 18.0 + width_of(t) + 14.0;
+            let need = 12.0 + total(&chips) + 24.0 + block + 26.0 + width_of(t) + 20.0;
             if need <= rect.width() {
                 (tier, with_era) = (t, e);
                 break 'pick;
@@ -190,8 +196,27 @@ fn bar(s: &mut Session, ui: &mut Ui) {
     let block_w = turn_galley.size().x.max(sub_galley.size().x);
 
     let menu_w = width_of(tier);
-    let menu_left = rect.right() - 14.0 - menu_w;
+    let menu_left = rect.right() - 20.0 - menu_w;
     let mut x = menu_left;
+    if tier != Tier::Captions {
+        // A dark tray the buttons sit in.
+        let tray = Rect::from_min_size(
+            pos2(menu_left - 8.0, cy - 23.0),
+            vec2(menu_w + 16.0, 46.0),
+        );
+        painter.add(theme::gradient_rect(
+            tray,
+            23.0,
+            Color32::from_rgb(5, 10, 20),
+            Color32::from_rgb(14, 24, 40),
+        ));
+        painter.rect_stroke(
+            tray,
+            23.0,
+            Stroke::new(1.0, palette::with_alpha(GOLD_DIM, 170)),
+            StrokeKind::Inside,
+        );
+    }
     for m in menu {
         let w = m.width(&painter, tier);
         let h = if tier == Tier::Captions { 46.0 } else { 36.0 };
@@ -235,16 +260,21 @@ fn bar(s: &mut Session, ui: &mut Ui) {
         x += w + gap;
     }
 
-    let block_x = menu_left - 18.0 - block_w;
+    let block_x = menu_left - 26.0 - block_w;
     painter.galley(
-        pos2(block_x + block_w - turn_galley.size().x, cy - 19.0),
+        pos2(block_x + block_w - turn_galley.size().x, cy - 20.0),
         turn_galley,
         GOLD,
     );
     painter.galley(
-        pos2(block_x + block_w - sub_galley.size().x, cy + 3.0),
+        pos2(block_x + block_w - sub_galley.size().x, cy + 4.0),
         sub_galley,
         TEXT_DIM,
+    );
+    // A fine rule between the turn block and the menu buttons.
+    painter.line_segment(
+        [pos2(menu_left - 15.0, cy - 17.0), pos2(menu_left - 15.0, cy + 17.0)],
+        Stroke::new(1.0, palette::with_alpha(GOLD_DIM, 150)),
     );
     let avail = block_x - 24.0 - (rect.left() + 12.0);
 
@@ -355,7 +385,7 @@ impl MenuItem {
         } else {
             NAVY_RAISED
         };
-        painter.rect_filled(r, 18.0, fill);
+        theme::well(painter, r, 18.0, fill, Color32::TRANSPARENT);
         painter.rect_stroke(
             r,
             18.0,
@@ -363,7 +393,7 @@ impl MenuItem {
             StrokeKind::Inside,
         );
         let ic = pos2(r.left() + 19.0, r.center().y);
-        painter.circle_filled(ic, 14.0, Color32::from_black_alpha(90));
+        theme::disc(painter, ic, 14.0, Color32::from_rgb(8, 14, 24), GOLD_DIM);
         super::glyph::paint(painter, self.glyph, ic, 9.0, self.color);
         let text = theme::text(
             painter,
@@ -393,7 +423,13 @@ fn chip_width(painter: &egui::Painter, chip: &Chip) -> f32 {
 }
 
 fn draw_chip(painter: &egui::Painter, r: Rect, chip: &Chip, hovered: bool) {
-    painter.rect_filled(r, 18.0, NAVY_RAISED);
+    theme::well(
+        painter,
+        r,
+        18.0,
+        if hovered { palette::NAVY_HOVER } else { NAVY_RAISED },
+        Color32::TRANSPARENT,
+    );
     painter.rect_stroke(
         r,
         18.0,
@@ -408,7 +444,7 @@ fn draw_chip(painter: &egui::Painter, r: Rect, chip: &Chip, hovered: bool) {
         StrokeKind::Inside,
     );
     let ic = pos2(r.left() + 19.0, r.center().y);
-    painter.circle_filled(ic, 14.0, Color32::from_black_alpha(90));
+    theme::disc(painter, ic, 14.0, Color32::from_rgb(8, 14, 24), GOLD_DIM);
     super::glyph::paint(painter, chip.glyph, ic, 9.5, chip.color);
     let tx = r.left() + 40.0;
     let rect = theme::text_bold(
@@ -433,7 +469,7 @@ fn draw_chip(painter: &egui::Painter, r: Rect, chip: &Chip, hovered: bool) {
 
 fn population_tip(s: &Session, ui: &mut Ui) {
     let me = s.me();
-    ui.label(egui::RichText::new("Population").strong().color(GOLD));
+    ui.label(theme::title("Population", 17.0));
     let mut total = 0;
     for c in s.game.player_cities(me) {
         total += c.population;
