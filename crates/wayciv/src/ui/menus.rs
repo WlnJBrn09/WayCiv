@@ -1018,6 +1018,7 @@ mod tests {
         };
         let me = s.me();
         let ctx = egui::Context::default();
+        crate::palette::style(&ctx);
         // Without enough Faith the cards are locked: clicks do nothing.
         frame(&ctx, &mut s, religion, vec![]);
         for y in (150..700).step_by(25) {
@@ -1061,6 +1062,7 @@ mod tests {
         s.windows.found = Some(FoundDraft::new(prophet));
 
         let ctx = egui::Context::default();
+        crate::palette::style(&ctx);
         frame(&ctx, &mut s, religion, vec![]);
         // Click down the left column: a name pill, then a card in each
         // belief grid; the Found button sits below them all.

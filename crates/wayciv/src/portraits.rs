@@ -1,11 +1,16 @@
 //! Leader portraits from `assets/leaders/`, loaded on first use and
 //! downscaled for display.
 
+use crate::palette::{self, GOLD_HI, GOLD_LO};
+use crate::ui::theme;
 use egui::{Color32, TextureHandle, TextureOptions};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 const MAX_SIZE: u32 = 512;
+
+/// Width of the gold picture frame around a portrait.
+pub const FRAME: f32 = 7.0;
 
 pub struct Portraits {
     dir: PathBuf,
@@ -71,8 +76,10 @@ impl Portraits {
         texture
     }
 
-    /// Draws a leader's portrait in `rect`; a framed monogram in the civ's
-    /// colors when no portrait exists.
+    /// Draws a leader's portrait in `rect` inside a gold picture frame (which
+    /// extends [`FRAME`] pixels beyond `rect`) with a thin line in the civ's
+    /// color around the painting; a monogram in the civ's colors when no
+    /// portrait exists.
     pub fn paint(
         &mut self,
         ui: &egui::Ui,
@@ -84,6 +91,31 @@ impl Portraits {
         let painter = ui.painter();
         let primary = Color32::from_rgb(colors.0[0], colors.0[1], colors.0[2]);
         let secondary = Color32::from_rgb(colors.1[0], colors.1[1], colors.1[2]);
+        let frame = rect.expand(FRAME);
+        let radius = 4.0;
+        painter.add(egui::Shadow {
+            offset: [0, 4],
+            blur: 12,
+            spread: 0,
+            color: Color32::from_black_alpha(150),
+        }
+        .as_shape(frame, egui::CornerRadius::same(radius as u8)));
+        painter.add(theme::gradient_rect(frame, radius, GOLD_HI, GOLD_LO));
+        painter.rect_stroke(
+            frame,
+            radius,
+            egui::Stroke::new(1.0, Color32::from_black_alpha(220)),
+            egui::StrokeKind::Outside,
+        );
+        // Bevel: a dark channel inside the gold, then the civ-colored line.
+        let channel = rect.expand(FRAME * 0.42);
+        painter.add(theme::gradient_rect(
+            channel,
+            2.0,
+            Color32::from_rgb(40, 30, 12),
+            Color32::from_rgb(70, 54, 22),
+        ));
+        painter.rect_filled(rect.expand(1.5), 1.0, primary);
         match self.get(ui.ctx(), leader) {
             Some(texture) => {
                 painter.image(
@@ -92,9 +124,27 @@ impl Portraits {
                     egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
                     Color32::WHITE,
                 );
+                // A soft vignette, deeper toward the lower edge.
+                for (inset, alpha) in [(0.0, 90u8), (2.0, 50), (5.0, 24)] {
+                    painter.rect_stroke(
+                        rect.shrink(inset + 1.0),
+                        0.0,
+                        egui::Stroke::new(2.0, Color32::from_black_alpha(alpha)),
+                        egui::StrokeKind::Inside,
+                    );
+                }
+                painter.add(theme::gradient_rect(
+                    egui::Rect::from_min_max(
+                        egui::pos2(rect.left(), rect.center().y + rect.height() * 0.18),
+                        rect.max,
+                    ),
+                    0.0,
+                    Color32::TRANSPARENT,
+                    Color32::from_black_alpha(70),
+                ));
             }
             None => {
-                painter.rect_filled(rect, 4.0, primary);
+                painter.rect_filled(rect, 0.0, primary);
                 let initials: String = name
                     .split_whitespace()
                     .filter_map(|w| w.chars().next())
@@ -104,16 +154,10 @@ impl Portraits {
                     rect.center(),
                     egui::Align2::CENTER_CENTER,
                     initials,
-                    egui::FontId::proportional(rect.height() * 0.4),
+                    palette::bold(rect.height() * 0.4),
                     secondary,
                 );
             }
         }
-        painter.rect_stroke(
-            rect,
-            4.0,
-            egui::Stroke::new(2.0, primary),
-            egui::StrokeKind::Inside,
-        );
     }
 }

@@ -10,9 +10,10 @@ use super::anim;
 use super::glyph::{self, Glyph};
 use super::theme;
 use crate::icons::Icons;
-use crate::palette::{self, GOLD, GOLD_DIM, NAVY_HOVER, NAVY_RAISED, TEXT, TEXT_DIM};
+use crate::palette::{self, GOLD, GOLD_DIM, GOLD_HI, NAVY_HOVER, NAVY_RAISED, TEXT, TEXT_DIM};
 use egui::{
-    Align2, Color32, CursorIcon, FontId, Rect, Response, Sense, Stroke, StrokeKind, Ui, pos2, vec2,
+    Align2, Color32, CornerRadius, CursorIcon, FontId, Rect, Response, Sense, Shadow, Stroke,
+    StrokeKind, Ui, pos2, vec2,
 };
 
 /// Gap between cards.
@@ -109,7 +110,7 @@ impl<'a> Card<'a> {
         });
         let title = painter.layout(
             self.title.to_string(),
-            FontId::proportional(16.5),
+            palette::bold(16.0),
             dim(TEXT),
             text_w - corner_w,
         );
@@ -163,14 +164,14 @@ impl<'a> Card<'a> {
             .translate(vec2(0.0, -2.0 * hot * (1.0 - down)))
             .shrink(1.4 * down);
         if visible {
-            if hot > 0.01 {
-                let shadow = egui::Shadow {
+            if !locked {
+                let shadow = Shadow {
                     offset: [0, 3],
-                    blur: 10,
+                    blur: 9,
                     spread: 0,
-                    color: Color32::from_black_alpha((90.0 * hot) as u8),
+                    color: Color32::from_black_alpha((80.0 + 70.0 * hot) as u8),
                 };
-                painter.add(shadow.as_shape(rect, 12.0));
+                painter.add(shadow.as_shape(rect, CornerRadius::same(12)));
             }
             if gold > 0.01 {
                 anim::ambient(&ctx);
@@ -192,7 +193,7 @@ impl<'a> Card<'a> {
             Color32::from_rgb(58, 48, 22),
             gold,
         );
-        painter.rect_filled(rect, 12.0, fill);
+        theme::well(&painter, rect, 12.0, fill, Color32::TRANSPARENT);
         if let Some(p) = pop {
             // A gold ring spreads out from the card.
             let e = anim::ease_out(p);
@@ -204,11 +205,12 @@ impl<'a> Card<'a> {
             );
         }
         // The type strip on the left.
-        painter.rect_filled(
-            Rect::from_min_size(rect.min + vec2(0.0, 10.0), vec2(4.0, rect.height() - 20.0)),
+        painter.add(theme::gradient_rect(
+            Rect::from_min_size(rect.min + vec2(2.0, 10.0), vec2(4.0, rect.height() - 20.0)),
             2.0,
-            dim(self.accent),
-        );
+            dim(self.accent.lerp_to_gamma(Color32::WHITE, 0.3)),
+            dim(self.accent.gamma_multiply(0.7)),
+        ));
         let base_edge = if locked {
             Stroke::new(1.0, Color32::from_rgb(44, 56, 74))
         } else {
@@ -223,6 +225,14 @@ impl<'a> Card<'a> {
             anim::mix(anim::mix(base_edge.color, GOLD, hot), GOLD, gold),
         );
         painter.rect_stroke(rect, 12.0, edge, StrokeKind::Inside);
+        if gold > 0.01 || hot > 0.01 {
+            painter.rect_stroke(
+                rect.shrink(3.5),
+                9.0,
+                Stroke::new(1.0, palette::with_alpha(GOLD_HI, (70.0 * gold.max(hot * 0.5)) as u8)),
+                StrokeKind::Inside,
+            );
+        }
         let ic = pos2(
             rect.left() + pad + 6.0 + icon_d / 2.0,
             rect.top() + pad + icon_d / 2.0,
@@ -247,11 +257,15 @@ impl<'a> Card<'a> {
             icon_d / 2.0,
             Stroke::new(1.5, anim::mix(dim(GOLD_DIM), GOLD, gold.max(hot * 0.6))),
         );
+        painter.circle_stroke(
+            ic,
+            icon_d / 2.0 + 1.0,
+            Stroke::new(1.0, Color32::from_black_alpha(170)),
+        );
         let mut y = rect.top() + pad + 1.0;
         let x = rect.left() + text_x;
         let title_h = title.size().y;
-        painter.galley(pos2(x, y), title.clone(), TEXT);
-        painter.galley(pos2(x + 0.5, y), title, TEXT);
+        painter.galley(pos2(x, y), title, TEXT);
         y += title_h + 3.0;
         if !self.body.is_empty() {
             let h = body.size().y;
@@ -283,7 +297,12 @@ impl<'a> Card<'a> {
                 ),
                 vec2(galley.size().x + 12.0, 20.0),
             );
-            painter.rect_filled(r, 10.0, color.gamma_multiply(0.18));
+            painter.add(theme::gradient_rect(
+                r,
+                10.0,
+                color.gamma_multiply(0.32),
+                color.gamma_multiply(0.12),
+            ));
             painter.rect_stroke(
                 r,
                 10.0,
@@ -330,7 +349,12 @@ pub fn instruction(ui: &mut Ui, text: &str) {
     );
     let (rect, _) = ui.allocate_exact_size(vec2(width, galley.size().y + 18.0), Sense::hover());
     let painter = ui.painter();
-    painter.rect_filled(rect, 10.0, palette::with_alpha(palette::TEAL_DIM, 110));
+    painter.add(theme::gradient_rect(
+        rect,
+        10.0,
+        palette::with_alpha(palette::TEAL_DIM, 170),
+        palette::with_alpha(palette::TEAL_DIM, 70),
+    ));
     painter.rect_stroke(
         rect,
         10.0,
@@ -352,7 +376,7 @@ pub fn instruction(ui: &mut Ui, text: &str) {
 pub fn section(ui: &mut Ui, title: &str, hint: &str) {
     ui.add_space(8.0);
     ui.horizontal(|ui| {
-        ui.label(egui::RichText::new(title).size(18.0).strong().color(GOLD));
+        ui.label(theme::title(title, 19.0));
         if !hint.is_empty() {
             ui.label(egui::RichText::new(hint).size(13.5).color(TEXT_DIM));
         }
@@ -428,10 +452,21 @@ pub fn progress(
 /// gold when it can be pressed, gray with the reason in its tooltip when
 /// it can't.
 pub fn action_button(ui: &mut Ui, label: &str, enabled: bool, why_not: &str) -> bool {
+    action_button_wide(ui, label, enabled, why_not, 240.0)
+}
+
+/// [`action_button`] at least `min_width` wide.
+pub fn action_button_wide(
+    ui: &mut Ui,
+    label: &str,
+    enabled: bool,
+    why_not: &str,
+    min_width: f32,
+) -> bool {
     let galley = ui
         .painter()
-        .layout_no_wrap(label.to_string(), FontId::proportional(18.0), TEXT);
-    let w = (galley.size().x + 60.0).max(240.0);
+        .layout_no_wrap(label.to_string(), palette::bold(18.0), TEXT);
+    let w = (galley.size().x + 60.0).max(min_width);
     let (base, response) = ui.allocate_exact_size(
         vec2(w, 46.0),
         if enabled {
@@ -481,21 +516,35 @@ pub fn action_button(ui: &mut Ui, label: &str, enabled: bool, why_not: &str) -> 
     let fill = anim::mix(Color32::from_rgb(28, 36, 50), on_fill, on);
     let edge = anim::mix(Color32::from_rgb(60, 70, 86), GOLD, on);
     let text = anim::mix(Color32::from_gray(130), Color32::WHITE, on);
-    painter.rect_filled(rect, 23.0, fill);
+    painter.add(theme::gradient_rect(
+        rect,
+        23.0,
+        fill.lerp_to_gamma(Color32::WHITE, 0.22 * on),
+        fill.lerp_to_gamma(Color32::BLACK, 0.3),
+    ));
     if on > 0.01 {
-        // A soft sheen along the top edge.
-        painter.rect_filled(
-            Rect::from_min_size(rect.min + vec2(18.0, 3.0), vec2(rect.width() - 36.0, 9.0)),
-            4.5,
-            Color32::from_white_alpha((26.0 * on) as u8),
+        // A soft bevel just inside the trim.
+        painter.rect_stroke(
+            rect.shrink(3.5),
+            19.5,
+            Stroke::new(1.0, palette::with_alpha(GOLD_HI, (90.0 * on) as u8)),
+            StrokeKind::Inside,
         );
     }
     painter.rect_stroke(rect, 23.0, Stroke::new(2.0, edge), StrokeKind::Inside);
     let galley = ui
         .painter()
-        .layout_no_wrap(label.to_string(), FontId::proportional(18.0), text);
-    ui.painter()
-        .galley(rect.center() - galley.size() / 2.0, galley, text);
+        .layout_no_wrap(label.to_string(), palette::bold(18.0), text);
+    let at = rect.center() - galley.size() / 2.0;
+    if on > 0.5 {
+        let shade = ui.painter().layout_no_wrap(
+            label.to_string(),
+            palette::bold(18.0),
+            Color32::from_black_alpha((120.0 * on) as u8),
+        );
+        ui.painter().galley(at + vec2(0.0, 1.5), shade, text);
+    }
+    ui.painter().galley(at, galley, text);
     let response = if enabled {
         response.on_hover_cursor(CursorIcon::PointingHand)
     } else if !why_not.is_empty() {
@@ -510,7 +559,7 @@ pub fn action_button(ui: &mut Ui, label: &str, enabled: bool, why_not: &str) -> 
 pub fn choice(ui: &mut Ui, label: &str, color: Color32, selected: bool) -> bool {
     let galley = ui
         .painter()
-        .layout_no_wrap(label.to_string(), FontId::proportional(15.5), TEXT);
+        .layout_no_wrap(label.to_string(), palette::bold(15.0), TEXT);
     let (base, response) =
         ui.allocate_exact_size(vec2(galley.size().x + 44.0, 34.0), Sense::click());
     let ctx = ui.ctx().clone();
@@ -535,14 +584,16 @@ pub fn choice(ui: &mut Ui, label: &str, color: Color32, selected: bool) -> bool 
             StrokeKind::Outside,
         );
     }
-    painter.rect_filled(
+    theme::well(
+        painter,
         rect,
         17.0,
         anim::mix(
             anim::mix(NAVY_RAISED, NAVY_HOVER, hot),
-            Color32::from_rgb(58, 48, 22),
+            Color32::from_rgb(62, 50, 22),
             gold,
         ),
+        Color32::TRANSPARENT,
     );
     painter.rect_stroke(
         rect,
@@ -553,7 +604,8 @@ pub fn choice(ui: &mut Ui, label: &str, color: Color32, selected: bool) -> bool 
         ),
         StrokeKind::Inside,
     );
-    painter.circle_filled(pos2(rect.left() + 17.0, rect.center().y), 6.0, color);
+    painter.circle_filled(pos2(rect.left() + 17.0, rect.center().y), 7.0, Color32::from_black_alpha(140));
+    painter.circle_filled(pos2(rect.left() + 17.0, rect.center().y), 5.5, color);
     painter.galley(
         pos2(rect.left() + 30.0, rect.center().y - galley.size().y / 2.0),
         galley,

@@ -57,7 +57,7 @@ pub fn show(s: &mut Session, ctx: &egui::Context) {
         .fixed_pos(pos2(screen.right() - MARGIN - WIDTH, top))
         .order(egui::Order::Middle)
         .show(ctx, |ui| {
-            theme::plate_frame().show(ui, |ui| {
+            theme::plate_ui(ui, 12, |ui| {
                 ui.set_width(WIDTH - 26.0);
                 ui.set_height(height - 26.0);
                 panel(s, ui, id);
@@ -94,7 +94,7 @@ fn panel(s: &mut Session, ui: &mut Ui, id: CityId) {
             let (rect, _) = ui.allocate_exact_size(vec2(24.0, 24.0), Sense::hover());
             glyph::paint(ui.painter(), Glyph::Star, rect.center(), 11.0, GOLD);
         }
-        ui.label(RichText::new(&c.name).size(25.0).strong().color(GOLD));
+        ui.label(theme::title(&c.name, 27.0));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if theme::round_button(ui, 32.0, Glyph::Cross, TEXT, None, true)
                 .on_hover_text("Close the city panel (Esc)")
@@ -163,7 +163,7 @@ fn panel(s: &mut Session, ui: &mut Ui, id: CityId) {
     // Yields: icon over number.
     let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 50.0), Sense::hover());
     let painter = ui.painter().clone();
-    painter.rect_filled(rect, 12.0, Color32::from_white_alpha(12));
+    theme::well(&painter, rect, 12.0, NAVY_RAISED, palette::with_alpha(GOLD_DIM, 100));
     let col_w = rect.width() / 6.0;
     for i in 0..6 {
         let x = rect.left() + col_w * (i as f32 + 0.5);
@@ -244,7 +244,7 @@ fn panel(s: &mut Session, ui: &mut Ui, id: CityId) {
             } else {
                 NAVY_RAISED
             };
-            painter.rect_filled(rect, 15.0, fill);
+            theme::well(painter, rect, 15.0, fill, Color32::TRANSPARENT);
             painter.rect_stroke(
                 rect,
                 15.0,
@@ -317,7 +317,7 @@ fn growth_block(
     let (rect, response) =
         ui.allocate_exact_size(vec2(ui.available_width(), 104.0), Sense::hover());
     let painter = ui.painter().clone();
-    painter.rect_filled(rect, 14.0, Color32::from_white_alpha(12));
+    theme::well(&painter, rect, 14.0, NAVY_RAISED, palette::with_alpha(GOLD_DIM, 100));
     let center = pos2(rect.left() + 56.0, rect.center().y);
     let frac = c.food as f32 / report.growth_threshold.max(1) as f32;
     theme::disc(
@@ -500,7 +500,7 @@ fn chip(ui: &mut Ui, g: Glyph, color: Color32, text: String, tip: &str) {
     let (rect, response) =
         ui.allocate_exact_size(vec2(galley.size().x + 34.0, 26.0), Sense::hover());
     let painter = ui.painter();
-    painter.rect_filled(rect, 13.0, Color32::from_white_alpha(14));
+    theme::well(painter, rect, 13.0, NAVY_RAISED, palette::with_alpha(GOLD_DIM, 90));
     glyph::paint(
         painter,
         g,
@@ -559,11 +559,7 @@ fn production_block(s: &mut Session, ui: &mut Ui, id: CityId, c: &wayciv_core::s
         Sense::hover(),
     );
     let painter = ui.painter().clone();
-    painter.rect_filled(
-        rect,
-        14.0,
-        Color32::from_rgb(40, 28, 16).gamma_multiply(1.0),
-    );
+    theme::well(&painter, rect, 14.0, Color32::from_rgb(54, 38, 18), Color32::TRANSPARENT);
     painter.rect_stroke(
         rect,
         14.0,
@@ -712,7 +708,7 @@ fn item_row(
     let painter = ui.painter().clone();
     let current = c.production.as_ref() == Some(item);
     let hovered = response.hovered();
-    painter.rect_filled(rect, 12.0, if hovered { NAVY_HOVER } else { NAVY_RAISED });
+    theme::well(&painter, rect, 12.0, if hovered { NAVY_HOVER } else if current { Color32::from_rgb(54, 44, 22) } else { NAVY_RAISED }, Color32::TRANSPARENT);
     painter.rect_stroke(
         rect,
         12.0,
@@ -841,11 +837,7 @@ fn item_row(
 }
 
 fn faith_list(s: &mut Session, ui: &mut Ui, id: CityId, faith: &[usize]) {
-    ui.label(
-        RichText::new("Buy with Faith")
-            .strong()
-            .color(YIELD_COLORS[5]),
-    );
+    ui.label(theme::bold("Buy with Faith", 15.0).color(YIELD_COLORS[5]));
     for &unit in faith {
         let cost = s.game.faith_cost(unit);
         let name = s.game.rules.content.units[unit].name.clone();
@@ -853,16 +845,13 @@ fn faith_list(s: &mut Session, ui: &mut Ui, id: CityId, faith: &[usize]) {
         let (rect, response) =
             ui.allocate_exact_size(vec2(ui.available_width(), 46.0), Sense::click());
         let painter = ui.painter().clone();
-        painter.rect_filled(
+        theme::well(
+            &painter,
             rect,
             12.0,
-            if response.hovered() {
-                NAVY_HOVER
-            } else {
-                NAVY_RAISED
-            },
+            if response.hovered() { NAVY_HOVER } else { NAVY_RAISED },
+            GOLD_DIM,
         );
-        painter.rect_stroke(rect, 12.0, Stroke::new(1.0, GOLD_DIM), StrokeKind::Inside);
         let ic = pos2(rect.left() + 26.0, rect.center().y);
         if !s.icons.paint(
             &painter,

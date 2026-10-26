@@ -99,7 +99,19 @@ fn tracker(s: &mut Session, ui: &mut egui::Ui, t: &Tracker) {
         pos2(rect.right(), c.y + 24.0),
     );
     theme::glow(&painter, plate, 12.0, GOLD, hot * 0.6);
-    painter.rect_filled(plate, 12.0, palette::with_alpha(NAVY, 238));
+    painter.add(egui::Shadow {
+        offset: [0, 3],
+        blur: 10,
+        spread: 0,
+        color: Color32::from_black_alpha(130),
+    }
+    .as_shape(plate, egui::CornerRadius::same(12)));
+    painter.add(theme::gradient_rect(
+        plate,
+        12.0,
+        palette::PLATE_TOP,
+        palette::PLATE_BOTTOM,
+    ));
     painter.rect_stroke(
         plate,
         12.0,

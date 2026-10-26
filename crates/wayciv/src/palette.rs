@@ -1,6 +1,6 @@
 //! Colors: biomes, districts, yields, and the UI theme.
 
-use egui::Color32;
+use egui::{Color32, FontFamily, FontId};
 
 pub fn rgb(c: [u8; 3]) -> Color32 {
     Color32::from_rgb(c[0], c[1], c[2])
@@ -113,8 +113,15 @@ pub const PANEL: Color32 = Color32::from_rgb(14, 22, 36);
 pub const GOLD: Color32 = Color32::from_rgb(232, 194, 100);
 /// Trim on panels and rings: a darker gold.
 pub const GOLD_DIM: Color32 = Color32::from_rgb(150, 120, 58);
+/// The lit edge of gold trim and the highlight on gold lettering.
+pub const GOLD_HI: Color32 = Color32::from_rgb(255, 229, 158);
+/// The shaded edge of gold trim.
+pub const GOLD_LO: Color32 = Color32::from_rgb(96, 72, 30);
 /// Deep navy behind HUD plates.
 pub const NAVY: Color32 = Color32::from_rgb(10, 18, 32);
+/// Top and bottom of a panel's gradient.
+pub const PLATE_TOP: Color32 = Color32::from_rgb(30, 48, 76);
+pub const PLATE_BOTTOM: Color32 = Color32::from_rgb(8, 14, 26);
 /// Raised navy: buttons and rows.
 pub const NAVY_RAISED: Color32 = Color32::from_rgb(24, 40, 62);
 pub const NAVY_HOVER: Color32 = Color32::from_rgb(34, 62, 88);
@@ -127,10 +134,51 @@ pub const BAD: Color32 = Color32::from_rgb(242, 94, 84);
 /// The AI tree and Compute.
 pub const COMPUTE: Color32 = Color32::from_rgb(70, 225, 235);
 
+/// Noto Sans Bold, for names, numbers and button labels.
+pub fn bold(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Name("bold".into()))
+}
+
+/// Noto Serif Display Bold, for window titles and the game's name.
+pub fn display(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Name("display".into()))
+}
+
+/// Registers the typefaces in `assets/fonts` (Noto Sans for text, Noto Serif
+/// Display for titles, both OFL): egui's built-in fonts stay as the
+/// fallback, and stand in for the whole set when the folder is missing.
+fn install_fonts(ctx: &egui::Context) {
+    use egui::{FontData, FontDefinitions};
+    use std::sync::Arc;
+    let mut fonts = FontDefinitions::default();
+    let dir = crate::portraits::assets_dir().join("fonts");
+    let fallback = fonts.families[&FontFamily::Proportional].clone();
+    let mut load = |name: &str, file: &str| -> Vec<String> {
+        let mut list = fallback.clone();
+        if let Ok(bytes) = std::fs::read(dir.join(file)) {
+            fonts
+                .font_data
+                .insert(name.to_string(), Arc::new(FontData::from_owned(bytes)));
+            list.insert(0, name.to_string());
+        }
+        list
+    };
+    let text = load("noto-sans", "NotoSans-Medium.ttf");
+    let bold = load("noto-sans-bold", "NotoSans-Bold.ttf");
+    let display = load("noto-serif-display", "NotoSerifDisplay-Bold.ttf");
+    fonts.families.insert(FontFamily::Proportional, text);
+    fonts.families.insert(FontFamily::Name("bold".into()), bold);
+    fonts
+        .families
+        .insert(FontFamily::Name("display".into()), display);
+    ctx.set_fonts(fonts);
+}
+
 /// Civ VI-on-Switch look: dark navy and teal panels with gold trim, rounded
 /// corners, and large readable text.
 pub fn style(ctx: &egui::Context) {
-    use egui::{CornerRadius, FontFamily, FontId, Stroke, TextStyle};
+    use egui::{CornerRadius, Stroke, TextStyle};
+    install_fonts(ctx);
     let mut visuals = egui::Visuals::dark();
     visuals.panel_fill = PANEL;
     visuals.window_fill = Color32::from_rgb(14, 24, 40);
@@ -172,7 +220,7 @@ pub fn style(ctx: &egui::Context) {
         style.text_styles.insert(TextStyle::Body, f(15.0));
         style.text_styles.insert(TextStyle::Button, f(15.0));
         style.text_styles.insert(TextStyle::Small, f(12.5));
-        style.text_styles.insert(TextStyle::Heading, f(24.0));
+        style.text_styles.insert(TextStyle::Heading, display(24.0));
         style.spacing.button_padding = egui::vec2(12.0, 6.0);
         style.spacing.item_spacing = egui::vec2(8.0, 6.0);
         style.spacing.interact_size.y = 28.0;

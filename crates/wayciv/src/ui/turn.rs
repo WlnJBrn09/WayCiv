@@ -80,15 +80,32 @@ pub fn show(s: &mut Session, ctx: &egui::Context) -> f32 {
             let swap = anim::progress(&ctx, id.with("swap"), 0.45).map_or(0.0, anim::bump);
             let r = DIAMETER / 2.0 * (1.0 + 0.035 * hot - 0.06 * down + 0.07 * swap);
             glows(&painter, &ctx, c, r, blockers.is_empty());
-            painter.circle_filled(c + vec2(0.0, 4.0), r + 2.0, Color32::from_black_alpha(110));
+            painter.circle_filled(c + vec2(0.0, 5.0), r + 3.0, Color32::from_black_alpha(90));
+            painter.circle_filled(c + vec2(0.0, 3.0), r + 1.0, Color32::from_black_alpha(90));
             painter.circle_filled(c, r, NAVY);
             painter.circle_stroke(
                 c,
-                r - 1.0,
+                r - 1.5,
                 Stroke::new(3.0, anim::mix(GOLD_DIM, GOLD, hot)),
+            );
+            painter.circle_stroke(c, r - 0.5, Stroke::new(1.0, Color32::from_black_alpha(220)));
+            painter.circle_stroke(
+                c,
+                r - 3.0,
+                Stroke::new(1.0, palette::with_alpha(palette::GOLD_HI, 110)),
             );
             let face = color.gamma_multiply(1.0 + 0.18 * hot);
             painter.circle_filled(c, r - 7.0, face);
+            // A soft glow toward the upper left.
+            let face_r = r - 7.0;
+            for i in 1..=6 {
+                let k = i as f32 / 6.0;
+                painter.circle_filled(
+                    c + vec2(-k * 6.0, -k * 10.0),
+                    face_r * (1.0 - k * 0.62),
+                    face.lerp_to_gamma(Color32::WHITE, 0.035),
+                );
+            }
             // A soft highlight on the upper half.
             theme::arc(
                 &painter,

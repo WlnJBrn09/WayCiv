@@ -429,6 +429,13 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         .show(ui, |ui| {
             s.view = ui.max_rect();
             map_view::show(s, ui);
+            // The map darkens softly under the top bar.
+            ui.painter().add(ui::theme::gradient_rect(
+                egui::Rect::from_min_size(s.view.min, vec2(s.view.width(), 16.0)),
+                0.0,
+                Color32::from_black_alpha(110),
+                Color32::TRANSPARENT,
+            ));
         });
 
     let screen = ctx.content_rect();
@@ -486,7 +493,7 @@ fn banners(s: &mut Session, ctx: &egui::Context) {
             .fixed_pos(pos2(center_x, y))
             .order(egui::Order::Middle)
             .show(ctx, |ui| {
-                ui::theme::plate_frame().show(ui, |ui| {
+                ui::theme::plate_ui(ui, 12, |ui| {
                     ui.set_max_width(max_w);
                     let pill = |ui: &mut egui::Ui| {
                         ui::widgets::pill(
@@ -532,7 +539,7 @@ fn banners(s: &mut Session, ctx: &egui::Context) {
                 .order(egui::Order::Tooltip)
                 .interactable(false)
                 .show(ctx, |ui| {
-                    ui::theme::plate_frame().show(ui, |ui| {
+                    ui::theme::plate_ui(ui, 12, |ui| {
                         ui.set_max_width(max_w);
                         ui.label(RichText::new(text).size(16.0));
                     });
@@ -569,9 +576,9 @@ fn legend(s: &mut Session, ctx: &egui::Context) {
         .fixed_pos(pos2(ui::MARGIN + 310.0, ui::TOP_BAR + ui::MARGIN))
         .order(egui::Order::Middle)
         .show(ctx, |ui| {
-            ui::theme::plate_frame().show(ui, |ui| {
+            ui::theme::plate_ui(ui, 12, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("Map Key").size(20.0).strong().color(GOLD));
+                    ui.label(ui::theme::title("Map Key", 23.0));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui::theme::round_button(
                             ui,

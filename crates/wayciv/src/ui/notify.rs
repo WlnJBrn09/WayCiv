@@ -6,7 +6,7 @@ use super::glyph::Glyph;
 use super::{MARGIN, TOP_BAR, anim, glyph, theme};
 use crate::hud::Session;
 use crate::map_view;
-use crate::palette::{self, BAD, GOLD, GOLD_DIM, NAVY, NAVY_HOVER, NAVY_RAISED, TEXT, TEXT_DIM};
+use crate::palette::{self, BAD, GOLD, GOLD_DIM, NAVY_HOVER, NAVY_RAISED, TEXT, TEXT_DIM};
 use egui::{Align2, Color32, FontId, Id, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
 use std::time::Duration;
 use wayciv_core::Pos;
@@ -151,7 +151,21 @@ pub fn toasts(s: &mut Session, ctx: &egui::Context) {
                 // New toasts flash bright and settle to gold.
                 let fresh = (1.0 - age / 0.7).max(0.0);
                 theme::glow(painter, rect, 12.0, GOLD, (hot * 0.5 + fresh * 0.9) * alpha);
-                painter.rect_filled(rect, 12.0, a(anim::mix(palette::with_alpha(NAVY, 235), NAVY_HOVER, hot)));
+                painter.add(
+                    egui::Shadow {
+                        offset: [0, 3],
+                        blur: 10,
+                        spread: 0,
+                        color: a(Color32::from_black_alpha(130)),
+                    }
+                    .as_shape(rect, egui::CornerRadius::same(12)),
+                );
+                painter.add(theme::gradient_rect(
+                    rect,
+                    12.0,
+                    a(anim::mix(palette::PLATE_TOP, NAVY_HOVER, hot)),
+                    a(palette::PLATE_BOTTOM),
+                ));
                 painter.rect_stroke(
                     rect,
                     12.0,
@@ -220,10 +234,10 @@ pub fn panel(s: &mut Session, ctx: &egui::Context) {
         .fixed_pos(origin)
         .order(egui::Order::Middle)
         .show(ctx, |ui| {
-            theme::plate_frame().show(ui, |ui| {
+            theme::plate_ui(ui, 12, |ui| {
                 ui.set_width(width - 26.0);
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("Notifications").size(20.0).strong().color(GOLD));
+                    ui.label(theme::title("Notifications", 23.0));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if theme::round_button(ui, 30.0, Glyph::Cross, TEXT, None, true)
                             .on_hover_text("Close (N or Esc)")
@@ -258,7 +272,13 @@ pub fn panel(s: &mut Session, ctx: &egui::Context) {
                             0.12,
                         );
                         let painter = ui.painter();
-                        painter.rect_filled(rect, 9.0, anim::mix(NAVY_RAISED, NAVY_HOVER, hot));
+                        theme::well(
+                            painter,
+                            rect,
+                            9.0,
+                            anim::mix(NAVY_RAISED, NAVY_HOVER, hot),
+                            palette::with_alpha(GOLD_DIM, 60),
+                        );
                         theme::glow(painter, rect, 9.0, GOLD, hot * 0.35);
                         if current {
                             painter.rect_filled(

@@ -7,7 +7,7 @@ use super::glyph::Glyph;
 use super::widgets::{self, Btn, Kind, Tool};
 use super::{MARGIN, glyph, theme};
 use crate::hud::Session;
-use crate::palette::{self, BAD, GOLD, GOOD, NAVY, TEXT, TEXT_DIM, rgb};
+use crate::palette::{self, BAD, GOLD, GOOD, TEXT, TEXT_DIM, rgb};
 use egui::{Align2, Color32, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
 use wayciv_core::actions::{MIN_CITY_DISTANCE, UnitAction};
 use wayciv_core::turn::Blocker;
@@ -33,7 +33,7 @@ pub fn show(s: &mut Session, ctx: &egui::Context) {
         .order(egui::Order::Middle)
         .show(ctx, |ui| {
             if unit_selected {
-                theme::plate_frame().show(ui, |ui| card(s, ui, col, screen));
+                theme::plate_ui(ui, 12, |ui| card(s, ui, col, screen));
             } else {
                 hint(s, ui, col + 124.0);
             }
@@ -54,12 +54,7 @@ fn waiting_units(s: &Session, except: Option<wayciv_core::UnitId>) -> usize {
 fn hint(s: &mut Session, ui: &mut Ui, width: f32) {
     let waiting = waiting_units(s, None);
     let mut next = false;
-    egui::Frame::new()
-        .fill(palette::with_alpha(NAVY, 230))
-        .stroke(Stroke::new(1.5, palette::GOLD_DIM))
-        .corner_radius(14.0)
-        .inner_margin(egui::Margin::symmetric(14, 10))
-        .show(ui, |ui| {
+    theme::plate_ui(ui, 12, |ui| {
             ui.set_max_width(width.min(520.0));
             ui.label(RichText::new("Click a unit or city to select it.").color(TEXT));
             ui.label(
@@ -80,7 +75,7 @@ fn hint(s: &mut Session, ui: &mut Ui, width: f32) {
                         .tip("Select the next unit that needs orders and center the map on it."),
                 );
             }
-        });
+    });
     if next {
         s.next_unit();
     }
@@ -93,7 +88,7 @@ fn stat(ui: &mut Ui, g: Glyph, color: Color32, text: String, tip: &str) {
     let (rect, response) =
         ui.allocate_exact_size(vec2(galley.size().x + 36.0, 28.0), Sense::hover());
     let painter = ui.painter();
-    painter.rect_filled(rect, 14.0, Color32::from_white_alpha(14));
+    theme::well(painter, rect, 14.0, palette::NAVY_RAISED, palette::with_alpha(palette::GOLD_DIM, 90));
     glyph::paint(
         painter,
         g,
@@ -215,7 +210,7 @@ fn card(s: &mut Session, ui: &mut Ui, col: f32, screen: Rect) {
         ui.vertical(|ui| {
             ui.set_width(col);
             ui.horizontal(|ui| {
-                ui.label(RichText::new(&ty.name).size(24.0).strong().color(Color32::WHITE));
+                ui.label(theme::title(&ty.name, 27.0));
                 if let Some(gp) = unit.great_person {
                     ui.label(
                         RichText::new(&s.game.rules.content.great_people[gp].name)
@@ -415,7 +410,7 @@ fn actions(s: &mut Session, ui: &mut Ui, id: wayciv_core::UnitId, col: f32, scre
             return picked;
         }
         ui.add_space(4.0);
-        ui.label(RichText::new(format!("{title} ({})", items.len())).size(14.0).strong().color(GOLD));
+        ui.label(theme::title(format!("{title} ({})", items.len()), 15.0));
         ui.spacing_mut().scroll = egui::style::ScrollStyle::solid();
         egui::ScrollArea::vertical()
             .max_height(max_h)

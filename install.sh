@@ -32,7 +32,7 @@ rm -f "$data/assets/leaders/"*.png
 install -m644 assets/leaders/leader_*.png "$data/assets/leaders/"
 # Art (icons, terrain, units, buildings, resources): each folder is
 # replaced as a whole.
-for dir in icons terrain units buildings resources; do
+for dir in icons terrain units buildings resources fonts; do
   rm -rf "$data/assets/$dir"
   if [[ -d assets/$dir ]]; then
     mkdir -p "$data/assets/$dir"

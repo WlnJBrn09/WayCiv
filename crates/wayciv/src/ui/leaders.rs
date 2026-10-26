@@ -164,18 +164,19 @@ pub fn ribbon(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) {
                 let rel = relationship(s, other);
                 let hit = Rect::from_center_size(c, vec2(d, d));
                 let response = ui.interact(hit, ui.scope_id().with(("ribbon", other)), Sense::click());
-                theme::portrait_disc(&painter, portraits, c, d / 2.0 - 3.0, &leader_id, &leader_name, colors);
+                theme::medallion(
+                    &painter,
+                    portraits,
+                    c,
+                    d / 2.0,
+                    &leader_id,
+                    &leader_name,
+                    colors,
+                    if response.hovered() { GOLD } else { rel.status_color },
+                );
                 if !alive {
                     painter.circle_filled(c, d / 2.0 - 3.0, Color32::from_black_alpha(170));
                 }
-                painter.circle_stroke(
-                    c,
-                    d / 2.0 - 1.0,
-                    Stroke::new(
-                        if response.hovered() { 4.0 } else { 3.0 },
-                        if response.hovered() { GOLD } else { rel.status_color },
-                    ),
-                );
                 painter.circle_filled(c + vec2(d * 0.34, d * 0.34), 7.0, NAVY);
                 painter.circle_filled(c + vec2(d * 0.34, d * 0.34), 5.0, rel.status_color);
                 let tip = format!(
@@ -234,11 +235,9 @@ fn row(s: &mut Session, portraits: &mut Portraits, ui: &mut Ui, other: PlayerId)
     let o = s.game.players[other].clone();
     let leader = s.game.rules.content.leaders[o.leader].clone();
     let rel = relationship(s, other);
-    painter.rect_filled(rect, 12.0, NAVY_RAISED);
-    painter.rect_stroke(rect, 12.0, Stroke::new(1.5, palette::with_alpha(GOLD_DIM, 190)), StrokeKind::Inside);
+    theme::well(&painter, rect, 12.0, NAVY_RAISED, palette::with_alpha(GOLD_DIM, 190));
     let c = pos2(rect.left() + 52.0, rect.center().y);
-    theme::portrait_disc(&painter, portraits, c, 36.0, &leader.id, &leader.name, (o.primary, o.secondary));
-    painter.circle_stroke(c, 38.0, Stroke::new(3.5, rel.status_color));
+    theme::medallion(&painter, portraits, c, 40.0, &leader.id, &leader.name, (o.primary, o.secondary), rel.status_color);
     // Civ color swatch.
     painter.circle_filled(c + vec2(26.0, 28.0), 9.0, NAVY);
     painter.circle_filled(c + vec2(26.0, 28.0), 7.0, palette::rgb(o.primary));
@@ -250,7 +249,12 @@ fn row(s: &mut Session, portraits: &mut Portraits, ui: &mut Ui, other: PlayerId)
     // Status chip.
     let chip_w = 92.0;
     let chip = Rect::from_min_size(pos2(x, rect.top() + 58.0), vec2(chip_w, 24.0));
-    painter.rect_filled(chip, 12.0, rel.status_color.gamma_multiply(0.35));
+    painter.add(theme::gradient_rect(
+        chip,
+        12.0,
+        rel.status_color.gamma_multiply(0.5),
+        rel.status_color.gamma_multiply(0.22),
+    ));
     painter.rect_stroke(chip, 12.0, Stroke::new(1.5, rel.status_color), StrokeKind::Inside);
     theme::text_bold(&painter, chip.center(), Align2::CENTER_CENTER, rel.status, 14.0, TEXT);
 
@@ -287,7 +291,7 @@ fn row(s: &mut Session, portraits: &mut Portraits, ui: &mut Ui, other: PlayerId)
     let btn = Rect::from_center_size(pos2(rect.right() - 62.0, rect.center().y), vec2(104.0, 36.0));
     let br = ui.interact(btn, ui.scope_id().with(("dip", other)), Sense::click());
     let hovered = br.hovered();
-    painter.rect_filled(btn, 18.0, if hovered { palette::NAVY_HOVER } else { NAVY });
+    theme::well(&painter, btn, 18.0, if hovered { palette::NAVY_HOVER } else { NAVY_RAISED }, Color32::TRANSPARENT);
     painter.rect_stroke(btn, 18.0, Stroke::new(2.0, if hovered { GOLD } else { GOLD_DIM }), StrokeKind::Inside);
     theme::text_bold(&painter, btn.center(), Align2::CENTER_CENTER, "Diplomacy", 15.0, TEXT);
     if br.on_hover_text(rel.detail.clone()).clicked() {
