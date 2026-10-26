@@ -1,9 +1,9 @@
 """Post-process raw Blender renders into game sprites (needs Pillow + numpy).
 
-  python post.py RAW_DIR OUT_DIR [--size 192] [UNIT_ID...]
+  python post.py RAW_DIR OUT_DIR [--size 256] [UNIT_ID...]
 
-For every <id>.png / <id>_mask.png in RAW_DIR writes
-  OUT_DIR/<id>.png            beauty sprite (RGBA)
+For every <id>.png / <id>_mask.png (and optional <id>_shadow.png) in RAW_DIR writes
+  OUT_DIR/<id>.png            beauty sprite (RGBA) with a soft outline and cast shadow baked in
   OUT_DIR/<id>_mask.png       team-colour layer: grey = shading, alpha = team parts
   OUT_DIR/portraits/<id>.png  128 px round portrait
 """
@@ -20,8 +20,45 @@ def down(img, size):
     return img.convert("RGBa").resize((size, size), Image.LANCZOS).convert("RGBA")
 
 
-def make_sprite(raw, mask_raw, size):
-    beauty = Image.open(raw).convert("RGBA")
+SHADOW_ALPHA = 0.5
+SHADOW_RGB = (30, 22, 14)
+OUTLINE_RGB = (38, 28, 20)
+OUTLINE_ALPHA = 0.55
+
+
+def grade(beauty):
+    """A little more colour and punch: gentle saturation boost and S-curve."""
+    a = np.asarray(beauty).astype(np.float32) / 255.0
+    rgb = a[:, :, :3]
+    lum = (rgb * np.array([0.3, 0.59, 0.11], np.float32)).sum(axis=2, keepdims=True)
+    rgb = lum + (rgb - lum) * 1.10
+    rgb = np.clip(rgb, 0, 1)
+    rgb = rgb + 0.10 * (rgb * rgb * (3 - 2 * rgb) - rgb)
+    a[:, :, :3] = np.clip(rgb, 0, 1)
+    return Image.fromarray((a * 255 + 0.5).astype(np.uint8), "RGBA")
+
+
+def outline_under(sprite, shadow_raw, size):
+    """Cast shadow and a thin dark rim placed under the finished sprite, so the
+    silhouette reads on any terrain."""
+    out = Image.new("RGBA", sprite.size, (0, 0, 0, 0))
+    if shadow_raw and os.path.exists(shadow_raw):
+        sh = Image.open(shadow_raw).convert("RGBA").getchannel("A")
+        sh = sh.resize(sprite.size, Image.LANCZOS).filter(ImageFilter.GaussianBlur(size / 128))
+        lay = Image.new("RGBA", sprite.size, SHADOW_RGB + (0,))
+        lay.putalpha(sh.point(lambda v: int(v * SHADOW_ALPHA)))
+        out.alpha_composite(lay)
+    a = sprite.getchannel("A")
+    rim = a.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(0.6))
+    lay = Image.new("RGBA", sprite.size, OUTLINE_RGB + (0,))
+    lay.putalpha(rim.point(lambda v: int(min(255, v * 1.4) * OUTLINE_ALPHA)))
+    out.alpha_composite(lay)
+    out.alpha_composite(sprite)
+    return out
+
+
+def make_sprite(raw, mask_raw, size, shadow_raw=None):
+    beauty = grade(Image.open(raw).convert("RGBA"))
     mask = Image.open(mask_raw).convert("RGBA")
     b = np.asarray(beauty).astype(np.float32) / 255.0
     m = np.asarray(mask)[:, :, 3].astype(np.float32) / 255.0
@@ -32,7 +69,8 @@ def make_sprite(raw, mask_raw, size):
     g = (lum * 255).astype(np.uint8)
     mk = np.stack([g, g, g, (a * 255).astype(np.uint8)], axis=2)
     mk_img = Image.fromarray(mk, "RGBA")
-    return down(beauty, size), down(mk_img, size)
+    clean = down(beauty, size)
+    return outline_under(clean, shadow_raw, size), down(mk_img, size), clean
 
 
 def tint_over(sprite, mask, rgb):
@@ -98,7 +136,7 @@ def portrait(sprite, mask, kind, size=128):
 
 def main():
     args = sys.argv[1:]
-    size = 192
+    size = 256
     if "--size" in args:
         i = args.index("--size")
         size = int(args[i + 1])
@@ -121,12 +159,12 @@ def main():
         mask_path = os.path.join(raw, uid + "_mask.png")
         if not os.path.exists(mask_path):
             continue
-        spr, mk = make_sprite(os.path.join(raw, f), mask_path, size)
+        spr, mk, clean = make_sprite(os.path.join(raw, f), mask_path, size, os.path.join(raw, uid + "_shadow.png"))
         spr.save(os.path.join(out, uid + ".png"), optimize=True)
         # grey + alpha keeps the mask small
         la = Image.merge("LA", (mk.getchannel("R"), mk.getchannel("A")))
         la.save(os.path.join(out, uid + "_mask.png"), optimize=True)
-        portrait(spr, mk, kinds.get(uid, "land")).save(os.path.join(out, "portraits", uid + ".png"), optimize=True)
+        portrait(clean, mk, kinds.get(uid, "land")).save(os.path.join(out, "portraits", uid + ".png"), optimize=True)
         print("ok", uid)
     if manifest and not only:
         with open(os.path.join(out, "manifest.tsv"), "w") as f:

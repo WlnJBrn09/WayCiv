@@ -3,9 +3,10 @@
 //! Each unit type is a little 3D model rendered to a sprite with Blender
 //! (`tools/units`, output in `assets/units/<id>.png`).  A second image,
 //! `<id>_mask.png`, holds the team-coloured parts (grey shading with alpha);
-//! it is tinted with the owner's colour and drawn over the sprite.  Around the
-//! model: a soft ground shadow, a selection ring, an owner-coloured badge with
-//! a class symbol, a health bar (military only) and a fortified marker.
+//! it is tinted with the owner's colour and drawn over the sprite.  The sprite
+//! already carries its cast shadow and a thin dark rim.  Around the model: a
+//! contact shadow, a selection ring, an owner-coloured badge with a class
+//! symbol, a health bar (military only) and a fortified marker.
 //! When a sprite is missing we fall back to the Codex icon, then to the class
 //! symbol on a disc.  Nothing here panics on missing files.
 //!
@@ -195,12 +196,13 @@ fn dim(c: Color32, on: bool) -> Color32 {
 }
 
 /// Canvas size of a sprite in px for a unit slot of `radius`.
-/// The box around a sprite's visible pixels, in 0..1 canvas coordinates.
+/// The box around a sprite's solid pixels (not its soft baked shadow), in 0..1
+/// canvas coordinates.
 fn opaque_bounds(img: &image::RgbaImage) -> Rect {
     let (w, h) = img.dimensions();
     let (mut x0, mut y0, mut x1, mut y1) = (w, h, 0, 0);
     for (x, y, p) in img.enumerate_pixels() {
-        if p[3] > 24 {
+        if p[3] > 150 {
             x0 = x0.min(x);
             y0 = y0.min(y);
             x1 = x1.max(x + 1);
@@ -306,11 +308,12 @@ fn draw_sprite(
     }
 }
 
+/// A soft pool of shade right under the feet (the sprite carries the cast shadow).
 fn ground_shadow(painter: &egui::Painter, ground: Pos2, rx: f32, alpha: u8) {
-    for (k, a) in [(1.0, 0.35), (0.78, 0.35), (0.55, 0.4)] {
+    for (k, a) in [(1.0, 0.22), (0.8, 0.28), (0.58, 0.34), (0.38, 0.4)] {
         painter.add(Shape::ellipse_filled(
             ground,
-            vec2(rx * k, rx * k * 0.42),
+            vec2(rx * k, rx * k * 0.4),
             Color32::from_black_alpha((alpha as f32 * a) as u8),
         ));
     }
@@ -328,7 +331,17 @@ fn selection_ring(painter: &egui::Painter, ground: Pos2, rx: f32, time: f32) {
     painter.add(Shape::ellipse_stroke(
         ground,
         r,
-        Stroke::new(2.5, Color32::WHITE.gamma_multiply(0.78 + 0.22 * pulse)),
+        Stroke::new(7.0, Color32::from_rgba_unmultiplied(255, 236, 170, (18.0 + 18.0 * pulse) as u8)),
+    ));
+    painter.add(Shape::ellipse_stroke(
+        ground,
+        r,
+        Stroke::new(4.0, Color32::from_rgba_unmultiplied(255, 226, 140, (60.0 + 40.0 * pulse) as u8)),
+    ));
+    painter.add(Shape::ellipse_stroke(
+        ground,
+        r,
+        Stroke::new(2.0, Color32::WHITE.gamma_multiply(0.8 + 0.2 * pulse)),
     ));
     if time > 0.0 {
         let k = (time * 0.8).fract();
@@ -414,13 +427,13 @@ pub fn draw_unit(
     let has_sprite = if let Some(s) = art.find(painter.ctx(), &ids) {
         // Every unit stands as tall as a Settler; long ships are kept to
         // about a Settler's width.
-        let px = uniform_px(s, height * radius, width * radius * 1.1);
+        let px = uniform_px(s, height * radius * 1.1, width * radius * 1.2);
         let rx = (radius * (0.8 + 0.12 * s.ortho)).min(radius * 1.7).min(px * s.bounds.width() * 0.5);
         if selected {
             selection_ring(painter, ground, rx, fx.time);
         }
         let high = (1.0 - lift / (radius * 3.0)).clamp(0.6, 1.0);
-        ground_shadow(painter, ground, rx * 0.9 * high, if spent { 70 } else { 95 });
+        ground_shadow(painter, ground, rx * 0.8 * high, if spent { 80 } else { 110 });
         draw_sprite(s, painter, hover, px * fx.scale, primary, spent, stretch, fx.flash);
         true
     } else {
@@ -474,34 +487,61 @@ fn hp_bar(u: &wayciv_core::state::Unit, painter: &egui::Painter, at: Pos2, radiu
         return;
     }
     let w = radius * 1.7;
-    let h = (radius * 0.14).clamp(2.5, 5.0);
+    let h = (radius * 0.16).clamp(3.0, 6.0);
     let bar = Rect::from_min_size(at + vec2(-w / 2.0, radius * 1.1 + 2.0), vec2(w, h));
-    painter.rect_filled(bar.expand(1.0), 1.5, Color32::from_black_alpha(200));
-    let color = if u.hp > 60 {
-        Color32::from_rgb(80, 210, 90)
+    let round = h * 0.5;
+    painter.rect_filled(bar.expand(1.5).translate(vec2(0.0, 1.0)), round + 1.5, Color32::from_black_alpha(90));
+    painter.rect_filled(bar.expand(1.5), round + 1.5, Color32::from_rgb(20, 22, 28));
+    let frac = u.hp.max(0) as f32 / 100.0;
+    let (light, dark) = if u.hp > 60 {
+        (Color32::from_rgb(130, 232, 110), Color32::from_rgb(54, 168, 66))
     } else if u.hp > 30 {
-        Color32::from_rgb(230, 200, 60)
+        (Color32::from_rgb(250, 220, 90), Color32::from_rgb(212, 160, 30))
     } else {
-        Color32::from_rgb(220, 60, 50)
+        (Color32::from_rgb(255, 110, 90), Color32::from_rgb(190, 40, 34))
     };
+    let fill = Rect::from_min_size(bar.min, vec2((w * frac).max(h), h));
+    painter.rect_filled(fill, round, dark);
+    // Lit top half, so the bar reads as a glossy tube.
     painter.rect_filled(
-        Rect::from_min_size(bar.min, vec2(w * u.hp.max(0) as f32 / 100.0, h)),
-        1.0,
-        color,
+        Rect::from_min_size(fill.min + vec2(round * 0.3, 0.0), vec2((fill.width() - round * 0.6).max(0.0), h * 0.5)),
+        round * 0.5,
+        light,
+    );
+    painter.rect_stroke(
+        bar.expand(1.5),
+        round + 1.5,
+        Stroke::new(1.0, Color32::from_white_alpha(70)),
+        egui::StrokeKind::Outside,
     );
 }
 
-/// An owner-coloured round flag with a class symbol.
+/// An owner-coloured round flag with a class symbol: a gem-like disc with a
+/// light top half, a ring in the second colour and a soft drop shadow.
 fn draw_badge(painter: &egui::Painter, class: Class, c: Pos2, r: f32, primary: Color32, secondary: Color32, spent: bool) {
     let ink = dim(secondary, spent);
-    painter.circle_filled(c + vec2(0.0, 1.0), r + 1.0, Color32::from_black_alpha(90));
-    painter.circle(c, r, dim(primary, spent), Stroke::new((r * 0.16).max(1.0), ink));
-    draw_glyph(painter, class, c, r * 0.64, ink);
+    let fill = dim(primary, spent);
+    painter.circle_filled(c + vec2(0.0, r * 0.22), r + 1.5, Color32::from_black_alpha(80));
+    painter.circle_filled(c, r + 1.0, Color32::from_rgb(18, 20, 26));
+    painter.circle_filled(c, r, ink);
+    let inner = r * 0.82;
+    painter.circle_filled(c, inner, fill);
+    // Glossy cap on the upper half of the disc.
+    let cap: Vec<Pos2> = (0..=12)
+        .map(|i| {
+            let a = PI + PI * i as f32 / 12.0;
+            c + vec2(a.cos() * inner * 0.92, a.sin() * inner * 0.92 * 0.95)
+        })
+        .collect();
+    painter.add(Shape::convex_polygon(cap, Color32::from_white_alpha(if spent { 20 } else { 38 }), Stroke::NONE));
+    // Dark glyph outline, then the glyph itself in the second colour.
+    draw_glyph(painter, class, c + vec2(0.0, r * 0.05), r * 0.62, Color32::from_black_alpha(110));
+    draw_glyph(painter, class, c, r * 0.62, ink);
 }
 
 fn draw_fortified(painter: &egui::Painter, c: Pos2, r: f32, spent: bool) {
-    let col = dim(Color32::from_rgb(214, 218, 224), spent);
-    let edge = Stroke::new(1.2, Color32::from_rgb(60, 66, 76));
+    let col = dim(Color32::from_rgb(222, 226, 232), spent);
+    let edge = Stroke::new(1.3, Color32::from_rgb(40, 46, 58));
     let pts = vec![
         c + vec2(-r * 0.8, -r * 0.85),
         c + vec2(r * 0.8, -r * 0.85),
@@ -509,8 +549,24 @@ fn draw_fortified(painter: &egui::Painter, c: Pos2, r: f32, spent: bool) {
         c + vec2(0.0, r),
         c + vec2(-r * 0.8, r * 0.1),
     ];
+    painter.add(Shape::convex_polygon(
+        pts.iter().map(|p| *p + vec2(0.0, r * 0.18)).collect(),
+        Color32::from_black_alpha(80),
+        Stroke::NONE,
+    ));
     painter.add(Shape::convex_polygon(pts, col, edge));
-    painter.line_segment([c + vec2(0.0, -r * 0.6), c + vec2(0.0, r * 0.55)], edge);
+    // Lit left half.
+    painter.add(Shape::convex_polygon(
+        vec![
+            c + vec2(-r * 0.7, -r * 0.75),
+            c + vec2(0.0, -r * 0.75),
+            c + vec2(0.0, r * 0.8),
+            c + vec2(-r * 0.7, r * 0.1),
+        ],
+        Color32::from_white_alpha(70),
+        Stroke::NONE,
+    ));
+    painter.line_segment([c + vec2(0.0, -r * 0.6), c + vec2(0.0, r * 0.55)], Stroke::new(1.2, Color32::from_rgb(90, 98, 112)));
 }
 
 /// Class symbols drawn as vectors inside a circle of radius `r` centered on `c`.
