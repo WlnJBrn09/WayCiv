@@ -272,3 +272,29 @@ def blob(cx, cy, rx, ry, soft=0.25, wob=None):
 
 def grid_noise(seed, beta=2.2):
     return fft_noise(GRID, beta, seed)
+
+
+# ---------------------------------------------------- Blender rendering
+
+
+def render_many(jobs, samples=48):
+    """Render sprite jobs with Cycles (see blrender.py) and return RGBA
+    float cells (CELL x CELL, unpremultiplied).  Each job is a dict with
+    `H` (z-units), `rgb` (unlit sRGB albedo) and `alpha` over the sprite
+    canvas, plus `cy` (canvas row of the ground origin), `ky`, `kh` and
+    optional `rough`, `spec`, `sun`, `sky`, `step`."""
+    import os, subprocess, tempfile
+    tmp = tempfile.mkdtemp(prefix="wayciv_terrain_")
+    for i, j in enumerate(jobs):
+        d = dict(rough=0.85, spec=0.2, sun=3.4, sky=0.75, step=1, ky=0.62, kh=1.0)
+        d.update(j)
+        np.savez(os.path.join(tmp, "job_%d.npz" % i), **{k: np.asarray(v) for k, v in d.items()})
+    here = os.path.dirname(os.path.abspath(__file__))
+    subprocess.run(["blender", "-b", "--factory-startup", "-P", os.path.join(here, "blrender.py"),
+                    "--", tmp, str(len(jobs)), str(samples)],
+                   check=True, stdout=subprocess.DEVNULL)
+    out = []
+    for i in range(len(jobs)):
+        a = np.load(os.path.join(tmp, "out_%d.npy" % i))
+        out.append(bleed(downsample_premul(a, SS), 3))
+    return out

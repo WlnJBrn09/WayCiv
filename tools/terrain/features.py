@@ -3,6 +3,7 @@ glacier, oasis, sea ice).  Cell layout (8 columns):
  0-2 forest  3-5 jungle  6-8 taiga  9-11 marsh  12-13 floodplains (desert)
  14-15 floodplains (grass)  16-17 floodplains (plains)  18-20 dunes
  21-23 glacier  24-25 oasis  26-28 sea ice"""
+import os
 import numpy as np
 from texlib import *
 
@@ -61,7 +62,7 @@ def add_tree(H, alb, x, y, R, Ht, kind, col, r, snow=0.0):
     alb[:] = np.where((up & m)[..., None], treec, alb)
 
 
-def forest_like(kind, variant, seed):
+def forest_job(kind, variant, seed):
     r = np.random.default_rng(seed)
     H = np.zeros_like(GX)
     alb = np.zeros(GX.shape + (3,), np.float32)
@@ -95,9 +96,8 @@ def forest_like(kind, variant, seed):
         fl = dots(GRID, seed + 60, 60, 1.6)
         alb[:] = alb * (1 - (fl[..., None] > 0.5) * 0.7) + np.array([0.95, 0.35, 0.45]) * ((fl[..., None] > 0.5) * 0.7) * (H[..., None] > 0.1)
     alpha = np.maximum(smoothstep(0.015, 0.05, H), floor)
-    lit = shade(H, alb, shadow_len=40, shadow_strength=0.6, ambient=0.5, sun=1.0, hscale=1.2)
-    img = render_height(H, lit, alpha, cy_feat(), ky=ky, kh=1.0)
-    return finish(img)
+    return dict(H=H.astype(np.float32), rgb=alb.astype(np.float32), alpha=alpha.astype(np.float32),
+                cy=cy_feat(), ky=ky, kh=1.2, rough=0.8, spec=0.25, sun=3.6, sky=0.8)
 
 
 def marsh(variant, seed):
@@ -194,15 +194,15 @@ def glacier(variant, seed):
     base = blurn(grid_noise(seed + 5, 3.0), 7)
     # broken ice: most seams are shallow, a few are deep blue crevasses
     r = np.random.default_rng(seed)
-    deep = r.uniform(0, 1, 64)[ids] < 0.35
+    deep = r.uniform(0, 1, 64)[ids] < 0.12
     seam = smoothstep(7, 0, d2 - d1)
     H = (0.05 + 0.1 * base) * mask
-    H = H - seam * 0.03 * mask
+    H = H - seam * 0.012 * mask
     H = blurn(H, 1.5)
     alb = ramp(grid_noise(seed + 4, 2.4), [(0, hexc("e2f0fa")), (0.6, hexc("f4faff")), (1, hexc("ffffff"))])
     alb = mix(alb, hexc("b4d8f0"), smoothstep(0.55, 0.2, base) * 0.45)
-    alb = mix(alb, hexc("5aa0d4"), seam * deep * 0.8)
-    alb = mix(alb, hexc("9cc8e8"), seam * (~deep) * 0.5)
+    alb = mix(alb, hexc("7ab4de"), seam * deep * 0.55)
+    alb = mix(alb, hexc("c4e0f2"), seam * (~deep) * 0.25)
     lit = shade(H, alb, shadow_len=36, shadow_strength=0.35, ambient=0.6, sun=0.9, hscale=3.0, ao=0.1)
     img = render_height(H, np.clip(lit, 0, 1.05), mask, cy_feat(), ky=ky, kh=1.0)
     return finish(img)
@@ -285,13 +285,15 @@ def ndi_dist(mask):
 def build_sheet():
     cols, rows = 8, 4
     sheet = np.zeros((rows * CELL, cols * CELL, 4), np.float32)
-    cells = []
-    for v in range(3):
-        cells.append(forest_like("forest", v, 11000 + v))
-    for v in range(3):
-        cells.append(forest_like("jungle", v, 12000 + v))
-    for v in range(3):
-        cells.append(forest_like("taiga", v, 13000 + v))
+    if os.environ.get("FEATURES_KEEP_FOREST"):
+        # quick iteration: keep the forests already in the shipped sheet
+        from PIL import Image
+        old = np.asarray(Image.open(os.path.join(os.path.dirname(__file__), "..", "..", "assets", "terrain", "features.png")), np.float32) / 255.0
+        cells = [old[(i // cols) * CELL:(i // cols + 1) * CELL, (i % cols) * CELL:(i % cols + 1) * CELL] for i in range(9)]
+    else:
+        jobs = [forest_job(k, v, seed + v) for k, seed in (("forest", 11000), ("jungle", 12000), ("taiga", 13000))
+                for v in range(3)]
+        cells = render_many(jobs)
     for v in range(3):
         cells.append(marsh(v, 14000 + v))
     for k in ("desert", "grass", "plains"):

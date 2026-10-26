@@ -25,7 +25,7 @@ mod flat;
 
 use super::TileCtx;
 use super::hex::{DIRS, SQRT3, world, world_dir};
-use atlas::{Atlas, CELL, Decoded, level_for};
+use atlas::{Atlas, CELL, Decoded, Tiled, level_for};
 use egui::epaint::{Mesh, Vertex};
 use egui::{Align2, Color32, FontId, Pos2, Rect, Shape, TextureId, Vec2, pos2, vec2};
 use std::f32::consts::TAU;
@@ -61,9 +61,11 @@ const MTN_SCALE: f32 = 0.86;
 /// Natural wonders are drawn larger than ordinary relief.
 const WONDER_SCALE: f32 = 1.2;
 /// Sprite sheet cell numbers: relief first, then features, then wonders.
-const SPRITE_FEATURES: usize = 32;
-const SPRITE_WONDERS: usize = 64;
-const SPRITE_ROWS: usize = 11;
+const SPRITE_FEATURES: usize = 48;
+const SPRITE_WONDERS: usize = 80;
+const SPRITE_ROWS: usize = 13;
+/// Mountain variants per biome.
+const MOUNTAINS: usize = 6;
 const WONDERS: [&str; 20] = [
     "FEATURE_BARRIER_REEF",
     "FEATURE_CLIFFS_DOVER",
@@ -87,6 +89,13 @@ const WONDERS: [&str; 20] = [
     "FEATURE_PAITITI",
 ];
 const WONDER_GENERIC: usize = 20;
+/// World units (hex radii) covered by one repeat of the water textures.
+const WATER_SPAN: f32 = 6.0;
+const GLINT_SPAN: f32 = 4.0;
+/// World units between lattice points of the large-scale colour noise.
+const NOISE_CELL: f32 = 5.0;
+/// Depth of land as seen from the sea: it makes the shallows pale.
+const LAND_DEPTH: f32 = -0.35;
 
 // ---- Per-rules lookup tables ----------------------------------------------
 
@@ -311,13 +320,19 @@ impl Buf {
 }
 
 const GROUND: usize = 0;
-const FRINGE: usize = 1;
+/// Water in world-space texture, then two scrolling glint layers over it.
+const WATER: usize = 1;
+const GLINT_A: usize = 2;
+const GLINT_B: usize = 3;
+const FRINGE: usize = 4;
 /// Flat sprites (floodplains, marsh) that rivers run over.
-const DECALS: usize = 2;
-const SPRITES: usize = 3;
+const DECALS: usize = 5;
+const SPRITES: usize = 6;
 /// Rivers run over relief and features so they stay visible through forests.
-const RIVER: usize = 4;
-const LAYERS: usize = 5;
+const RIVER: usize = 7;
+/// Additive glints drifting down the rivers.
+const RIVER_FX: usize = 8;
+const LAYERS: usize = 9;
 
 struct Frame {
     pass: u64,
@@ -346,6 +361,13 @@ struct Frame {
     fx: bool,
     /// Whether any water effect was emitted this frame.
     moving: bool,
+    /// World units per repeat of the water and glint textures.
+    water_span: f32,
+    glint_span: f32,
+    /// Opacity of the glint layers (zero when zoomed out or still).
+    glint: f32,
+    /// Noise lattice cells around the map (a whole number, so it wraps).
+    cells: i32,
 }
 
 #[derive(Clone, Copy)]
@@ -404,6 +426,34 @@ fn wobble(p: Vec2, wd: f32) -> Vec2 {
 }
 
 impl Frame {
+    /// Smooth value noise in 0..1 that repeats around the map; `mult`
+    /// scales the lattice (an integer keeps it periodic).
+    fn vn(&self, p: Vec2, mult: i32, salt: u32) -> f32 {
+        let cells = self.cells * mult;
+        let q = p * (cells as f32 / self.wd);
+        let (ix, iy) = (q.x.floor(), q.y.floor());
+        let (fx, fy) = (q.x - ix, q.y - iy);
+        let (sx, sy) = (fx * fx * (3.0 - 2.0 * fx), fy * fy * (3.0 - 2.0 * fy));
+        let at = |dx: i32, dy: i32| {
+            (hash2((ix as i32 + dx).rem_euclid(cells), iy as i32 + dy, salt) & 0xffff) as f32
+                / 65535.0
+        };
+        let top = at(0, 0) + (at(1, 0) - at(0, 0)) * sx;
+        let bottom = at(0, 1) + (at(1, 1) - at(0, 1)) * sx;
+        top + (bottom - top) * sy
+    }
+
+    /// Slow, map-wide variation in the land's brightness and warmth, shared
+    /// by tiles at their common corners so it never shows tile edges.
+    fn land_tint(&self, p: Vec2, dim: f32) -> Color32 {
+        let a = self.vn(p, 1, 21) - 0.5;
+        let b = self.vn(p, 3, 22) - 0.5;
+        let lum = (0.93 + 0.16 * a + 0.08 * b) * dim;
+        let warm = 0.05 * (self.vn(p, 1, 23) - 0.5);
+        let ch = |k: f32| ((lum + k).clamp(0.0, 1.0) * 255.0) as u8;
+        Color32::from_rgb(ch(warm), ch(0.0), ch(-warm))
+    }
+
     fn ground_uv(&self, c: Cell, off: Vec2) -> Pos2 {
         let (mut x, mut y) = (off.x / SPAN, off.y / SPAN);
         for _ in 0..c.rot {
@@ -492,6 +542,8 @@ pub struct TerrainArt {
     load: Load,
     ground: Option<Atlas>,
     sprites: Option<Atlas>,
+    water: Option<Tiled>,
+    glint: Option<Tiled>,
     has: Has,
     infos: Infos,
     racc: RiverAcc,
@@ -508,6 +560,8 @@ impl TerrainArt {
             load: Load::Pending,
             ground: None,
             sprites: None,
+            water: None,
+            glint: None,
             has: Has::default(),
             infos: Infos::default(),
             racc: RiverAcc::default(),
@@ -538,6 +592,9 @@ impl TerrainArt {
             let ground = atlas::decode(&dir.join("ground.png"))
                 .filter(|d| d.w >= 8 * CELL && d.h >= 4 * CELL)
                 .map(|d| Atlas::new("ground", d.w, d.h, d.px));
+            self.water = atlas::decode(&dir.join("water.png")).and_then(|d| Tiled::new("water", d));
+            self.glint = atlas::decode(&dir.join("glint.png")).and_then(|d| Tiled::new("glint", d));
+            let ground = ground.filter(|_| self.water.is_some() && self.glint.is_some());
             if ground.is_some() {
                 // One sprite atlas: relief, features and wonders stacked.
                 let (w, h) = (8 * CELL, SPRITE_ROWS * CELL);
@@ -554,9 +611,9 @@ impl TerrainArt {
                     }
                 };
                 self.has = Has {
-                    relief: put("relief.png", 0, 4),
-                    features: put("features.png", 4, 4),
-                    wonders: put("wonders.png", 8, 3),
+                    relief: put("relief.png", 0, 6),
+                    features: put("features.png", 6, 4),
+                    wonders: put("wonders.png", 10, 3),
                 };
                 self.sprites = Some(Atlas::new("sprites", w, h, px));
             }
@@ -574,6 +631,8 @@ impl TerrainArt {
 fn begin_frame(
     ground: &mut Atlas,
     sprites: &mut Atlas,
+    water: &mut Tiled,
+    glint: &mut Tiled,
     painter: &egui::Painter,
     game: &Game,
     z: f32,
@@ -584,6 +643,12 @@ fn begin_frame(
     let sl = level_for(SPRITE_SPAN * z * ppp);
     let gtex = ground.texture(ctx, gl);
     let stex = sprites.texture(ctx, sl);
+    let wd = SQRT3 * game.map.grid.width as f32;
+    // Whole repeats around the map keep the water seamless at the wrap.
+    let water_span = wd / (wd / WATER_SPAN).round().max(1.0);
+    let glint_span = wd / (wd / GLINT_SPAN).round().max(1.0);
+    let wtex = water.texture(ctx, water.level_for(water_span * z * ppp));
+    let glint_tex = glint.texture(ctx, glint.level_for(glint_span * z * ppp));
     let n = if z < 14.0 {
         1
     } else if z < 30.0 {
@@ -612,10 +677,14 @@ fn begin_frame(
         labels: Vec::new(),
         bufs: [
             Buf::new(gtex),
+            Buf::new(wtex),
+            Buf::new(glint_tex),
+            Buf::new(glint_tex),
             Buf::new(gtex),
             Buf::new(stex),
             Buf::new(stex),
             Buf::new(gtex),
+            Buf::new(glint_tex),
         ],
         gw: ground.w as f32,
         gh: ground.h as f32,
@@ -626,11 +695,15 @@ fn begin_frame(
         n,
         wobble: wobble_on,
         ring,
-        wd: SQRT3 * game.map.grid.width as f32,
+        wd,
         scratch: Vec::new(),
         time: 0.0,
         fx: false,
         moving: false,
+        water_span,
+        glint_span,
+        glint: ((z - 20.0) / 14.0).clamp(0.0, 1.0),
+        cells: (wd / NOISE_CELL).round().max(1.0) as i32,
     }
 }
 
@@ -644,12 +717,20 @@ pub fn draw_tile(art: &mut TerrainArt, painter: &egui::Painter, t: &TileCtx) {
     let pass = painter.ctx().cumulative_pass_nr();
     if art.frame.as_ref().is_none_or(|f| f.pass != pass) {
         art.racc.refresh(t.game);
-        let (Some(g), Some(s)) = (art.ground.as_mut(), art.sprites.as_mut()) else {
+        let (Some(g), Some(s), Some(w), Some(gl)) = (
+            art.ground.as_mut(),
+            art.sprites.as_mut(),
+            art.water.as_mut(),
+            art.glint.as_mut(),
+        ) else {
             return;
         };
-        let mut frame = begin_frame(g, s, painter, t.game, t.z);
+        let mut frame = begin_frame(g, s, w, gl, painter, t.game, t.z);
         frame.time = art.time;
         frame.fx = art.ambient && t.z >= 14.0;
+        if !frame.fx {
+            frame.glint = 0.0;
+        }
         art.frame = Some(frame);
     }
     let TerrainArt {
@@ -735,18 +816,22 @@ fn tile(
         pts.push(c + (*u + d) * z);
     }
 
-    // 1. Ground fan.
-    {
+    // 1. Ground fan; water has its own world-space layers. Mountains stand
+    // on darker, rockier ground.
+    let dim = if info.mountain { 0.78 } else { 1.0 };
+    if info.water {
+        water_fan(f, infos, t, &pts);
+    } else {
         let center_uv = f.ground_uv(cell, Vec2::ZERO);
         let verts: Vec<Vertex> = std::iter::once(Vertex {
             pos: c,
             uv: center_uv,
-            color: Color32::WHITE,
+            color: f.land_tint(wp, dim),
         })
         .chain(pts.iter().zip(&f.ring).map(|(p, u)| Vertex {
             pos: *p,
             uv: f.ground_uv(cell, *u),
-            color: Color32::WHITE,
+            color: f.land_tint(wp + (*p - c) / z, dim),
         }))
         .collect();
         let m = f.bufs[GROUND].mesh(verts.len());
@@ -756,11 +841,6 @@ fn tile(
             m.indices
                 .extend_from_slice(&[base, base + 1 + k, base + 1 + (k + 1) % nring as u32]);
         }
-    }
-
-    // 1b. Glints drifting over open water.
-    if f.fx && info.water {
-        glints(f, c, z, h, biome == 5);
     }
 
     // 2. Edges: fringes into earlier neighbours, shores, cliffs.
@@ -774,12 +854,38 @@ fn tile(
         let nrm = world_dir(d).normalized();
         let i = (6 - d) % 6;
         let edge: Vec<usize> = (0..=n).map(|j| (i * n + j) % nring).collect();
+        // Where shores meet at a corner their strips share the corner's
+        // offset, so no wedge is left between them.
+        let shore = |dd: usize| {
+            t.neighbor(dd).is_some_and(|nb| {
+                me.revealed[grid.index(nb)]
+                    && infos.terrains[game.map.tile(nb).terrain].water != info.water
+            })
+        };
+        let bend = |dd: usize| {
+            if shore(dd) {
+                (nrm + world_dir(dd).normalized()).normalized() * 1.1547
+            } else {
+                nrm
+            }
+        };
+        let ends = if info.water == ninfo.water {
+            [nrm; 2]
+        } else {
+            [bend((6 - (i + 5) % 6) % 6), bend((6 - (i + 1) % 6) % 6)]
+        };
+        let side = Side {
+            pts: &pts,
+            edge: &edge,
+            nrm,
+            ends,
+            wp,
+        };
         if info.water == ninfo.water {
-            if grid.index(nb) < grid.index(pos) {
+            if !info.water && grid.index(nb) < grid.index(pos) {
                 // Fade this tile's texture over the earlier neighbour.
-                let w = if info.water { 0.34 } else { 0.30 };
-                let rows = [(0.0, 1.0), (0.5 * w, 0.38), (w, 0.0)];
-                edge_strip(f, FRINGE, &pts, &edge, nrm, z, cell, &rows, [1.0; 3], 0.0, h, d);
+                let rows = [(0.0, 1.0), (0.15, 0.38), (0.30, 0.0)];
+                edge_strip(f, FRINGE, &side, z, cell, &rows, [1.0; 3], 0.0);
             }
         } else if !info.water {
             // Land meets water: sand on the land, foam on the water.
@@ -795,7 +901,7 @@ fn tile(
             };
             if let Some(tint) = tint {
                 let rows = [(0.0, 0.0), (-0.07, 0.75), (-0.2, 0.0)];
-                edge_strip(f, FRINGE, &pts, &edge, nrm, z, sand_cell, &rows, tint, 0.0, h, d);
+                edge_strip(f, FRINGE, &side, z, sand_cell, &rows, tint, 0.0);
             }
             let white = Cell {
                 cell: GROUND_WHITE,
@@ -810,9 +916,9 @@ fn tile(
                 0.0
             };
             let foam = [(0.0, 0.9), (0.05 + 0.05 * sw, 0.6), (0.15 + 0.12 * sw, 0.0)];
-            edge_strip(f, FRINGE, &pts, &edge, nrm, z, white, &foam, [1.0; 3], 0.45, h, d);
+            edge_strip(f, FRINGE, &side, z, white, &foam, [1.0; 3], 0.45);
             let wide = [(0.0, 0.0), (0.12 + 0.08 * sw, 0.3), (0.28 + 0.16 * sw, 0.0)];
-            edge_strip(f, FRINGE, &pts, &edge, nrm, z, white, &wide, [0.85, 1.0, 1.0], 0.3, h, d);
+            edge_strip(f, FRINGE, &side, z, white, &wide, [0.85, 1.0, 1.0], 0.3);
             if tile.cliffs {
                 let rock = Cell {
                     cell: GROUND_ROCK,
@@ -820,9 +926,9 @@ fn tile(
                     flip: false,
                 };
                 let wall = [(0.04, 0.0), (0.0, 1.0), (-0.1, 1.0), (-0.24, 0.85), (-0.34, 0.0)];
-                edge_strip(f, FRINGE, &pts, &edge, nrm, z, rock, &wall, [1.0; 3], 0.0, h, d);
+                edge_strip(f, FRINGE, &side, z, rock, &wall, [1.0; 3], 0.0);
                 let shadow = [(0.0, 0.5), (0.12, 0.0)];
-                edge_strip(f, FRINGE, &pts, &edge, nrm, z, white, &shadow, [0.0; 3], 0.0, h, d);
+                edge_strip(f, FRINGE, &side, z, white, &shadow, [0.0; 3], 0.0);
             }
         }
     }
@@ -841,8 +947,9 @@ fn tile(
     let bidx = biome.min(4);
     if has.relief && wonder.is_none() && biome <= 4 {
         if info.mountain {
-            let rect = Frame::sprite_rect(c, z, MTN_OFF, MTN_SCALE, 0.0);
-            f.sprite(SPRITES, 15 + bidx * 3 + variant, rect, false);
+            let size = MTN_SCALE * (0.92 + 0.14 * ((h >> 16) & 7) as f32 / 7.0);
+            let rect = Frame::sprite_rect(c, z, MTN_OFF, size, 0.0);
+            f.sprite(SPRITES, 15 + bidx * MOUNTAINS + (h >> 4) as usize % MOUNTAINS, rect, false);
         } else if info.hills {
             let rect = Frame::sprite_rect(c, z, HILL_OFF, 1.0, 0.0);
             f.sprite(SPRITES, bidx * 3 + variant, rect, false);
@@ -912,6 +1019,141 @@ fn tile(
     f.scratch = pts;
 }
 
+/// How deep the sea looks at a tile's centre (0 shallows .. 1 abyss).
+fn depth_of(info: TerrainInfo) -> f32 {
+    match (info.water, info.biome) {
+        (false, _) => LAND_DEPTH,
+        (true, Some(5)) => 0.18,
+        (true, Some(6)) => 0.55,
+        _ => 1.0,
+    }
+}
+
+/// The sea's colour at a depth: pale turquoise shallows to deep blue.
+/// Multiplied by the (light) water texture, so these run bright.
+fn sea_color(depth: f32) -> Color32 {
+    const STOPS: [(f32, [f32; 3]); 6] = [
+        (-0.35, [0.78, 1.0, 0.92]),
+        (0.0, [0.55, 0.98, 0.98]),
+        (0.2, [0.38, 0.88, 1.0]),
+        (0.5, [0.20, 0.64, 1.0]),
+        (0.8, [0.12, 0.42, 0.86]),
+        (1.0, [0.08, 0.30, 0.72]),
+    ];
+    let d = depth.clamp(STOPS[0].0, STOPS[5].0.max(1.0));
+    let i = (0..5).find(|&i| d <= STOPS[i + 1].0).unwrap_or(4);
+    let ((d0, c0), (d1, c1)) = (STOPS[i], STOPS[i + 1]);
+    let u = ((d - d0) / (d1 - d0)).clamp(0.0, 1.0);
+    let ch = |k: usize| ((c0[k] + (c1[k] - c0[k]) * u) * 255.0) as u8;
+    Color32::from_rgb(ch(0), ch(1), ch(2))
+}
+
+/// A water tile: a mesh over the world-space water texture whose colour
+/// follows the sea's depth as a smooth field (so it never shows tile or
+/// triangle edges), with two scrolling glint layers on top.
+fn water_fan(f: &mut Frame, infos: &Infos, t: &TileCtx, pts: &[Pos2]) {
+    let (game, z, c) = (t.game, t.z, t.c);
+    let grid = game.map.grid;
+    let me = &game.players[t.viewer];
+    let wp = world(t.pos);
+    let own = depth_of(infos.terrains[t.tile().terrain]);
+    // This tile and its six neighbours: where they sit and how deep they are.
+    let sites: [(Vec2, f32); 7] = std::array::from_fn(|i| {
+        if i == 0 {
+            return (Vec2::ZERO, own);
+        }
+        let d = i - 1;
+        let depth = match t.neighbor(d) {
+            Some(nb) if me.revealed[grid.index(nb)] => {
+                depth_of(infos.terrains[game.map.tile(nb).terrain])
+            }
+            _ => own,
+        };
+        (world_dir(d), depth)
+    });
+    let depth_at = |f: &Frame, off: Vec2| {
+        let (mut sum, mut weight) = (0.0, 0.0);
+        for (at, depth) in sites {
+            let w = (1.0 - (off - at).length() / 2.6).max(0.0).powi(2);
+            sum += w * depth;
+            weight += w;
+        }
+        let p = wp + off;
+        sum / weight + 0.3 * (f.vn(p, 1, 11) - 0.5) + 0.12 * (f.vn(p, 3, 12) - 0.5)
+    };
+    let glint = f.glint;
+    let sparkle = |depth: f32| (0.30 - 0.14 * depth.clamp(0.0, 1.0)) * glint;
+    // The centre, a ring halfway out, then the displaced perimeter.
+    let nring = pts.len();
+    let mut offs: Vec<(Pos2, Vec2)> = std::iter::once((c, Vec2::ZERO))
+        .chain(pts.iter().map(|p| (*p, (*p - c) / z)))
+        .collect();
+    let mut base = Vec::with_capacity(2 * offs.len());
+    let mut fx_a = Vec::new();
+    let mut fx_b = Vec::new();
+    let (ta, tb) = (f.time * 0.02, f.time * 0.014);
+    let g = 1.0 / f.glint_span;
+    // The glints are faint, so they get every other perimeter point.
+    let stride = if nring > 6 { 2 } else { 1 };
+    for (i, &(p, off)) in offs.iter().enumerate() {
+        let depth = depth_at(f, off);
+        let w = wp + off;
+        base.push(Vertex {
+            pos: p,
+            uv: (w / f.water_span).to_pos2(),
+            color: sea_color(depth),
+        });
+        if glint > 0.0 && (i == 0 || (i - 1) % stride == 0) {
+            let v = (sparkle(depth) * 255.0) as u8;
+            let color = Color32::from_rgba_premultiplied(v, v, (v as f32 * 0.9) as u8, 0);
+            fx_a.push(Vertex {
+                pos: p,
+                uv: pos2(w.x * g + ta, w.y * g + ta * 0.4),
+                color,
+            });
+            fx_b.push(Vertex {
+                pos: p,
+                uv: pos2(w.y * g * 1.7 + 0.37 - tb, w.x * g * 1.7 + 0.11 + tb * 0.7),
+                color,
+            });
+        }
+    }
+    // The depth colour gets a ring halfway out, so it varies across the tile.
+    offs.drain(..1);
+    for &(p, off) in &offs {
+        let (p, off) = (c + (p - c) * 0.5, off * 0.5);
+        base.push(Vertex {
+            pos: p,
+            uv: ((wp + off) / f.water_span).to_pos2(),
+            color: sea_color(depth_at(f, off)),
+        });
+    }
+    let nring = nring as u32;
+    let m = f.bufs[WATER].mesh(base.len());
+    let first = m.vertices.len() as u32;
+    m.vertices.extend(base);
+    let (outer, mid) = (first + 1, first + 1 + nring);
+    for k in 0..nring {
+        let k1 = (k + 1) % nring;
+        m.indices.extend_from_slice(&[first, mid + k, mid + k1]);
+        m.indices.extend_from_slice(&[mid + k, outer + k, outer + k1]);
+        m.indices.extend_from_slice(&[mid + k, outer + k1, mid + k1]);
+    }
+    if glint > 0.0 {
+        f.moving = true;
+        let ring = (nring / stride as u32).max(1);
+        for (layer, verts) in [(GLINT_A, fx_a), (GLINT_B, fx_b)] {
+            let m = f.bufs[layer].mesh(verts.len());
+            let first = m.vertices.len() as u32;
+            m.vertices.extend(verts);
+            for k in 0..ring {
+                m.indices
+                    .extend_from_slice(&[first, first + 1 + k, first + 1 + (k + 1) % ring]);
+            }
+        }
+    }
+}
+
 fn flat_wonder_marker(out: &mut Vec<Shape>, c: Pos2, z: f32) {
     let star: Vec<Pos2> = (0..10)
         .map(|i| {
@@ -934,31 +1176,32 @@ fn flat_wonder_marker(out: &mut Vec<Shape>, c: Pos2, z: f32) {
 fn edge_strip(
     f: &mut Frame,
     buf: usize,
-    pts: &[Pos2],
-    edge: &[usize],
-    nrm: Vec2,
+    side: &Side,
     z: f32,
     cell: Cell,
     rows: &[(f32, f32)],
     tint: [f32; 3],
     jitter: f32,
-    h: u32,
-    dir: usize,
 ) {
-    let cols = edge.len();
+    let cols = side.edge.len();
     let mut verts = Vec::with_capacity(cols * rows.len());
     for &(dist, alpha) in rows {
-        for (j, &k) in edge.iter().enumerate() {
+        for (j, &k) in side.edge.iter().enumerate() {
             let u = f.ring[k];
-            let wob = 1.0
-                + jitter
-                    * (((hash2(j as i32 + 31 * dir as i32, (h & 0xffff) as i32, 5) & 255) as f32
-                        / 255.0)
-                        - 0.5)
-                    * 2.0;
+            // Jitter by world position, so both tiles at a corner agree.
+            let at = side.wp + u;
+            let hv = hash2((at.x * 64.0).round() as i32, (at.y * 64.0).round() as i32, 5);
+            let wob = 1.0 + jitter * (((hv & 255) as f32 / 255.0) - 0.5) * 2.0;
+            let nrm = if j == 0 {
+                side.ends[0]
+            } else if j == cols - 1 {
+                side.ends[1]
+            } else {
+                side.nrm
+            };
             let off = nrm * dist * wob;
             verts.push(Vertex {
-                pos: pts[k] + off * z,
+                pos: side.pts[k] + off * z,
                 uv: f.ground_uv(cell, u + off),
                 color: pm(tint, alpha),
             });
@@ -968,48 +1211,17 @@ fn edge_strip(
     push_grid(m, &verts, cols, rows.len());
 }
 
-// ---- Rivers ---------------------------------------------------------------
-
-/// Soft glints on open water: each fades in, drifts east a little, and fades
-/// out, on its own slow cycle. Drawn additively (alpha 0, premultiplied).
-fn glints(f: &mut Frame, c: Pos2, z: f32, h: u32, shallow: bool) {
-    let count = if z < 22.0 { 1 } else { 2 };
-    let white = f.cell_center_uv(GROUND_WHITE);
-    for i in 0..count {
-        let r = |salt: u32| (hash2(h as i32, i as i32 * 17 + salt as i32, 9) & 0xffff) as f32 / 65535.0;
-        // Many tiles go without, so the sea isn't uniformly busy.
-        if r(1) < 0.3 {
-            continue;
-        }
-        let period = 3.2 + 3.0 * r(2);
-        let u = ((f.time + period * r(3)) % period) / period;
-        let a = (u * std::f32::consts::PI).sin().powi(2) * if shallow { 0.26 } else { 0.2 };
-        let at = c + vec2((r(4) - 0.5) * 0.9 * z + u * 0.22 * z, (r(5) - 0.5) * 0.8 * z);
-        let (w, t) = ((0.17 + 0.13 * r(6)) * z, (0.022 + 0.014 * r(7)) * z);
-        let tint = [190.0, 228.0, 255.0];
-        let glow = Color32::from_rgba_premultiplied(
-            (tint[0] * a) as u8,
-            (tint[1] * a) as u8,
-            (tint[2] * a) as u8,
-            0,
-        );
-        let clear = Color32::TRANSPARENT;
-        let verts = [
-            Vertex { pos: at, uv: white, color: glow },
-            Vertex { pos: at + vec2(-w, 0.0), uv: white, color: clear },
-            Vertex { pos: at + vec2(0.0, -t), uv: white, color: clear },
-            Vertex { pos: at + vec2(w, 0.0), uv: white, color: clear },
-            Vertex { pos: at + vec2(0.0, t), uv: white, color: clear },
-        ];
-        let m = f.bufs[FRINGE].mesh(5);
-        let base = m.vertices.len() as u32;
-        m.vertices.extend_from_slice(&verts);
-        for k in 0..4u32 {
-            m.indices.extend_from_slice(&[base, base + 1 + k, base + 1 + (k + 1) % 4]);
-        }
-        f.moving = true;
-    }
+/// One hex side: its perimeter points, outward normal and the normals
+/// its two ends bend toward.
+struct Side<'a> {
+    pts: &'a [Pos2],
+    edge: &'a [usize],
+    nrm: Vec2,
+    ends: [Vec2; 2],
+    wp: Vec2,
 }
+
+// ---- Rivers ---------------------------------------------------------------
 
 /// The (displaced) middle of the edge facing `dir`.
 fn edge_mid(f: &Frame, t: &TileCtx, dir: usize) -> Pos2 {
@@ -1026,7 +1238,7 @@ fn river(f: &mut Frame, racc: &RiverAcc, _pts: &[Pos2], t: &TileCtx, _h: u32) {
     let (game, z, c, pos) = (t.game, t.z, t.c, t.pos);
     let tile = t.tile();
     let grid = game.map.grid;
-    let half_of = |acc: u16| (z * (0.06 + 0.03 * (acc as f32).sqrt())).min(z * 0.2);
+    let half_of = |acc: u16| (z * (0.065 + 0.034 * (acc as f32).sqrt())).min(z * 0.24);
     let my = half_of(racc.at(game, pos));
     let rules = &game.rules;
 
@@ -1112,11 +1324,9 @@ fn river(f: &mut Frame, racc: &RiverAcc, _pts: &[Pos2], t: &TileCtx, _h: u32) {
     let _ = grid;
 
     let white = f.cell_center_uv(GROUND_WHITE);
-    let cap_color = [0.62, 0.82, 0.94];
-    let bank = [0.40, 0.34, 0.22];
-    let edge_c = [0.17, 0.42, 0.68];
-    let mid_c = [0.30, 0.60, 0.84];
-    let core = [0.62, 0.82, 0.94];
+    let wp = world(pos);
+    let glint_on = f.glint > 0.0;
+    let flow = f.time * 0.35;
     for (mut pts, mut ws, _, flare) in curves {
         if flare {
             // The mouth widens and fades into the sea.
@@ -1129,6 +1339,13 @@ fn river(f: &mut Frame, racc: &RiverAcc, _pts: &[Pos2], t: &TileCtx, _h: u32) {
         }
         let cols = pts.len();
         let last = cols - 1;
+        // Rivers wander a little between the fixed points on tile edges.
+        let mut wander = vec![0.0f32; cols];
+        for (k, w) in wander.iter_mut().enumerate().take(last).skip(1) {
+            let u = k as f32 / last as f32;
+            let at = wp + (pts[k] - c) / z;
+            *w = (f.vn(at, 3, 31) - 0.5) * 0.9 * (u * std::f32::consts::PI).sin() * z * 0.16;
+        }
         // Round the free ends (sources and dead ends) so short streams
         // do not end in needles.
         let end_open = !flare
@@ -1140,34 +1357,14 @@ fn river(f: &mut Frame, racc: &RiverAcc, _pts: &[Pos2], t: &TileCtx, _h: u32) {
             };
         let source = incoming_none && !flare;
         if source {
-            river_cap(f, pts[0], ws[0], white, cap_color);
+            river_cap(f, pts[0], ws[0], white);
         }
         if end_open {
-            river_cap(f, pts[last], ws[last], white, cap_color);
+            river_cap(f, pts[last], ws[last], white);
         }
-        // Seven vertices across: bank fade, bank, water edge, centre line.
-        let across: [(f32, [f32; 3], f32); 7] = [
-            (-1.35, bank, 0.0),
-            (-1.0, bank, 0.7),
-            (-0.72, edge_c, 1.0),
-            (0.0, core, 1.0),
-            (0.72, edge_c, 1.0),
-            (1.0, bank, 0.7),
-            (1.35, bank, 0.0),
-        ];
-        let mut verts = Vec::with_capacity(7 * cols);
-        let wp = world(pos);
-        // A highlight runs downstream once per tile length (so it joins up
-        // across tiles); its strength varies over the map.
-        let strength = 0.35 + 0.65 * (0.5 + 0.5 * (wp.x * 1.7 + wp.y * 1.3).sin());
+        let mut verts = Vec::with_capacity(RIVER_ACROSS.len() * cols);
+        let mut sparks = Vec::with_capacity(RIVER_ACROSS.len() * cols);
         for (k, p) in pts.iter().enumerate() {
-            let crest = if f.fx {
-                f.moving = true;
-                let u = k as f32 / last as f32;
-                (0.5 + 0.5 * (TAU * (u - f.time * 0.45)).sin()).powi(2) * strength
-            } else {
-                0.0
-            };
             let tan = if k == 0 {
                 pts[1] - pts[0]
             } else if k == last {
@@ -1175,66 +1372,100 @@ fn river(f: &mut Frame, racc: &RiverAcc, _pts: &[Pos2], t: &TileCtx, _h: u32) {
             } else {
                 pts[k + 1] - pts[k - 1]
             };
-            let nrm = vec2(-tan.y, tan.x).normalized();
+            let dir = tan.normalized();
+            let nrm = vec2(-dir.y, dir.x);
+            let p = *p + nrm * wander[k];
             let fade = if flare && k > last - 2 {
-                1.0 - 0.5 * (k - (last - 2)) as f32
+                (1.0 - 0.5 * (k - (last - 2)) as f32).max(0.0)
             } else {
                 1.0
             };
-            for &(off, col, a) in &across {
-                let mix = |a: [f32; 3], b: [f32; 3], t: f32| {
-                    [
-                        a[0] + (b[0] - a[0]) * t,
-                        a[1] + (b[1] - a[1]) * t,
-                        a[2] + (b[2] - a[2]) * t,
-                    ]
-                };
-                let colr = if off.abs() < 0.1 {
-                    mix(core, [1.0; 3], crest * 0.8)
-                } else if off.abs() < 0.8 {
-                    // blend the edge and body colours
-                    let body = [
-                        edge_c[0] * 0.5 + mid_c[0] * 0.5,
-                        edge_c[1] * 0.5 + mid_c[1] * 0.5,
-                        edge_c[2] * 0.5 + mid_c[2] * 0.5,
-                    ];
-                    mix(body, core, crest * 0.6)
-                } else {
-                    col
-                };
+            // The bank facing the sun shades the water beside it.
+            let toward_sun = nrm.dot(RIVER_SUN);
+            let at = wp + (p - c) / z;
+            let g = 1.3 / f.glint_span;
+            for &off in &RIVER_ACROSS {
+                let (col, a) = river_profile(off.abs(), toward_sun * off.signum());
+                let pos = p + nrm * (off * ws[k]);
                 verts.push(Vertex {
-                    pos: *p + nrm * (off * ws[k]),
+                    pos,
                     uv: white,
-                    color: pm(colr, a * fade.max(0.0)),
+                    color: pm(col, a * fade),
                 });
+                if glint_on {
+                    // Glints drift downstream along the middle of the river.
+                    let v = (1.0 - off.abs() / 0.9).clamp(0.0, 1.0) * f.glint * 0.7 * fade;
+                    let v = (v * 255.0) as u8;
+                    sparks.push(Vertex {
+                        pos,
+                        uv: pos2(at.x * g - dir.x * flow, at.y * g - dir.y * flow),
+                        color: Color32::from_rgba_premultiplied(v, v, v, 0),
+                    });
+                }
             }
         }
         // Layout is point-major; transpose into rows x cols.
-        let mut grid_v = Vec::with_capacity(verts.len());
-        for r in 0..7 {
-            for k in 0..cols {
-                grid_v.push(verts[k * 7 + r]);
+        let rows = RIVER_ACROSS.len();
+        let transpose = |v: &[Vertex]| -> Vec<Vertex> {
+            let mut out = Vec::with_capacity(v.len());
+            for r in 0..rows {
+                for k in 0..cols {
+                    out.push(v[k * rows + r]);
+                }
             }
+            out
+        };
+        let m = f.bufs[RIVER].mesh(verts.len());
+        push_grid(m, &transpose(&verts), cols, rows);
+        if glint_on {
+            f.moving = true;
+            let m = f.bufs[RIVER_FX].mesh(sparks.len());
+            push_grid(m, &transpose(&sparks), cols, rows);
         }
-        let m = f.bufs[RIVER].mesh(grid_v.len());
-        push_grid(m, &grid_v, cols, 7);
     }
     let _ = DIRS;
 }
 
+/// Offsets across a river in half widths: bank fade, bank, rim, body, middle.
+const RIVER_ACROSS: [f32; 9] = [-1.55, -1.15, -0.85, -0.5, 0.0, 0.5, 0.85, 1.15, 1.55];
+/// Direction (screen) toward the sun.
+const RIVER_SUN: Vec2 = vec2(-0.6, -0.8);
+
+/// Colour and opacity at `off` half widths from the middle; `shade` is
+/// positive on the side facing the sun, whose bank shadows the water.
+fn river_profile(off: f32, shade: f32) -> ([f32; 3], f32) {
+    let shadow = shade.max(0.0);
+    let lerp3 = |a: [f32; 3], b: [f32; 3], t: f32| {
+        [
+            a[0] + (b[0] - a[0]) * t,
+            a[1] + (b[1] - a[1]) * t,
+            a[2] + (b[2] - a[2]) * t,
+        ]
+    };
+    if off > 1.0 {
+        let bank = lerp3([0.34, 0.33, 0.22], [0.18, 0.22, 0.14], shadow);
+        (bank, if off > 1.4 { 0.0 } else { 0.5 })
+    } else if off > 0.7 {
+        // Pale shallows on the lit side, dark under the bank.
+        (lerp3([0.62, 0.90, 0.95], [0.12, 0.36, 0.56], shadow), 1.0)
+    } else if off > 0.3 {
+        (lerp3([0.24, 0.62, 0.88], [0.14, 0.44, 0.72], shadow), 1.0)
+    } else {
+        ([0.30, 0.68, 0.92], 1.0)
+    }
+}
+
 /// A rounded end for a river: a disc fading out like the river's banks.
-fn river_cap(f: &mut Frame, p: Pos2, w: f32, uv: Pos2, core: [f32; 3]) {
-    let edge_c = [0.17, 0.42, 0.68];
-    let bank = [0.40, 0.34, 0.22];
+fn river_cap(f: &mut Frame, p: Pos2, w: f32, uv: Pos2) {
     const N: usize = 10;
-    let rings: [(f32, [f32; 3], f32); 3] = [(0.72, edge_c, 1.0), (1.0, bank, 0.7), (1.35, bank, 0.0)];
     let mut verts = Vec::with_capacity(1 + 3 * (N + 1));
     verts.push(Vertex {
         pos: p,
         uv,
-        color: pm(core, 1.0),
+        color: pm([0.30, 0.68, 0.92], 1.0),
     });
-    for &(r, col, a) in &rings {
+    for r in [0.85, 1.15, 1.55] {
+        let (col, a) = river_profile(r, 0.0);
         for k in 0..=N {
             let ang = TAU * k as f32 / N as f32;
             verts.push(Vertex {
