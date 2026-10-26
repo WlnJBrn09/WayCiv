@@ -253,6 +253,34 @@ fn draw(
         render::resources::draw_road(&mut art.resources, painter, &ctx(pos, c));
     }
 
+    // 2b. The hex grid: a dark line along each edge with a faint light
+    // bevel inside it, so every tile reads as a hex. Each shared edge is
+    // drawn once (by the tile facing east, north-east, or north-west of it).
+    let grid_alpha = ((z - 8.0) / 14.0).clamp(0.0, 1.0);
+    if grid_alpha > 0.0 {
+        let dark = Stroke::new(
+            (z * 0.045).clamp(1.0, 2.6),
+            Color32::from_rgba_unmultiplied(12, 16, 10, (120.0 * grid_alpha) as u8),
+        );
+        let light = Stroke::new(
+            (z * 0.02).clamp(0.6, 1.2),
+            Color32::from_rgba_unmultiplied(255, 250, 225, (34.0 * grid_alpha) as u8),
+        );
+        for &(pos, c) in &tiles {
+            let outer = corners(c, z);
+            let inner = corners(c, z - dark.width - light.width * 0.5);
+            for dir in 0..6 {
+                let (a, b) = EDGES[dir];
+                let shared = neighbor(s, pos, dir)
+                    .is_some_and(|n| player.revealed[grid.index(n)]);
+                if dir < 3 || !shared {
+                    painter.line_segment([outer[a], outer[b]], dark);
+                }
+                painter.line_segment([inner[a], inner[b]], light);
+            }
+        }
+    }
+
     // 3. Territory: tint and borders (new ones fade in).
     for &(pos, c) in &tiles {
         let tile = game.map.tile(pos);
@@ -263,17 +291,27 @@ fn draw(
         painter.add(hex(
             c,
             z,
-            with_alpha(primary, (46.0 * claim) as u8),
+            with_alpha(primary, (58.0 * claim) as u8),
             Stroke::NONE,
         ));
         let pts = corners(c, z * 0.93);
+        let width = (z * 0.15).max(2.5);
         for dir in 0..6 {
             let other = neighbor(s, pos, dir).and_then(|n| game.map.tile(n).owner);
             if other != Some(owner) {
                 let (a, b) = EDGES[dir];
+                // A dark rim under the colour keeps borders legible on any
+                // terrain (light blues on water, greens on grassland).
                 painter.line_segment(
                     [pts[a], pts[b]],
-                    Stroke::new((z * 0.13).max(2.0), primary.gamma_multiply(claim)),
+                    Stroke::new(
+                        width + 2.0,
+                        Color32::from_black_alpha((150.0 * claim) as u8),
+                    ),
+                );
+                painter.line_segment(
+                    [pts[a], pts[b]],
+                    Stroke::new(width, primary.gamma_multiply(claim)),
                 );
                 let inner = corners(c, z * 0.82);
                 painter.line_segment(
