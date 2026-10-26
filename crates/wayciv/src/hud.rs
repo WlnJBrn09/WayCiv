@@ -748,9 +748,11 @@ mod tests {
             .map(|u| u.id)
             .unwrap();
         s.select_unit(Some(warrior_unit));
+        let start = s.game.units[&warrior_unit].pos;
         let target = *s.reachable.first().expect("warrior can move");
         s.right_click(target);
-        assert_ne!(s.game.units[&warrior_unit].pos, pos, "warrior moved");
+        assert_eq!(s.game.units[&warrior_unit].pos, target, "warrior moved");
+        assert_ne!(target, start);
 
         // Fortify, then End Turn advances the game.
         s.game.fortify(warrior_unit);
