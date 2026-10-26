@@ -6,7 +6,7 @@
 use crate::palette::{self, rgb};
 use crate::ui::glyph::{self, Glyph};
 use crate::ui::theme;
-use egui::{Align2, Color32, FontId, Pos2, Rect, Stroke, StrokeKind, pos2, vec2};
+use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Stroke, StrokeKind, pos2, vec2};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use wayciv_core::state::Production;
@@ -118,22 +118,44 @@ pub fn draw_city_banner(
     let cx = x0 + pr;
     let cy = c.y - z * 1.05 - pr + 4.0;
 
-    // Plate.
+    // Plate: a pill with a soft shadow, lit from above, trimmed in the
+    // civilization's second color.
     let plate_right = cx + content + if production.is_some() { prod_r } else { 0.0 };
     let plate = Rect::from_min_max(pos2(cx, cy - ph / 2.0), pos2(plate_right, cy + ph / 2.0));
-    painter.rect_filled(plate.translate(vec2(0.0, 2.0)), ph / 2.0, Color32::from_black_alpha(90));
-    painter.rect_filled(plate, ph / 2.0, primary);
-    painter.rect_stroke(plate, ph / 2.0, Stroke::new(1.8, secondary), StrokeKind::Inside);
+    let radius = ph / 2.0;
+    shadow(painter, plate, radius);
+    painter.rect_filled(plate, radius, primary);
+    let (top, bottom) = plate.split_top_bottom_at_fraction(0.5);
+    let round = radius as u8;
+    painter.rect_filled(top, CornerRadius { nw: round, ne: round, sw: 0, se: 0 }, Color32::from_white_alpha(30));
+    painter.rect_filled(bottom, CornerRadius { nw: 0, ne: 0, sw: round, se: round }, Color32::from_black_alpha(36));
+    painter.rect_stroke(plate, radius, Stroke::new(1.0, Color32::from_black_alpha(190)), StrokeKind::Outside);
+    painter.rect_stroke(plate, radius, Stroke::new(1.8, secondary), StrokeKind::Inside);
+    painter.rect_stroke(
+        plate.shrink(2.8),
+        (radius - 2.8).max(0.0),
+        Stroke::new(1.0, Color32::from_white_alpha(44)),
+        StrokeKind::Inside,
+    );
     let mut tx = cx + name_x;
     if city.capital {
+        glyph::paint(painter, Glyph::Star, pos2(tx + fs * 0.42, cy + 0.8), fs * 0.5, Color32::from_black_alpha(120));
         glyph::paint(painter, Glyph::Star, pos2(tx + fs * 0.42, cy), fs * 0.5, palette::GOLD);
         tx += star_w;
     }
-    painter.galley(pos2(tx, cy - galley.size().y / 2.0), galley, text_color);
+    // A hairline shadow keeps the name crisp on any plate color.
+    let ink = if luminance(text_color) > 128.0 {
+        Color32::from_black_alpha(150)
+    } else {
+        Color32::from_white_alpha(70)
+    };
+    let name_at = pos2(tx, cy - galley.size().y / 2.0);
+    painter.galley_with_override_text_color(name_at + vec2(0.0, 1.0), galley.clone(), ink);
+    painter.galley(name_at, galley, text_color);
 
     // Population circle with the growth ring.
-    painter.circle_filled(pos2(cx, cy + 2.0), pr + 1.0, Color32::from_black_alpha(100));
-    painter.circle_filled(pos2(cx, cy), pr, Color32::from_rgb(12, 20, 34));
+    let pop = pos2(cx, cy);
+    medallion(painter, pop, pr);
     let ring_w = (fs * 0.28).max(3.0);
     let ring_r = pr - ring_w / 2.0 - 1.0;
     match &info {
@@ -144,21 +166,21 @@ pub fn draw_city_banner(
             } else {
                 palette::GOOD
             };
-            theme::ring(painter, pos2(cx, cy), ring_r, frac, ring_w, color);
+            theme::ring(painter, pop, ring_r, frac, ring_w, color);
         }
         None => {
-            painter.circle_stroke(pos2(cx, cy), ring_r, Stroke::new(ring_w, secondary));
+            painter.circle_stroke(pop, ring_r, Stroke::new(ring_w, secondary));
         }
     }
-    painter.circle_stroke(pos2(cx, cy), pr, Stroke::new(1.5, palette::GOLD_DIM));
     theme::text_bold(
         painter,
-        pos2(cx, cy),
+        pop + vec2(0.0, 1.0),
         Align2::CENTER_CENTER,
         city.population,
         fs * 1.25,
-        Color32::WHITE,
+        Color32::from_black_alpha(140),
     );
+    theme::text_bold(painter, pop, Align2::CENTER_CENTER, city.population, fs * 1.25, Color32::WHITE);
     // Turns until growth, under the circle.
     if let Some(d) = &info
         && fs >= 12.0
@@ -170,8 +192,7 @@ pub fn draw_city_banner(
         };
         let tag_c = pos2(cx, cy + pr + fs * 0.35);
         let tag = Rect::from_center_size(tag_c, vec2(fs * 2.1, fs * 1.05));
-        painter.rect_filled(tag, fs * 0.52, Color32::from_rgb(12, 20, 34));
-        painter.rect_stroke(tag, fs * 0.52, Stroke::new(1.2, palette::GOOD), StrokeKind::Inside);
+        capsule(painter, tag, palette::GOOD);
         glyph::paint(painter, Glyph::Food, pos2(tag.left() + fs * 0.55, tag_c.y), fs * 0.38, palette::GOOD);
         theme::text_bold(
             painter,
@@ -192,8 +213,7 @@ pub fn draw_city_banner(
             .get(&wayciv_core::Game::production_key(item))
             .copied()
             .unwrap_or(0);
-        painter.circle_filled(pc + vec2(0.0, 2.0), prod_r + 1.0, Color32::from_black_alpha(100));
-        painter.circle_filled(pc, prod_r, Color32::from_rgb(12, 20, 34));
+        medallion(painter, pc, prod_r);
         theme::ring(
             painter,
             pc,
@@ -202,7 +222,6 @@ pub fn draw_city_banner(
             3.0,
             Color32::from_rgb(240, 150, 60),
         );
-        painter.circle_stroke(pc, prod_r, Stroke::new(1.5, palette::GOLD_DIM));
         let icon = Rect::from_center_size(pc, vec2(prod_r * 1.25, prod_r * 1.25));
         let drawn = match item {
             Production::Unit(u) => {
@@ -217,8 +236,7 @@ pub fn draw_city_banner(
         if fs >= 12.0 {
             let tag_c = pos2(pc.x, pc.y + prod_r + fs * 0.1);
             let tag = Rect::from_center_size(tag_c, vec2(fs * 1.7, fs * 1.0));
-            painter.rect_filled(tag, fs * 0.5, Color32::from_rgb(12, 20, 34));
-            painter.rect_stroke(tag, fs * 0.5, Stroke::new(1.2, Color32::from_rgb(240, 150, 60)), StrokeKind::Inside);
+            capsule(painter, tag, Color32::from_rgb(240, 150, 60));
             theme::text_bold(
                 painter,
                 tag_c,
@@ -234,40 +252,79 @@ pub fn draw_city_banner(
     let bar_left = cx + pr * 0.9;
     let bar_w = (plate_right - bar_left).max(20.0);
     let mut y = cy + ph / 2.0 + 3.0;
-    let bar_h = (fs * 0.28).max(4.0);
+    let bar_h = (fs * 0.3).max(4.0);
     if city.loyalty < wayciv_core::loyalty::MAX_LOYALTY && game.loyalty_applies(city.id) {
         // Loyalty: purple, turning red when the city is close to defecting.
-        let bar = Rect::from_min_size(pos2(bar_left, y), vec2(bar_w, bar_h));
-        painter.rect_filled(bar, bar_h / 2.0, Color32::from_black_alpha(190));
         let color = if city.loyalty > 25 {
             Color32::from_rgb(176, 120, 236)
         } else {
             Color32::from_rgb(236, 70, 70)
         };
-        painter.rect_filled(
-            Rect::from_min_size(bar.min, vec2((bar_w * city.loyalty as f32 / 100.0).max(bar_h), bar_h)),
-            bar_h / 2.0,
-            color,
-        );
+        let bar = Rect::from_min_size(pos2(bar_left, y), vec2(bar_w, bar_h));
+        meter(painter, bar, city.loyalty as f32 / 100.0, color);
         y += bar_h + 2.0;
     }
     if city.hp < 200 || city.wall_hp > 0 {
+        // Health: green, then amber, then red as the city is battered.
+        let frac = city.hp as f32 / 200.0;
+        let color = if frac >= 0.6 {
+            Color32::from_rgb(86, 214, 96)
+        } else if frac >= 0.3 {
+            Color32::from_rgb(244, 196, 62)
+        } else {
+            Color32::from_rgb(238, 74, 66)
+        };
         let bar = Rect::from_min_size(pos2(bar_left, y), vec2(bar_w, bar_h));
-        painter.rect_filled(bar, bar_h / 2.0, Color32::from_black_alpha(190));
-        painter.rect_filled(
-            Rect::from_min_size(bar.min, vec2((bar_w * city.hp as f32 / 200.0).max(bar_h), bar_h)),
-            bar_h / 2.0,
-            Color32::from_rgb(80, 210, 90),
-        );
+        meter(painter, bar, frac, color);
         if city.wall_hp > 0 {
-            let walls = Rect::from_min_size(
-                pos2(bar_left, y + bar_h + 1.0),
-                vec2(
-                    (bar_w * (city.wall_hp as f32 / game.max_walls(city.id).max(1) as f32).min(1.0)).max(2.0),
-                    bar_h * 0.7,
-                ),
-            );
-            painter.rect_filled(walls, 1.0, Color32::from_rgb(120, 170, 240));
+            let walls = Rect::from_min_size(pos2(bar_left, y + bar_h + 1.5), vec2(bar_w, bar_h * 0.7));
+            let held = (city.wall_hp as f32 / game.max_walls(city.id).max(1) as f32).min(1.0);
+            meter(painter, walls, held, Color32::from_rgb(124, 176, 244));
         }
     }
+}
+
+/// A soft drop shadow under a rounded rect: a few widening, fading layers.
+fn shadow(painter: &egui::Painter, rect: Rect, radius: f32) {
+    for (grow, alpha) in [(0.5, 70), (2.5, 38), (5.0, 18)] {
+        painter.rect_filled(
+            rect.expand(grow).translate(vec2(0.0, 2.5)),
+            radius + grow,
+            Color32::from_black_alpha(alpha),
+        );
+    }
+}
+
+/// A round navy badge with a gold rim, lit from above, standing on a soft
+/// shadow: the base of the population and production circles.
+fn medallion(painter: &egui::Painter, c: Pos2, r: f32) {
+    for (grow, alpha) in [(0.5, 80), (2.5, 40), (5.0, 18)] {
+        painter.circle_filled(c + vec2(0.0, 2.5), r + grow, Color32::from_black_alpha(alpha));
+    }
+    painter.circle_filled(c, r, Color32::from_rgb(10, 17, 30));
+    painter.circle_filled(c - vec2(0.0, r * 0.3), r * 0.62, Color32::from_white_alpha(9));
+    painter.circle_stroke(c, r + 1.0, Stroke::new(1.0, Color32::from_black_alpha(190)));
+    painter.circle_stroke(c, r, Stroke::new(2.0, palette::GOLD_DIM));
+    painter.circle_stroke(c, r - 1.8, Stroke::new(1.0, palette::with_alpha(palette::GOLD, 70)));
+}
+
+/// A small dark pill with a colored trim, for the numbers under the circles.
+fn capsule(painter: &egui::Painter, rect: Rect, trim: Color32) {
+    painter.rect_filled(rect.translate(vec2(0.0, 1.5)), rect.height() / 2.0, Color32::from_black_alpha(90));
+    painter.rect_filled(rect, rect.height() / 2.0, Color32::from_rgb(10, 17, 30));
+    painter.rect_stroke(rect, rect.height() / 2.0, Stroke::new(1.2, trim), StrokeKind::Inside);
+}
+
+/// A thin meter: a dark outlined track and a lit fill.
+fn meter(painter: &egui::Painter, rect: Rect, frac: f32, color: Color32) {
+    let r = rect.height() / 2.0;
+    painter.rect_filled(rect, r, Color32::from_black_alpha(200));
+    let fill = Rect::from_min_size(
+        rect.min,
+        vec2((rect.width() * frac.clamp(0.0, 1.0)).max(rect.height()), rect.height()),
+    );
+    painter.rect_filled(fill.shrink(0.5), r, color);
+    let (top, _) = fill.shrink(1.0).split_top_bottom_at_fraction(0.42);
+    painter.rect_filled(top, r, Color32::from_white_alpha(56));
+    painter.rect_stroke(rect, r, Stroke::new(1.0, Color32::from_white_alpha(46)), StrokeKind::Outside);
 }

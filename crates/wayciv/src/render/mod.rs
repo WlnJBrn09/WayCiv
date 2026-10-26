@@ -6,6 +6,9 @@
 //!   units     — land, sea, and air units
 //!   banner    — city banners
 //!   anim, fx  — animation schedule (walks, fights, fades) and its effects
+//!   overlay   — hex grid, territory ribbons, tile highlights
+//!   veil      — unexplored world, fog, lighting
+//!   mesh      — builders for the gradient meshes the last two use
 //! `map_view` decides what to draw where and in which order.
 
 pub mod anim;
@@ -13,9 +16,12 @@ pub mod banner;
 pub mod buildings;
 pub mod fx;
 pub mod hex;
+pub mod mesh;
+pub mod overlay;
 pub mod resources;
 pub mod terrain;
 pub mod units;
+pub mod veil;
 
 use egui::Pos2;
 use std::path::PathBuf;
@@ -26,6 +32,7 @@ pub struct Art {
     pub resources: resources::ResourceArt,
     pub buildings: buildings::BuildingArt,
     pub units: units::UnitArt,
+    pub veil: veil::VeilArt,
 }
 
 impl Art {
@@ -36,6 +43,7 @@ impl Art {
             resources: resources::ResourceArt::new(assets.clone()),
             buildings: buildings::BuildingArt::new(assets.clone()),
             units: units::UnitArt::new(assets),
+            veil: veil::VeilArt::default(),
         }
     }
 }

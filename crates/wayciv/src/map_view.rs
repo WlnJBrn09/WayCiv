@@ -3,12 +3,13 @@
 //! fading right now comes from `render::anim` (the `Anims` in the session).
 
 use crate::hud::Session;
-use crate::palette::{self, rgb, with_alpha};
+use crate::palette::{self, with_alpha};
 use crate::render::anim::{ease_out, ease_out_back, smooth};
-use crate::render::hex::{EDGES, SQRT3, corners, hex};
+use crate::render::hex::{SQRT3, corners, hex};
+use crate::render::{mesh, overlay};
 use crate::render::units::UnitFx;
 use crate::render::{self, Art, TileCtx};
-use egui::{Align2, Color32, FontId, Pos2, Rect, Sense, Shape, Stroke, Vec2, vec2};
+use egui::{Align2, Color32, FontId, Mesh, Pos2, Rect, Sense, Shape, Stroke, Vec2, vec2};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use wayciv_core::state::Unit;
@@ -73,10 +74,6 @@ pub fn center_on(s: &mut Session, pos: Pos) {
 pub fn snap_to(s: &mut Session, pos: Pos) {
     s.anim.cancel_pan();
     s.cam.center = world(pos);
-}
-
-fn neighbor(s: &Session, pos: Pos, dir: usize) -> Option<Pos> {
-    render::hex::neighbor(&s.game.map.grid, pos, dir)
 }
 
 pub fn show(s: &mut Session, ui: &mut egui::Ui) {
@@ -166,39 +163,6 @@ fn slots(game: &Game, units: &[&Unit]) -> Vec<Slot> {
         .collect()
 }
 
-/// Soft shadows of clouds drifting over the land: one coarse mesh over the
-/// view, so the cost doesn't depend on how many tiles are showing.
-fn cloud_shadows(s: &Session, rect: Rect, painter: &egui::Painter) {
-    const CELL: f32 = 70.0;
-    let (cols, rows) = (
-        (rect.width() / CELL).ceil() as usize + 1,
-        (rect.height() / CELL).ceil() as usize + 1,
-    );
-    let t = s.anim.now as f32;
-    let z = s.cam.zoom;
-    let mut mesh = egui::epaint::Mesh::default();
-    for r in 0..=rows {
-        for c in 0..=cols {
-            let p = rect.min + vec2(c as f32, r as f32) * CELL;
-            let w = (p - rect.center()) / z + s.cam.center;
-            // Two crossing swells make blobs; the drift is slow.
-            let n = ((w.x * 0.17 - t * 0.09).sin() + (w.y * 0.23 + t * 0.05).sin()) * 0.5
-                + 0.45 * (w.x * 0.07 + w.y * 0.11 - t * 0.04).sin();
-            let a = smooth((n - 0.35) / 0.9);
-            mesh.colored_vertex(p, Color32::from_black_alpha((a * 46.0) as u8));
-        }
-    }
-    let stride = (cols + 1) as u32;
-    for r in 0..rows as u32 {
-        for c in 0..cols as u32 {
-            let i = r * stride + c;
-            mesh.add_triangle(i, i + 1, i + stride);
-            mesh.add_triangle(i + 1, i + stride + 1, i + stride);
-        }
-    }
-    painter.add(Shape::mesh(mesh));
-}
-
 /// Draws the whole map; returns whether anything ambient is on screen (so
 /// the caller keeps repainting at a low rate).
 fn draw(
@@ -225,6 +189,9 @@ fn draw(
         z,
     };
     art.terrain.set_clock(now, ambient);
+
+    // 0. The unexplored world, under everything.
+    render::veil::unknown(&mut art.veil, painter, rect, s.cam.center, z, now);
 
     // 1. Terrain: biomes, relief, features, cliffs.
     let (row0, row1) = visible_rows(s, rect);
@@ -253,74 +220,28 @@ fn draw(
         render::resources::draw_road(&mut art.resources, painter, &ctx(pos, c));
     }
 
-    // 2b. The hex grid: a dark line along each edge with a faint light
-    // bevel inside it, so every tile reads as a hex. Each shared edge is
-    // drawn once (by the tile facing east, north-east, or north-west of it).
-    let grid_alpha = ((z - 8.0) / 14.0).clamp(0.0, 1.0);
-    if grid_alpha > 0.0 {
-        let dark = Stroke::new(
-            (z * 0.045).clamp(1.0, 2.6),
-            Color32::from_rgba_unmultiplied(12, 16, 10, (120.0 * grid_alpha) as u8),
-        );
-        let light = Stroke::new(
-            (z * 0.02).clamp(0.6, 1.2),
-            Color32::from_rgba_unmultiplied(255, 250, 225, (34.0 * grid_alpha) as u8),
-        );
+    // 2b. The hex grid, so every tile reads as a hex.
+    let strength = ((z - 6.0) / 8.0).clamp(0.0, 1.0);
+    if strength > 0.0 {
+        let mut layer = Mesh::default();
         for &(pos, c) in &tiles {
-            let outer = corners(c, z);
-            let inner = corners(c, z - dark.width - light.width * 0.5);
-            for dir in 0..6 {
-                let (a, b) = EDGES[dir];
-                let shared = neighbor(s, pos, dir)
-                    .is_some_and(|n| player.revealed[grid.index(n)]);
-                if dir < 3 || !shared {
-                    painter.line_segment([outer[a], outer[b]], dark);
-                }
-                painter.line_segment([inner[a], inner[b]], light);
-            }
+            overlay::grid(&mut layer, &ctx(pos, c), strength);
         }
+        painter.add(Shape::mesh(layer));
     }
 
-    // 3. Territory: tint and borders (new ones fade in).
+    // 3. Territory: tint and border ribbons (new ones fade in), then the
+    // soft edge where the explored world meets the unknown.
+    let mut layer = Mesh::default();
     for &(pos, c) in &tiles {
-        let tile = game.map.tile(pos);
-        let Some(owner) = tile.owner else { continue };
-        let o = &game.players[owner];
-        let claim = anim.claim(pos);
-        let primary = rgb(o.primary);
-        painter.add(hex(
-            c,
-            z,
-            with_alpha(primary, (58.0 * claim) as u8),
-            Stroke::NONE,
-        ));
-        let pts = corners(c, z * 0.93);
-        let width = (z * 0.15).max(2.5);
-        for dir in 0..6 {
-            let other = neighbor(s, pos, dir).and_then(|n| game.map.tile(n).owner);
-            if other != Some(owner) {
-                let (a, b) = EDGES[dir];
-                // A dark rim under the colour keeps borders legible on any
-                // terrain (light blues on water, greens on grassland).
-                painter.line_segment(
-                    [pts[a], pts[b]],
-                    Stroke::new(
-                        width + 2.0,
-                        Color32::from_black_alpha((150.0 * claim) as u8),
-                    ),
-                );
-                painter.line_segment(
-                    [pts[a], pts[b]],
-                    Stroke::new(width, primary.gamma_multiply(claim)),
-                );
-                let inner = corners(c, z * 0.82);
-                painter.line_segment(
-                    [inner[a], inner[b]],
-                    Stroke::new((z * 0.05).max(1.0), rgb(o.secondary).gamma_multiply(claim)),
-                );
-            }
-        }
+        overlay::territory(&mut layer, &ctx(pos, c), anim.claim(pos));
     }
+    painter.add(Shape::mesh(layer));
+    let mut layer = Mesh::default();
+    for &(pos, c) in &tiles {
+        render::veil::frontier(&mut layer, &ctx(pos, c));
+    }
+    painter.add(Shape::mesh(layer));
 
     // 4. Districts, wonders, improvements, resources; fog on top. New
     // districts and improvements pop in; fog and newly seen tiles fade.
@@ -344,60 +265,65 @@ fn draw(
         render::resources::draw_resource(&mut art.resources, icons, painter, &t);
         let fog = anim.fog(pos, seen);
         if fog > 0.01 {
-            painter.add(hex(
-                c,
-                z,
-                Color32::from_rgba_unmultiplied(0, 0, 0, (120.0 * fog) as u8),
-                Stroke::NONE,
-            ));
+            painter.add(render::veil::fog(&t, fog));
         }
         let shown = anim.reveal(pos);
         if shown < 0.999 {
             painter.add(hex(
                 c,
                 z * 1.03,
-                Color32::from_rgba_unmultiplied(8, 10, 14, (255.0 * (1.0 - shown)) as u8),
+                with_alpha(render::veil::UNKNOWN, (255.0 * (1.0 - shown)) as u8),
                 Stroke::NONE,
             ));
         }
     }
     if ambient {
-        cloud_shadows(s, rect, painter);
+        render::veil::cloud_shadows(painter, rect, s.cam.center, z, now);
     }
+    render::veil::lighting(painter, rect);
 
-    // 5. Highlights: reachable tiles, attack targets, district sites, path.
-    let pulse = 0.5 + 0.5 * (now * 3.0).sin();
+    // 5. Highlights: the selected tile, reachable tiles, attack targets,
+    // building sites and the path. They breathe gently.
+    let pulse = 0.5 + 0.5 * (now * 2.6).sin();
+    let alpha = |base: f32, swing: f32| (base + swing * pulse) as u8;
+    let mut marks = Mesh::default();
+    let mut path: Vec<Pos2> = Vec::new();
+    let mut badges: Vec<(Pos2, f32)> = Vec::new();
     if let Some(unit) = s.selected_unit.and_then(|id| game.units.get(&id)) {
         for &pos in &s.reachable {
             for c in screens(s, rect, pos) {
-                painter.add(hex(
+                overlay::mark(
+                    &mut marks,
                     c,
-                    z * 0.9,
-                    Color32::from_rgba_unmultiplied(120, 200, 255, 34 + (10.0 * pulse) as u8),
-                    Stroke::new(1.0, Color32::from_rgba_unmultiplied(150, 220, 255, 100 + (40.0 * pulse) as u8)),
-                ));
+                    z,
+                    Color32::from_rgba_unmultiplied(110, 200, 255, alpha(44.0, 26.0)),
+                    Color32::from_rgba_unmultiplied(176, 230, 255, alpha(130.0, 50.0)),
+                    1.4,
+                );
             }
         }
         for pos in grid.within(unit.pos, game.unit_type(unit).range.max(1)) {
             if game.can_attack(unit, pos) {
                 for c in screens(s, rect, pos) {
-                    painter.add(hex(
+                    mesh::fill(&mut marks, &corners(c, z * 0.97), Color32::from_rgba_unmultiplied(220, 40, 30, alpha(22.0, 20.0)));
+                    overlay::mark(
+                        &mut marks,
                         c,
-                        z * 0.9,
-                        Color32::from_rgba_unmultiplied(230, 50, 40, 44 + (40.0 * pulse) as u8),
-                        Stroke::new(2.0, Color32::from_rgb(240, 60, 50)),
-                    ));
+                        z,
+                        Color32::from_rgba_unmultiplied(236, 54, 40, alpha(100.0, 70.0)),
+                        Color32::from_rgb(255, 98, 82),
+                        2.4,
+                    );
                 }
             }
         }
         let mut prev = screens(s, rect, unit.pos).first().copied();
+        path.extend(prev);
         for &step in &s.path_preview {
             let here = screens(s, rect, step)
                 .into_iter()
                 .min_by_key(|p| prev.map(|q| (p.distance(q) * 10.0) as i32).unwrap_or(0));
-            if let (Some(a), Some(b)) = (prev, here) {
-                painter.line_segment([a, b], Stroke::new(3.0, Color32::from_rgb(255, 255, 255)));
-            }
+            path.extend(here);
             prev = here;
         }
     }
@@ -416,32 +342,74 @@ fn draw(
                 } else {
                     0.0
                 };
-                painter.add(hex(
+                overlay::mark(
+                    &mut marks,
                     c,
-                    z * 0.9,
-                    Color32::from_rgba_unmultiplied(80, 230, 120, 46 + (30.0 * pulse) as u8),
-                    Stroke::new(2.0, Color32::from_rgb(90, 240, 130)),
-                ));
+                    z,
+                    Color32::from_rgba_unmultiplied(70, 230, 120, alpha(78.0, 40.0)),
+                    Color32::from_rgb(112, 244, 144),
+                    2.0,
+                );
                 if extra > 0.0 {
-                    painter.text(
-                        c,
-                        Align2::CENTER_CENTER,
-                        format!("+{extra:.0}"),
-                        FontId::proportional(z * 0.45),
-                        Color32::WHITE,
-                    );
+                    badges.push((c, extra));
                 }
             }
+        }
+    }
+    // The selected unit's or city's own tile wears a gold frame.
+    let selected = s
+        .selected_unit
+        .and_then(|id| game.units.get(&id))
+        .map(|u| u.pos)
+        .or_else(|| s.selected_city.and_then(|id| game.cities.get(&id)).map(|c| c.pos));
+    if let Some(pos) = selected {
+        for c in screens(s, rect, pos) {
+            overlay::mark(
+                &mut marks,
+                c,
+                z,
+                with_alpha(palette::GOLD, alpha(60.0, 50.0)),
+                with_alpha(palette::GOLD, 240),
+                2.0,
+            );
+        }
+    }
+    painter.add(Shape::mesh(marks));
+    for (c, extra) in badges {
+        let r = (z * 0.3).max(9.0);
+        painter.circle_filled(c, r + 1.5, Color32::from_black_alpha(110));
+        painter.circle_filled(c, r, Color32::from_rgb(16, 34, 24));
+        painter.circle_stroke(c, r, Stroke::new(1.5, Color32::from_rgb(112, 244, 144)));
+        painter.text(
+            c,
+            Align2::CENTER_CENTER,
+            format!("+{extra:.0}"),
+            FontId::proportional(r * 1.1),
+            Color32::WHITE,
+        );
+    }
+    if path.len() > 1 {
+        let (dot, step) = ((z * 0.075).clamp(2.2, 4.5), (z * 0.34).max(11.0));
+        painter.add(Shape::line(
+            path.clone(),
+            Stroke::new(dot * 2.0 + 3.0, Color32::from_black_alpha(60)),
+        ));
+        // Dots flow toward the destination.
+        for (p, _) in overlay::along(&path, step, now * z * 0.7) {
+            painter.circle_filled(p, dot + 1.3, Color32::from_black_alpha(120));
+            painter.circle_filled(p, dot, Color32::from_rgb(255, 250, 236));
+        }
+        if let Some(&end) = path.last() {
+            let r = z * (0.2 + 0.03 * pulse);
+            painter.circle_stroke(end, r, Stroke::new(4.5, Color32::from_black_alpha(100)));
+            painter.circle_stroke(end, r, Stroke::new(2.4, palette::GOLD));
         }
     }
     if let Some(city) = s.selected_city.and_then(|id| game.cities.get(&id)) {
         for &pos in &city.worked {
             for c in screens(s, rect, pos) {
-                painter.circle_stroke(
-                    c,
-                    z * 0.25,
-                    Stroke::new(2.0, Color32::from_rgba_unmultiplied(255, 255, 255, 160)),
-                );
+                painter.circle_stroke(c, z * 0.25, Stroke::new(4.0, Color32::from_black_alpha(80)));
+                painter.circle_stroke(c, z * 0.25, Stroke::new(2.0, Color32::from_rgba_unmultiplied(255, 252, 240, 210)));
             }
         }
     }
@@ -619,9 +587,10 @@ fn draw(
             .into_iter()
             .min_by_key(|p| (p.distance(from) * 10.0) as i32)
         {
+            painter.add(Shape::line_segment([from, to], Stroke::new(4.5, Color32::from_black_alpha(70))));
             painter.add(Shape::dashed_line(
                 &[from, to],
-                Stroke::new(2.0, palette::GOLD),
+                Stroke::new(2.2, palette::GOLD),
                 8.0,
                 6.0,
             ));
@@ -638,14 +607,18 @@ fn draw(
 
     // 7. Hover outline and tooltip.
     if let Some(pos) = s.hover {
+        let mut marks = Mesh::default();
         for c in screens(s, rect, pos) {
-            painter.add(hex(
+            overlay::mark(
+                &mut marks,
                 c,
                 z,
-                Color32::TRANSPARENT,
-                Stroke::new(2.0, Color32::WHITE),
-            ));
+                Color32::from_rgba_unmultiplied(255, 244, 214, alpha(34.0, 18.0)),
+                Color32::from_rgba_unmultiplied(255, 250, 236, 240),
+                2.0,
+            );
         }
+        painter.add(Shape::mesh(marks));
         if player.revealed[grid.index(pos)] && response.hovered() {
             let text = crate::hud::tile_tooltip(s, pos);
             response.clone().on_hover_ui_at_pointer(|ui| {

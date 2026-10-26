@@ -8,7 +8,8 @@ use super::widgets::{self, Tool};
 use crate::hud::Session;
 use crate::map_view;
 use crate::palette::{self, GOLD_DIM};
-use crate::render::hex::SQRT3;
+use crate::render::hex::{SQRT3, neighbor};
+use crate::render::veil::UNKNOWN;
 use egui::{
     Color32, ColorImage, Rect, Sense, Stroke, StrokeKind, TextureHandle, TextureOptions, pos2,
     vec2,
@@ -141,7 +142,7 @@ impl Minimap {
         // Crisper pixels when few tiles share the box.
         let px: i32 = if (WIDTH / region.cols as f32) >= 4.0 { 6 } else { 3 };
         let (w, h) = ((region.cols * px) as usize, (region.rows * px) as usize);
-        let mut image = ColorImage::filled([w, h], Color32::from_rgb(15, 22, 34));
+        let mut image = ColorImage::filled([w, h], UNKNOWN);
         let mut put = |x: i32, y: i32, c: Color32, size: i32| {
             for dy in 0..size {
                 for dx in 0..size {
@@ -180,11 +181,16 @@ impl Minimap {
                 color = color.gamma_multiply(0.85);
             }
             if let Some(owner) = tile.owner {
+                // Territory: a wash of the owner's color, strongest on the border.
                 let o = palette::rgb(game.players[owner].primary);
-                color = mix(color, o, 0.55);
+                let edge = (0..6).any(|d| {
+                    neighbor(&grid, pos, d).is_some_and(|n| game.map.tile(n).owner != Some(owner))
+                });
+                color = mix(color, o, if edge { 0.92 } else { 0.5 });
             }
             if !player.visible[i] {
-                color = color.gamma_multiply(0.62);
+                // Fog: the same sepia wash as on the map.
+                color = mix(color, Color32::from_rgb(96, 82, 62), 0.38).gamma_multiply(0.78);
             }
             put(x, y, color, px);
         }
@@ -195,6 +201,7 @@ impl Minimap {
             let Some((x, y)) = place(city.pos) else { continue };
             let o = &game.players[city.owner];
             let edge = px / 3 + 1;
+            put(x - edge / 2 - 1, y - edge / 2 - 1, Color32::from_black_alpha(255), px + edge + 2);
             put(x - edge / 2, y - edge / 2, Color32::WHITE, px + edge);
             put(x, y, palette::rgb(o.primary), px - 1);
         }
@@ -276,7 +283,7 @@ pub fn show(s: &mut Session, ctx: &egui::Context, corner: egui::Pos2) {
             let inner = Rect::from_center_size(area.center(), vec2(ww * scale, wh * scale));
             let response = ui.interact(inner, ui.scope_id().with("minimap_map"), Sense::click_and_drag());
             let map_painter = painter.with_clip_rect(inner);
-            map_painter.rect_filled(inner, 0.0, Color32::from_rgb(15, 22, 34));
+            map_painter.rect_filled(inner, 0.0, UNKNOWN);
             if let Some(tex) = &minimap.texture {
                 map_painter.image(
                     tex.id(),
@@ -295,7 +302,12 @@ pub fn show(s: &mut Session, ctx: &egui::Context, corner: egui::Pos2) {
             for k in [-1.0, 0.0, 1.0] {
                 let c = inner.min + vec2((cx + k * world_w) * scale, cy * scale);
                 let r = Rect::from_center_size(c, half * 2.0);
+                map_painter.rect_stroke(r, 2.0, Stroke::new(3.5, Color32::from_black_alpha(140)), StrokeKind::Middle);
                 map_painter.rect_stroke(r, 2.0, Stroke::new(1.5, Color32::WHITE), StrokeKind::Middle);
+            }
+            // An inset shadow and a gold rim frame the chart.
+            for (k, a) in [(0.0, 90), (2.0, 50), (4.0, 24)] {
+                map_painter.rect_stroke(inner.shrink(k), 0.0, Stroke::new(2.0, Color32::from_black_alpha(a)), StrokeKind::Inside);
             }
             painter.rect_stroke(inner, 4.0, Stroke::new(1.0, GOLD_DIM), StrokeKind::Outside);
             if (response.clicked() || response.dragged() || response.is_pointer_button_down_on())
