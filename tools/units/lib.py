@@ -51,6 +51,105 @@ PAL = dict(
 )
 
 
+SKIN = {"skin", "tan", "brown_skin", "dark_skin"}
+WOOD = {"wood", "dkwood", "ltwood", "deck"}
+LEATHER = {"leather", "fur", "rope"}
+
+
+def _kind(name, metal_):
+    if metal_ > 0.3:
+        return "metal"
+    if name in SKIN:
+        return "skin"
+    if name in WOOD:
+        return "wood"
+    if name in LEATHER:
+        return "leather"
+    if name in ("stone", "sand", "haze"):
+        return "stone"
+    if name in ("glass", "water", "sea", "gold", "silver", "ivory"):
+        return "smooth"
+    return "cloth"
+
+
+# kind -> (noise scale, colour variation, roughness variation, bump strength, specular level)
+_SURF = dict(metal=(30.0, 0.10, 0.10, 0.06, 0.5), skin=(14.0, 0.05, 0.05, 0.0, 0.35),
+             wood=(1.0, 0.16, 0.10, 0.25, 0.3), leather=(42.0, 0.14, 0.12, 0.30, 0.4),
+             stone=(26.0, 0.18, 0.10, 0.35, 0.25), smooth=(20.0, 0.04, 0.04, 0.0, 0.5),
+             cloth=(90.0, 0.09, 0.05, 0.22, 0.2))
+
+
+def _surface(m, col, rough, metal_, kind, emit):
+    """Principled shader with a hint of surface: bevelled edges that catch the
+    light, fine noise breaking up flat colour and roughness, bump grain."""
+    nt = m.node_tree
+    nodes, links = nt.nodes, nt.links
+    bsdf = nodes.get("Principled BSDF")
+    scale, cvar, rvar, bump, spec = _SURF[kind]
+    bsdf.inputs["Metallic"].default_value = metal_
+    bsdf.inputs["Specular IOR Level"].default_value = spec
+    if kind == "metal":
+        rough = min(rough, 0.34)
+    elif kind == "cloth" and rough == 0.65:
+        rough = 0.86
+        bsdf.inputs["Sheen Weight"].default_value = 0.35
+        bsdf.inputs["Sheen Roughness"].default_value = 0.5
+    elif kind == "leather" and rough == 0.65:
+        rough = 0.55
+    elif kind == "wood" and rough == 0.65:
+        rough = 0.72
+    elif kind == "skin":
+        rough = 0.52
+        bsdf.inputs["Subsurface Weight"].default_value = 0.35
+        bsdf.inputs["Subsurface Radius"].default_value = (1.0, 0.32, 0.2)
+        bsdf.inputs["Subsurface Scale"].default_value = 0.05
+    elif kind == "smooth" and rough == 0.65:
+        rough = 0.35
+    coord = nodes.new("ShaderNodeTexCoord")
+    mp = nodes.new("ShaderNodeMapping")
+    mp.inputs["Scale"].default_value = (scale, scale, scale) if kind != "wood" else (3.0, 38.0, 38.0)
+    links.new(coord.outputs["Object"], mp.inputs["Vector"])
+    noise = nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = 1.0
+    noise.inputs["Detail"].default_value = 5.0
+    noise.inputs["Roughness"].default_value = 0.6
+    links.new(mp.outputs["Vector"], noise.inputs["Vector"])
+    # colour variation (multiply by 1 +- cvar)
+    tone = nodes.new("ShaderNodeMapRange")
+    tone.inputs["To Min"].default_value = 1.0 - cvar
+    tone.inputs["To Max"].default_value = 1.0 + cvar * 0.4
+    links.new(noise.outputs["Fac"], tone.inputs["Value"])
+    mix = nodes.new("ShaderNodeMix")
+    mix.data_type = "RGBA"
+    mix.blend_type = "MULTIPLY"
+    mix.inputs["Factor"].default_value = 1.0
+    mix.inputs["A"].default_value = col
+    links.new(tone.outputs["Result"], mix.inputs["B"])
+    links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
+    # roughness variation
+    rg = nodes.new("ShaderNodeMapRange")
+    rg.inputs["To Min"].default_value = max(0.0, rough - rvar)
+    rg.inputs["To Max"].default_value = min(1.0, rough + rvar)
+    links.new(noise.outputs["Fac"], rg.inputs["Value"])
+    links.new(rg.outputs["Result"], bsdf.inputs["Roughness"])
+    # bevelled normal, then grain bump on top
+    bev = nodes.new("ShaderNodeBevel")
+    bev.samples = 4
+    bev.inputs["Radius"].default_value = 0.018
+    nrm = bev.outputs["Normal"]
+    if bump > 0:
+        bp = nodes.new("ShaderNodeBump")
+        bp.inputs["Strength"].default_value = bump
+        bp.inputs["Distance"].default_value = 0.02
+        links.new(noise.outputs["Fac"], bp.inputs["Height"])
+        links.new(bev.outputs["Normal"], bp.inputs["Normal"])
+        nrm = bp.outputs["Normal"]
+    links.new(nrm, bsdf.inputs["Normal"])
+    if emit > 0:
+        bsdf.inputs["Emission Color"].default_value = col
+        bsdf.inputs["Emission Strength"].default_value = emit
+
+
 def mat(name, rough=0.65, metal=0.0, emit=0.0):
     """Material by palette name or '#rrggbb'.  'team' is the tintable one."""
     key = (name, rough, metal, emit)
@@ -66,20 +165,14 @@ def mat(name, rough=0.65, metal=0.0, emit=0.0):
     m = bpy.data.materials.new(name if len(_MATS) < 1000 else "m")
     m.name = name + "_%d" % len(_MATS) if name != "team" else "team_%d" % len(_MATS)
     m.use_nodes = True
-    bsdf = m.node_tree.nodes.get("Principled BSDF")
-    bsdf.inputs["Base Color"].default_value = col
-    bsdf.inputs["Roughness"].default_value = rough
-    bsdf.inputs["Metallic"].default_value = metal
-    if emit > 0:
-        bsdf.inputs["Emission Color"].default_value = col
-        bsdf.inputs["Emission Strength"].default_value = emit
+    _surface(m, col, rough, metal, "cloth" if name == "team" else _kind(name, metal), emit)
     m.diffuse_color = col
     _MATS[key] = m
     return m
 
 
 def metal(name):
-    return mat(name, rough=0.55, metal=0.55)
+    return mat(name, rough=0.34, metal=1.0)
 
 
 # -------------------------------------------------------------- transform
@@ -195,6 +288,7 @@ def _cyl_geom(r0, r1, h, seg, cap=True):
 def cyl(loc, r, h, m, rot=(0, 0, 0), r2=None, seg=10, cap=True, name="cyl"):
     """Tapered cylinder along local Z (centred on loc); r2 = top radius."""
     r2 = r if r2 is None else r2
+    seg = max(seg, 18) if seg >= 8 else seg
     v, f, sm = _cyl_geom(r, r2, h, seg, cap)
     R = Euler((d(rot[0]), d(rot[1]), d(rot[2])), "XYZ").to_matrix().to_4x4()
     T = _STACK[-1] @ Matrix.Translation(Vector(loc)) @ R
@@ -211,6 +305,7 @@ def limb(p0, p1, r0, m, r1=None, seg=8, cap=True, name="limb"):
     if L < 1e-6:
         return None
     q = dv.normalized().to_track_quat("Z", "Y")
+    seg = max(seg, 10) if seg >= 8 else seg
     v, f, sm = _cyl_geom(r0 * s, r1 * s, L, seg, cap)
     M = Matrix.Translation((a + b) / 2) @ q.to_matrix().to_4x4()
     return _mk(name, [M @ Vector(p) for p in v], f, _m(m), smooth=sm)
@@ -244,6 +339,7 @@ def _track_up(x, up):
 
 
 def sph(loc, r, m, scale=(1, 1, 1), seg=10, rings=6, rot=(0, 0, 0), name="sph"):
+    seg, rings = max(seg, 20), max(rings, 12)
     v, f = [], []
     v.append((0, 0, -1))
     for j in range(1, rings):
@@ -392,19 +488,45 @@ def mirror_y(fn):
 
 
 # ----------------------------------------------------------------- scene
-def setup_scene(res=384, samples=40, ortho=3.0, elev=45, yaw=-30.0, anchor=0.72,
-                key_energy=3.2):
-    """Cycles CPU, transparent film, ortho camera at `elev` degrees, warm sun."""
+def _sky(sc):
+    """Soft studio-outdoors environment: blue zenith, pale warm horizon and a
+    grassy bounce from below, so metals and glossy parts have something to reflect."""
+    w = bpy.data.worlds.new("w")
+    w.use_nodes = True
+    nt = w.node_tree
+    nodes, links = nt.nodes, nt.links
+    bg = nodes["Background"]
+    coord = nodes.new("ShaderNodeTexCoord")
+    sep = nodes.new("ShaderNodeSeparateXYZ")
+    links.new(coord.outputs["Generated"], sep.inputs["Vector"])
+    ramp = nodes.new("ShaderNodeValToRGB")
+    rm = ramp.color_ramp
+    rm.elements[0].position = 0.30
+    rm.elements[0].color = hexcol("#5f6a45")
+    rm.elements[1].position = 0.85
+    rm.elements[1].color = hexcol("#5d8fd6")
+    mid = rm.elements.new(0.52)
+    mid.color = hexcol("#f1e6d2")
+    links.new(sep.outputs["Z"], ramp.inputs["Fac"])
+    links.new(ramp.outputs["Color"], bg.inputs["Color"])
+    bg.inputs["Strength"].default_value = 0.95
+    sc.world = w
+
+
+def setup_scene(res=512, samples=96, ortho=3.0, elev=45, yaw=-30.0, anchor=0.72,
+                key_energy=3.4):
+    """Cycles CPU, transparent film, ortho camera at `elev` degrees, warm sun
+    from the upper left, soft sky fill and a cool rim light behind."""
     sc = bpy.context.scene
     sc.render.engine = "CYCLES"
     sc.cycles.device = "CPU"
     sc.cycles.samples = samples
     sc.cycles.use_denoising = True
-    sc.cycles.max_bounces = 3
-    sc.cycles.diffuse_bounces = 2
-    sc.cycles.glossy_bounces = 2
+    sc.cycles.max_bounces = 4
+    sc.cycles.diffuse_bounces = 3
+    sc.cycles.glossy_bounces = 3
     sc.cycles.transmission_bounces = 2
-    sc.cycles.sample_clamp_indirect = 4.0
+    sc.cycles.sample_clamp_indirect = 5.0
     sc.render.film_transparent = True
     sc.render.resolution_x = sc.render.resolution_y = res
     sc.render.resolution_percentage = 100
@@ -413,14 +535,8 @@ def setup_scene(res=384, samples=40, ortho=3.0, elev=45, yaw=-30.0, anchor=0.72,
     sc.view_settings.view_transform = "Standard"
     sc.view_settings.look = "None"
     sc.view_settings.exposure = 0.0
-    sc.render.filter_size = 1.2
-    # sky fill
-    w = bpy.data.worlds.new("w")
-    w.use_nodes = True
-    bg = w.node_tree.nodes["Background"]
-    bg.inputs["Color"].default_value = (0.50, 0.62, 0.80, 1)
-    bg.inputs["Strength"].default_value = 0.95
-    sc.world = w
+    sc.render.filter_size = 1.1
+    _sky(sc)
     # camera
     cam = bpy.data.cameras.new("cam")
     cam.type = "ORTHO"
@@ -435,10 +551,11 @@ def setup_scene(res=384, samples=40, ortho=3.0, elev=45, yaw=-30.0, anchor=0.72,
     co.location = (0, -dist * math.cos(e), dist * math.sin(e))
     co.rotation_euler = (d(90 - elev), 0, 0)
     cam.shift_y = anchor - 0.5  # origin lands `anchor` of the way down the frame
-    # key light: warm sun from the upper left front
+    # key: warm late-morning sun from the upper left front; rim: cool, from behind
     for name, rot, energy, col, ang in (
-        ("key", (d(48), d(8), d(-52)), key_energy, (1.0, 0.90, 0.74), 8),
-        ("rim", (d(70), 0, d(150)), 0.9, (0.75, 0.85, 1.0), 20),
+        ("key", (d(46), d(8), d(-52)), key_energy, (1.0, 0.88, 0.70), 5),
+        ("rim", (d(62), 0, d(150)), 1.5, (0.72, 0.84, 1.0), 4),
+        ("fill", (d(40), 0, d(60)), 0.45, (1.0, 0.93, 0.85), 40),
     ):
         l = bpy.data.lights.new(name, "SUN")
         l.energy = energy
@@ -454,7 +571,8 @@ def setup_scene(res=384, samples=40, ortho=3.0, elev=45, yaw=-30.0, anchor=0.72,
     gm.update()
     gmat = bpy.data.materials.new("bounce")
     gmat.use_nodes = True
-    gmat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = hexcol("#7a7a52")
+    gmat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = hexcol("#7f8456")
+    gmat.node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 1.0
     gm.materials.append(gmat)
     sc.collection.objects.link(ground)
     ground.visible_camera = False
@@ -470,6 +588,12 @@ def set_ortho(scale, anchor):
 
 def apply_mask_materials():
     """Switch every material to the mask pass: team -> white emission, rest holdout."""
+    for o in bpy.data.objects:
+        if o.type == "MESH":
+            o.is_holdout = False
+            o.is_shadow_catcher = False
+            if o.name.startswith("bounce"):
+                o.visible_camera = False
     for m in bpy.data.materials:
         if m.name.startswith("bounce"):
             continue
@@ -491,6 +615,32 @@ def apply_mask_materials():
     for o in bpy.data.objects:
         if o.type == "LIGHT":
             o.hide_render = True
+
+
+def render_shadow(path, samples=128):
+    """Soft cast shadow on the ground, alone: every model becomes a holdout and
+    the bounce plane a shadow catcher, so the alpha channel is the shadow."""
+    sc = bpy.context.scene
+    for o in bpy.data.objects:
+        if o.type == "MESH":
+            if o.name.startswith("bounce"):
+                o.visible_camera = True
+                o.is_shadow_catcher = True
+            else:
+                o.is_holdout = True
+        elif o.type == "LIGHT":
+            o.hide_render = True
+    # the cast shadow falls to the right and a little toward the viewer, like
+    # the terrain's, whatever the model shading does
+    sun = bpy.data.lights.new("shadow", "SUN")
+    sun.energy = 4.0
+    sun.angle = d(7)
+    so = bpy.data.objects.new("shadow", sun)
+    sc.collection.objects.link(so)
+    so.rotation_euler = Vector((0.6, -0.25, -0.76)).to_track_quat("-Z", "Y").to_euler()
+    sc.cycles.samples = samples
+    sc.cycles.use_denoising = False
+    render_to(path)
 
 
 def render_to(path):

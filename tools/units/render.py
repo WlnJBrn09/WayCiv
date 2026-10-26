@@ -1,9 +1,10 @@
 """Blender entry point: render beauty + team-mask passes for some units.
 
-  blender -b --factory-startup -t 4 -P render.py -- --out DIR [--res 384] [--samples 40] UNIT_ID...
+  blender -b --factory-startup -t 4 -P render.py -- --out DIR [--res 512] [--samples 96] UNIT_ID...
 
-Writes DIR/<id>.png (beauty, transparent) and DIR/<id>_mask.png (alpha = where
-the team-colour parts are).  tools/units/build_all.sh runs this for every unit
+Writes DIR/<id>.png (beauty, transparent), DIR/<id>_mask.png (alpha = where
+the team-colour parts are) and DIR/<id>_shadow.png (alpha = cast shadow on the
+ground; none for aircraft).  tools/units/build_all.sh runs this for every unit
 and post.py turns the raw renders into the final sprites.
 """
 import os
@@ -19,7 +20,7 @@ import catalog  # noqa: E402
 
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:]
-    out, res, samples, ids = ".", 384, 40, []
+    out, res, samples, ids = ".", 512, 96, []
     i = 0
     while i < len(argv):
         if argv[i] == "--out":
@@ -42,6 +43,8 @@ def main():
         with xf((0, 0, spec.get("lift", 0.0)), (spec.get("pitch", 0), 0, spec["yaw"])):
             catalog.build(uid)
         lib.render_to(os.path.join(out, uid.lower() + ".png"))
+        if catalog.kind_for(uid) != "air":
+            lib.render_shadow(os.path.join(out, uid.lower() + "_shadow.png"))
         lib.apply_mask_materials()
         lib.render_to(os.path.join(out, uid.lower() + "_mask.png"))
         with open(os.path.join(out, uid.lower() + ".meta"), "w") as f:

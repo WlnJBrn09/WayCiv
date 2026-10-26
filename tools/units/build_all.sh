@@ -2,7 +2,7 @@
 # Rebuilds every unit sprite: Blender renders (beauty + team mask), then Pillow
 # post-processing into assets/units/ (sprites, masks, portraits, manifest).
 #   tools/units/build_all.sh [PYTHON_WITH_PILLOW_AND_NUMPY]
-# Needs: blender 4.2+ on PATH.  Cycles on CPU, 4 threads per process, 2 processes.
+# Needs: blender 4.2+ on PATH.  Cycles on CPU: PROCS (3) processes x THREADS (5) threads; ~25 min for all units.
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
@@ -18,11 +18,18 @@ print("IDS " + " ".join(catalog.all_ids()))
 PYEOF
 )
 set -- $ids
-half=$(( ($# + 1) / 2 ))
-A=${@:1:$half}
-B=${@:$((half + 1))}
-blender -b --factory-startup -t 4 -P "$HERE/render.py" -- --out "$RAW" $A > "$RAW/a.log" 2>&1 &
-blender -b --factory-startup -t 4 -P "$HERE/render.py" -- --out "$RAW" $B > "$RAW/b.log" 2>&1 &
+# round-robin the ids over $PROCS blender processes (long models are spread evenly)
+PROCS=${PROCS:-3}
+THREADS=${THREADS:-5}
+for ((p = 0; p < PROCS; p++)); do
+  chunk=()
+  i=0
+  for id in "$@"; do
+    (( i % PROCS == p )) && chunk+=("$id")
+    i=$((i + 1))
+  done
+  blender -b --factory-startup -t "$THREADS" -P "$HERE/render.py" -- --out "$RAW" "${chunk[@]}" > "$RAW/render$p.log" 2>&1 &
+done
 wait
 mkdir -p "$OUT"
 "$PY" "$HERE/post.py" "$RAW" "$OUT"
