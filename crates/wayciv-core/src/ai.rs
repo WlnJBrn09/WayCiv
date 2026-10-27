@@ -19,9 +19,12 @@ impl Game {
             return;
         }
         self.ai_research(player);
+        self.ai_pick_policy(player);
+        self.ai_dedication(player);
         self.ai_government(player);
         self.ai_religion(player);
         self.ai_diplomacy(player);
+        self.ai_rivalry(player);
         self.ai_envoys(player);
         let cities: Vec<CityId> = self.player_cities(player).map(|c| c.id).collect();
         for city in &cities {
@@ -57,13 +60,32 @@ impl Game {
                 .map(|(_, n)| n)
                 .sum::<i32>()
         };
+        // Slots count most; the leader's focus breaks ties and can keep an
+        // older government it likes.
+        let focus = self.personality(player).focus.clone();
+        let liked = |g: usize| -> i32 {
+            let id = content.governments[g].id.as_str();
+            let likes: &[&str] = match focus.as_str() {
+                "war" => &["GOVERNMENT_OLIGARCHY", "GOVERNMENT_MONARCHY", "GOVERNMENT_FASCISM"],
+                "science" => &["GOVERNMENT_CLASSICAL_REPUBLIC", "GOVERNMENT_MERCHANT_REPUBLIC", "GOVERNMENT_DEMOCRACY"],
+                "culture" => &["GOVERNMENT_CLASSICAL_REPUBLIC", "GOVERNMENT_MONARCHY", "GOVERNMENT_DEMOCRACY"],
+                "faith" => &["GOVERNMENT_AUTOCRACY", "GOVERNMENT_THEOCRACY", "GOVERNMENT_FASCISM"],
+                "trade" => &["GOVERNMENT_CLASSICAL_REPUBLIC", "GOVERNMENT_MERCHANT_REPUBLIC", "GOVERNMENT_DEMOCRACY"],
+                "expansion" => &["GOVERNMENT_AUTOCRACY", "GOVERNMENT_MONARCHY", "GOVERNMENT_COMMUNISM"],
+                _ => &[],
+            };
+            let reagan = content.leaders[self.players[player].leader].id == crate::rules::REAGAN
+                && id == "GOVERNMENT_DEMOCRACY";
+            i32::from(likes.contains(&id) || reagan) * 3
+        };
+        let value = |g: usize| tier(g) * 2 + liked(g);
         if let Some(best) = self
             .available_governments(player)
             .into_iter()
-            .max_by_key(|&g| tier(g))
+            .max_by_key(|&g| (value(g), g))
             && self.players[player]
                 .government
-                .is_none_or(|g| tier(best) > tier(g))
+                .is_none_or(|g| value(best) > value(g))
         {
             let _ = self.set_government(player, best);
         }
@@ -125,14 +147,17 @@ impl Game {
             if at_war {
                 if !other_is_cs
                     && self.can_make_peace(player, other)
-                    && (mine * 10 < theirs * 9
-                        || self.turn > self.players[player].relations[other].since + 15)
+                    && self.ai_wants_peace(player, other)
                 {
                     if self.players[other].human {
-                        // Offers peace; the human answers in the diplomacy screen.
-                        if self.rng.chance(0.15) {
-                            let name = self.players[player].name.clone();
-                            self.notify(other, format!("{name} would accept peace."), None);
+                        // Offers peace; the human answers on the leader screen.
+                        let offered = self
+                            .popups
+                            .iter()
+                            .any(|&(p, e)| p == player && e == crate::diplomacy::DiploEvent::MakePeaceFromAi);
+                        if !offered && self.rng.chance(0.2) {
+                            self.popups
+                                .push((player, crate::diplomacy::DiploEvent::MakePeaceFromAi));
                         }
                     } else {
                         self.propose_peace(player, other);
@@ -140,25 +165,16 @@ impl Game {
                 }
                 continue;
             }
-            let near = self.player_cities(player).any(|a| {
-                self.player_cities(other)
-                    .any(|b| self.map.grid.distance(a.pos, b.pos) <= 12)
-            });
-            let aggressive = self.turn > 40
-                && near
-                && mine > theirs * 2 + 20
-                && opinion < 0
-                && self.rng.chance(0.02);
-            let at_war_count = self.real_wars(player);
-            if aggressive && at_war_count == 0 && self.can_declare_war(player, other) {
-                if !self.players[other].human || !self.players[player].relations[other].friendship {
-                    self.declare_war(player, other);
-                    if self.players[other].human {
-                        self.popups
-                            .push((player, crate::diplomacy::DiploEvent::DeclareWarFromAi));
-                    }
-                }
-            } else if !other_is_cs
+            let _ = (mine, theirs);
+            // Wars are planned in `ai_rivalry`.
+            let planning = self.players[player]
+                .war_plan
+                .as_ref()
+                .is_some_and(|p| p.target == other);
+            if planning {
+                continue;
+            }
+            if !other_is_cs
                 && opinion >= 25
                 && !self.players[player].relations[other].friendship
                 && !self.players[other].human
@@ -208,17 +224,69 @@ impl Game {
         }
     }
 
+    /// Spends Gold above a reserve: troops when at war or preparing one,
+    /// otherwise the current build or a cheap building.
     fn ai_spend(&mut self, player: PlayerId) {
-        if self.players[player].gold < 400 {
+        let cities: Vec<CityId> = self.player_cities(player).map(|c| c.id).collect();
+        let reserve = 100 + 20 * cities.len() as i32;
+        if self.players[player].gold <= reserve + 40 {
             return;
         }
-        let cities: Vec<CityId> = self.player_cities(player).map(|c| c.id).collect();
-        for city in cities {
-            if let Some(item) = self.cities[&city].production.clone()
-                && let Some(price) = self.purchase_cost(city, &item)
-                && price < self.players[player].gold - 200
-            {
-                let _ = self.purchase(city, item);
+        let content = self.rules.content.clone();
+        let martial = self.major_wars(player) > 0 || self.players[player].war_plan.is_some();
+        // No more troops than the war needs.
+        let army = self
+            .player_units(player)
+            .filter(|u| self.is_military(u))
+            .count();
+        let martial = martial && army < (cities.len() * 2 + 4).min(36);
+        // Candidates, gathered once: each city's current build, plus its
+        // best land unit (in wartime) or its buildings (in peacetime).
+        let mut options: Vec<(CityId, Production)> = Vec::new();
+        for &city in &cities {
+            if let Some(item) = self.cities[&city].production.clone() {
+                options.push((city, item));
+            }
+            if martial {
+                let unit = (0..content.units.len())
+                    .filter(|&i| {
+                        let u = &content.units[i];
+                        u.domain == "DOMAIN_LAND"
+                            && (u.combat > 0 || u.ranged_combat > 0)
+                            && !u.found_city
+                            && self.can_produce(city, &Production::Unit(i))
+                    })
+                    .max_by_key(|&i| content.units[i].combat.max(content.units[i].ranged_combat));
+                if let Some(i) = unit {
+                    options.push((city, Production::Unit(i)));
+                }
+            } else {
+                for i in 0..content.buildings.len() {
+                    if !content.buildings[i].wonder
+                        && self.can_produce(city, &Production::Building(i))
+                    {
+                        options.push((city, Production::Building(i)));
+                    }
+                }
+            }
+        }
+        for _ in 0..3 {
+            let budget = self.players[player].gold - reserve;
+            // Prefer what a city is building, then the cheapest.
+            let best = options
+                .iter()
+                .enumerate()
+                .filter_map(|(k, (city, item))| {
+                    let price = self.purchase_cost(*city, item)?;
+                    let current = self.cities[city].production.as_ref() == Some(item);
+                    (price <= budget).then_some((price - i32::from(current) * 1000, k))
+                })
+                .min();
+            let Some((_, k)) = best else {
+                return;
+            };
+            let (city, item) = options.remove(k);
+            if self.purchase(city, item).is_err() {
                 return;
             }
         }
@@ -248,7 +316,7 @@ impl Game {
             .player_units(owner)
             .filter(|u| self.unit_type(u).build_charges > 0)
             .count();
-        let at_war = self.real_wars(owner) > 0;
+        let at_war = self.real_wars(owner) > 0 || self.players[owner].war_plan.is_some();
         let target_cities = 6 + (self.turn / 60) as usize;
 
         let best_unit = |filter: &dyn Fn(&crate::rules::Unit) -> bool| -> Option<Production> {
@@ -272,11 +340,11 @@ impl Game {
         // In peacetime, don't grow an army the treasury can't pay for.
         let broke = !at_war && self.income(owner).net_gold < 2;
         let wanted_military = if at_war {
-            cities * 3 + 2
+            (cities * 2 + 4).min(36)
         } else if broke {
             2
         } else {
-            cities + 2
+            (cities + 2).min(20)
         };
 
         if (military < 2 || (at_war && military < wanted_military))
@@ -712,8 +780,10 @@ impl Game {
             )
             .filter(|&p| self.players[owner].visible[grid.index(p)] || self.city_at(p).is_some())
             .collect();
+        // In a real war armies march a long way; barbarians only nearby.
+        let reach = if self.major_wars(owner) > 0 { 26 } else { 14 };
         if let Some(&target) = enemies.iter().min_by_key(|&&p| grid.distance(p, unit.pos))
-            && grid.distance(target, unit.pos) <= 14
+            && grid.distance(target, unit.pos) <= reach
         {
             let approach = grid
                 .neighbors(target)
@@ -725,7 +795,65 @@ impl Game {
                 return;
             }
         }
-        // 3. Clear barbarian camps nearby.
+        // 2b. Preparing a war: gather near the border city facing the target,
+        // leaving one defender in each city.
+        if let Some(plan) = self.players[owner].war_plan.clone() {
+            let garrison = self
+                .city_at(unit.pos)
+                .is_some_and(|c| {
+                    c.owner == owner
+                        && !self
+                            .ground_units_at(c.pos)
+                            .any(|u| u.owner == owner && u.id != id && self.is_military(u))
+                });
+            let staging = self
+                .player_cities(owner)
+                .flat_map(|mine| {
+                    self.player_cities(plan.target)
+                        .map(move |theirs| (grid.distance(mine.pos, theirs.pos), mine.pos, theirs.pos))
+                })
+                .min();
+            if !garrison
+                && let Some((_, from, toward)) = staging
+            {
+                let spot = grid
+                    .within(from, 3)
+                    .into_iter()
+                    .filter(|&p| {
+                        self.passable(&unit, p)
+                            && self.can_stop(&unit, p)
+                            && self.map.tile(p).owner == Some(owner)
+                    })
+                    .min_by_key(|&p| grid.distance(p, toward) * 4 + grid.distance(p, unit.pos));
+                if let Some(spot) = spot {
+                    if spot == unit.pos {
+                        self.fortify(id);
+                        return;
+                    }
+                    if self.move_unit(id, spot).is_ok() {
+                        return;
+                    }
+                }
+            }
+        }
+        // 3. Visit tribal villages the unit knows about.
+        let village = self
+            .villages
+            .iter()
+            .copied()
+            .filter(|&v| {
+                grid.distance(v, unit.pos) <= 8
+                    && self.players[owner].revealed[grid.index(v)]
+                    && self.passable(&unit, v)
+            })
+            .min_by_key(|&v| grid.distance(v, unit.pos));
+        if let Some(v) = village
+            && self.unit_type(&unit).domain == "DOMAIN_LAND"
+            && self.move_unit(id, v).is_ok()
+        {
+            return;
+        }
+        // 4. Clear barbarian camps nearby.
         let camp = self
             .camps
             .keys()

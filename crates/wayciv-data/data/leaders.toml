@@ -3,7 +3,10 @@
 # first_meet, greeting, declare_war (they declare on you), attacked (you
 # declare on them), denounce, denounced, friend (they offer friendship),
 # accept_friend, reject_friend, peace_accept, peace_refuse, peace_offer,
-# defeat. Missing lines fall back to plain ones.
+# defeat, demand (they ask you for tribute), alliance (they propose one),
+# join_war (they ask you to join a war). Missing lines fall back to plain
+# ones. `ai` is the computer personality: `aggression` 0-3, a `focus`,
+# and the rule its `agenda` is scored by (see `Game::agenda_opinion`).
 
 [[leader]]
 id = "LEADER_REAGAN"
@@ -13,6 +16,7 @@ capital = "Washington"
 primary_color = [1, 42, 108]
 secondary_color = [249, 249, 249]
 agenda = { name = "Cold Warrior", description = "Likes civilizations running Democracy. Dislikes civilizations running Communism or Fascism." }
+ai = { aggression = 1, focus = "balanced", agenda = "democracy" }
 traits = [{ id = "TRAIT_LEADER_PEACE_THROUGH_STRENGTH", name = "Peace Through Strength", description = "Defense buildup, Reaganomics, and the Great Communicator. Declaring friendship with a civilization grants an envoy and 50 Gold.", effects = [
   { kind = "unit_production", military = true, percent = 15 },
   { kind = "combat_in_territory", amount = 5 },
@@ -43,6 +47,7 @@ capital = "Cairo"
 primary_color = [21, 108, 48]
 secondary_color = [240, 210, 40]
 agenda = { name = "Chivalrous Sultan", description = "Respects rulers who share his faith and keep their word. Scorns those who break treaties." }
+ai = { aggression = 1, focus = "faith", agenda = "religion" }
 traits = [{ id = "TRAIT_LEADER_SALADIN", name = "Sultan of Egypt and Syria", description = "A generous ruler who funds mosques and colleges.", effects = [
   { kind = "district_yield", district = "DISTRICT_HOLY_SITE", yield = "science", amount = 1 },
   { kind = "district_yield", district = "DISTRICT_HOLY_SITE", yield = "culture", amount = 1 },
@@ -66,6 +71,7 @@ capital = "Rio de Janeiro"
 primary_color = [40, 150, 50]
 secondary_color = [250, 210, 20]
 agenda = { name = "Philosopher King", description = "Admires civilizations with many great people. Dislikes those who neglect learning and the arts." }
+ai = { aggression = 0, focus = "culture", agenda = "great_people" }
 traits = [{ id = "TRAIT_LEADER_PEDRO", name = "The Scholar Emperor", description = "He corresponded with Pasteur and Darwin and sat in on lectures.", effects = [
   { kind = "great_person_points", class = "scientist", amount = 1 },
   { kind = "great_person_points", class = "writer", amount = 1 },
@@ -90,6 +96,7 @@ capital = "Xi'an"
 primary_color = [21, 108, 48]
 secondary_color = [240, 230, 200]
 agenda = { name = "Builder of Walls", description = "Respects those with great wonders. Holds in contempt those with few." }
+ai = { aggression = 1, focus = "culture", agenda = "wonders" }
 traits = [{ id = "TRAIT_LEADER_QIN", name = "First Emperor", description = "One script, one coinage, one measure, one empire.", effects = [
   { kind = "wonder_production", percent = 15 },
   { kind = "unit_production", unit = "UNIT_BUILDER", percent = 30 },
@@ -112,6 +119,7 @@ capital = "Beijing"
 primary_color = [234, 225, 157]
 secondary_color = [120, 0, 1]
 agenda = { name = "Silk and Steel", description = "Likes civilizations that trade with him. Dislikes those who close their borders to trade." }
+ai = { aggression = 2, focus = "trade", agenda = "trade" }
 traits = [{ id = "TRAIT_LEADER_KUBLAI", name = "Great Khan of the Yuan", description = "Paper money and the post road stitched an empire together.", effects = [
   { kind = "trade_capacity", amount = 1 },
   { kind = "trade_yield", routes = "international", yield = "science", amount = 1 },
@@ -135,6 +143,7 @@ capital = "London"
 primary_color = [202, 20, 21]
 secondary_color = [249, 249, 249]
 agenda = { name = "Empire of the Seas", description = "Admires civilizations on many coasts. Dislikes those who crowd her colonies." }
+ai = { aggression = 2, focus = "expansion", agenda = "space" }
 traits = [{ id = "TRAIT_LEADER_VICTORIA", name = "Queen and Empress", description = "An empire on which the sun never set.", effects = [
   { kind = "unit_production", domain = "sea", percent = 20 },
   { kind = "unit_production", unit = "UNIT_SETTLER", percent = 15 },
@@ -171,6 +180,7 @@ capital = "Alexandria"
 primary_color = [1, 79, 81]
 secondary_color = [234, 225, 157]
 agenda = { name = "Pharaoh's Favor", description = "Courts the strongest military powers. Has no patience for the weak." }
+ai = { aggression = 1, focus = "trade", agenda = "military" }
 traits = [{ id = "TRAIT_LEADER_CLEOPATRA", name = "Last of the Ptolemies", description = "She held Egypt together with charm, wealth, and Rome's generals.", effects = [
   { kind = "trade_yield", routes = "international", yield = "gold", amount = 3 },
   { kind = "trade_yield", routes = "domestic", yield = "food", amount = 1 },
@@ -193,6 +203,7 @@ capital = "Paris"
 primary_color = [0, 79, 206]
 secondary_color = [234, 225, 157]
 agenda = { name = "Courtly Intrigue", description = "Likes those who host splendid wonders and festivals. Suspects those who keep secrets from her." }
+ai = { aggression = 1, focus = "culture", agenda = "wonders" }
 traits = [{ id = "TRAIT_LEADER_CATHERINE", name = "Queen Mother", description = "She governed France through three sons and a court of spies and dancers.", effects = [
   { kind = "district_yield", district = "DISTRICT_THEATER", yield = "culture", amount = 2 },
   { kind = "amenities", amount = 1 },
@@ -215,6 +226,7 @@ capital = "Aachen"
 primary_color = [174, 174, 174]
 secondary_color = [24, 24, 24]
 agenda = { name = "Imperial Crown", description = "Dislikes civilizations that befriend city-states he wants. Respects strong armies." }
+ai = { aggression = 2, focus = "war", agenda = "military" }
 traits = [{ id = "TRAIT_LEADER_BARBAROSSA", name = "Holy Roman Emperor", description = "He crossed the Alps again and again to defend his crown.", effects = [
   { kind = "combat", amount = 4 },
   { kind = "unit_production", class = "heavy_cavalry", percent = 25 },
@@ -237,6 +249,7 @@ capital = "Sparta"
 primary_color = [120, 0, 1]
 secondary_color = [116, 163, 243]
 agenda = { name = "Spartan Discipline", description = "Respects civilizations that fight bravely. Despises those who make peace too readily." }
+ai = { aggression = 3, focus = "war", agenda = "warlike" }
 traits = [{ id = "TRAIT_LEADER_GORGO", name = "Queen of Sparta", description = "Only Spartan women give birth to men.", effects = [
   { kind = "combat", amount = 3, class = "anti_cavalry" },
   { kind = "combat", amount = 3, class = "melee" },
@@ -260,6 +273,7 @@ capital = "Athens"
 primary_color = [116, 163, 243]
 secondary_color = [249, 249, 249]
 agenda = { name = "Golden Age", description = "Likes civilizations with high Culture. Distrusts those who send envoys to his city-states." }
+ai = { aggression = 0, focus = "culture", agenda = "culture" }
 traits = [{ id = "TRAIT_LEADER_PERICLES", name = "First Citizen", description = "He rebuilt the Acropolis and made Athens the school of Hellas.", effects = [
   { kind = "city_percent", yield = "culture", percent = 10 },
   { kind = "wonder_production", percent = 10 },
@@ -282,6 +296,7 @@ capital = "Kyoto"
 primary_color = [249, 249, 249]
 secondary_color = [180, 0, 20]
 agenda = { name = "Way of the Warrior", description = "Respects civilizations with strong armies and high faith. Looks down on the weak." }
+ai = { aggression = 2, focus = "faith", agenda = "military" }
 traits = [{ id = "TRAIT_LEADER_HOJO", name = "Regent of the Shogunate", description = "He turned back two Mongol invasions; storms did the rest.", effects = [
   { kind = "combat_in_territory", amount = 5 },
   { kind = "district_yield", district = "DISTRICT_HOLY_SITE", yield = "faith", amount = 1 },
@@ -304,6 +319,7 @@ capital = "Mbanza Kongo"
 primary_color = [247, 216, 1]
 secondary_color = [202, 20, 21]
 agenda = { name = "Seeker of Learning", description = "Likes civilizations that share their faith and learning. Dislikes those who threaten Kongo's trade." }
+ai = { aggression = 0, focus = "faith", agenda = "religion" }
 traits = [{ id = "TRAIT_LEADER_MVEMBA", name = "Afonso of Kongo", description = "A king who wrote letters to Lisbon and Rome demanding respect.", effects = [
   { kind = "great_person_points", class = "writer", amount = 1 },
   { kind = "great_person_points", class = "merchant", amount = 1 },
@@ -327,6 +343,7 @@ capital = "Nidaros"
 primary_color = [1, 42, 108]
 secondary_color = [202, 20, 21]
 agenda = { name = "Last of the Vikings", description = "Respects strong navies. Disdains civilizations with weak fleets." }
+ai = { aggression = 3, focus = "war", agenda = "navy" }
 traits = [{ id = "TRAIT_LEADER_HARDRADA", name = "Thunder of the North", description = "Varangian guard, king, and raider of every coast.", effects = [
   { kind = "combat", amount = 4, class = "naval_melee" },
   { kind = "combat", amount = 2, class = "melee" },
@@ -363,6 +380,7 @@ capital = "Rome"
 primary_color = [109, 0, 205]
 secondary_color = [247, 216, 1]
 agenda = { name = "Best of Princes", description = "Admires large empires. Dislikes civilizations with few cities." }
+ai = { aggression = 2, focus = "expansion", agenda = "cities" }
 traits = [{ id = "TRAIT_LEADER_TRAJAN", name = "Optimus Princeps", description = "Under him the empire reached its greatest extent.", effects = [
   { kind = "city_yield", yield = "culture", amount = 1 },
   { kind = "district_production", percent = 10 },
@@ -385,6 +403,7 @@ capital = "St. Petersburg"
 primary_color = [247, 216, 1]
 secondary_color = [24, 24, 24]
 agenda = { name = "Window to the West", description = "Likes civilizations ahead of him in science and culture. Dislikes those behind." }
+ai = { aggression = 1, focus = "science", agenda = "science" }
 traits = [{ id = "TRAIT_LEADER_PETER", name = "The Grand Embassy", description = "He worked incognito in Dutch shipyards to learn how to build a navy.", effects = [
   { kind = "trade_yield", routes = "international", yield = "science", amount = 2 },
   { kind = "trade_yield", routes = "international", yield = "culture", amount = 1 },
@@ -407,6 +426,7 @@ capital = "Pokrovka"
 primary_color = [255, 178, 60]
 secondary_color = [120, 0, 1]
 agenda = { name = "Blood Oath", description = "Respects those who keep their word. Hates those who attack their friends." }
+ai = { aggression = 3, focus = "war", agenda = "loyal" }
 traits = [{ id = "TRAIT_LEADER_TOMYRIS", name = "Queen of the Massagetae", description = "She defeated Cyrus the Great in battle.", effects = [
   { kind = "combat", amount = 3, class = "light_cavalry" },
   { kind = "combat", amount = 3, class = "ranged" },
@@ -430,6 +450,7 @@ capital = "Madrid"
 primary_color = [202, 20, 21]
 secondary_color = [247, 216, 1]
 agenda = { name = "Defender of the Faith", description = "Likes civilizations that share his religion. Detests those who follow another." }
+ai = { aggression = 2, focus = "faith", agenda = "religion" }
 traits = [{ id = "TRAIT_LEADER_PHILIP", name = "Lord of Two Worlds", description = "He ruled Spain, Portugal, half of Italy, and the Americas.", effects = [
   { kind = "combat", amount = 3 },
   { kind = "unit_production", domain = "sea", percent = 15 },
@@ -452,6 +473,7 @@ capital = "Uruk"
 primary_color = [1, 42, 108]
 secondary_color = [255, 129, 18]
 agenda = { name = "Hero's Companion", description = "Likes civilizations who are his friends and fight beside him. Hates those who betray friends." }
+ai = { aggression = 2, focus = "war", agenda = "loyal" }
 traits = [{ id = "TRAIT_LEADER_GILGAMESH", name = "King of Uruk", description = "Two-thirds god, one-third man, builder of great walls.", effects = [
   { kind = "combat", amount = 2 },
   { kind = "city_yield", yield = "production", amount = 1, capital = true },
@@ -475,6 +497,7 @@ capital = "Tenochtitlan"
 primary_color = [125, 236, 227]
 secondary_color = [120, 0, 1]
 agenda = { name = "Treasures of the Earth", description = "Wants the luxuries others have. Dislikes those who hoard what he lacks." }
+ai = { aggression = 3, focus = "war", agenda = "luxuries" }
 traits = [{ id = "TRAIT_LEADER_MONTEZUMA", name = "Speaker of the Mexica", description = "Tribute flowed into Tenochtitlan from a hundred towns.", effects = [
   { kind = "amenities", amount = 1 },
   { kind = "combat", amount = 2 },
@@ -497,6 +520,7 @@ capital = "Kraków"
 primary_color = [120, 0, 1]
 secondary_color = [229, 117, 116]
 agenda = { name = "Patron Saint", description = "Likes civilizations who follow her religion and found universities. Dislikes those who persecute believers." }
+ai = { aggression = 1, focus = "faith", agenda = "religion" }
 traits = [{ id = "TRAIT_LEADER_JADWIGA", name = "King of Poland", description = "Crowned as king, not queen, she united Poland and Lithuania.", effects = [
   { kind = "district_yield", district = "DISTRICT_HOLY_SITE", yield = "faith", amount = 1 },
   { kind = "building_yield", building = "BUILDING_UNIVERSITY", yield = "science", amount = 1 },
@@ -520,6 +544,7 @@ capital = "Canberra"
 primary_color = [21, 108, 48]
 secondary_color = [247, 216, 1]
 agenda = { name = "Never Again Undefended", description = "Respects those who liberate cities. Hates those who attack him." }
+ai = { aggression = 0, focus = "balanced", agenda = "peaceful" }
 traits = [{ id = "TRAIT_LEADER_CURTIN", name = "Wartime Prime Minister", description = "He looked to America and built Australia's defense.", effects = [
   { kind = "combat_in_territory", amount = 4 },
   { kind = "city_percent", yield = "production", percent = 5 },
@@ -542,6 +567,7 @@ capital = "Pella"
 primary_color = [250, 210, 60]
 secondary_color = [120, 40, 140]
 agenda = { name = "No More Worlds to Conquer", description = "Likes civilizations at war with others. Dislikes peaceful ones." }
+ai = { aggression = 3, focus = "war", agenda = "warlike" }
 traits = [{ id = "TRAIT_LEADER_ALEXANDER", name = "Undefeated", description = "He never lost a battle.", effects = [
   { kind = "combat", amount = 3 },
   { kind = "unit_xp", amount = 5 },
@@ -579,6 +605,7 @@ capital = "Pasargadae"
 primary_color = [140, 40, 140]
 secondary_color = [250, 210, 60]
 agenda = { name = "King of Kings", description = "Looks for weak neighbors to absorb. Respects those he cannot." }
+ai = { aggression = 3, focus = "war", agenda = "weak_prey" }
 traits = [{ id = "TRAIT_LEADER_CYRUS", name = "Liberator of Babylon", description = "He freed captives and let conquered peoples keep their gods.", effects = [
   { kind = "amenities", amount = 1 },
   { kind = "combat", amount = 2 },
@@ -602,6 +629,7 @@ capital = "Meroë"
 primary_color = [250, 220, 120]
 secondary_color = [30, 60, 120]
 agenda = { name = "Builder Queen", description = "Likes civilizations with many districts. Dislikes those with few." }
+ai = { aggression = 1, focus = "science", agenda = "districts" }
 traits = [{ id = "TRAIT_LEADER_AMANITORE", name = "Kandake of Meroë", description = "She rebuilt the temples of Nubia.", effects = [
   { kind = "district_production", percent = 25 },
 ] }]
@@ -623,6 +651,7 @@ capital = "Majapahit"
 primary_color = [120, 0, 1]
 secondary_color = [0, 192, 155]
 agenda = { name = "Island Empress", description = "Likes those who stay off her seas. Dislikes those who settle her coasts." }
+ai = { aggression = 1, focus = "trade", agenda = "space" }
 traits = [{ id = "TRAIT_LEADER_GITARJA", name = "Queen of Majapahit", description = "Her fleets ruled the archipelago.", effects = [
   { kind = "unit_production", domain = "sea", percent = 25 },
   { kind = "district_yield", district = "DISTRICT_HARBOR", yield = "faith", amount = 1 },
@@ -645,6 +674,7 @@ capital = "Angkor Thom"
 primary_color = [117, 0, 115]
 secondary_color = [255, 129, 18]
 agenda = { name = "Healer King", description = "Likes those who care for their cities. Dislikes those with unhappy people." }
+ai = { aggression = 0, focus = "faith", agenda = "happiness" }
 traits = [{ id = "TRAIT_LEADER_JAYAVARMAN", name = "Builder of Hospitals", description = "He built a hundred hospitals and rest houses along the roads.", effects = [
   { kind = "housing", amount = 1 },
   { kind = "district_yield", district = "DISTRICT_HOLY_SITE", yield = "food", amount = 2 },
@@ -667,6 +697,7 @@ capital = "Addis Ababa"
 primary_color = [247, 216, 1]
 secondary_color = [21, 108, 48]
 agenda = { name = "Victor of Adwa", description = "Respects those who stay independent. Dislikes empires that conquer." }
+ai = { aggression = 1, focus = "faith", agenda = "peaceful" }
 traits = [{ id = "TRAIT_LEADER_MENELIK", name = "Lion of Judah", description = "He defeated an invading European army at Adwa.", effects = [
   { kind = "combat_in_territory", amount = 4 },
   { kind = "city_yield", yield = "science", amount = 1 },
@@ -689,6 +720,7 @@ capital = "Constantinople"
 primary_color = [55, 0, 101]
 secondary_color = [234, 225, 157]
 agenda = { name = "Guardian of the City", description = "Likes those who share his faith. Hates those who threaten it." }
+ai = { aggression = 2, focus = "faith", agenda = "religion" }
 traits = [{ id = "TRAIT_LEADER_BASIL", name = "Slayer of Bulgars", description = "Fifty years on the throne, most of them at war.", effects = [
   { kind = "combat", amount = 3, class = "heavy_cavalry" },
   { kind = "great_person_points", class = "prophet", amount = 1 },
@@ -724,6 +756,7 @@ capital = "Aduatuca"
 primary_color = [21, 108, 48]
 secondary_color = [125, 236, 227]
 agenda = { name = "Bane of Caesar", description = "Respects armies as large as his own. Dislikes those who neglect theirs." }
+ai = { aggression = 2, focus = "war", agenda = "military" }
 traits = [{ id = "TRAIT_LEADER_AMBIORIX", name = "King of the Eburones", description = "He destroyed a Roman legion in an ambush.", effects = [
   { kind = "combat", amount = 3, class = "melee" },
   { kind = "unit_production", military = true, percent = 10 },
@@ -746,6 +779,7 @@ capital = "Babylon"
 primary_color = [40, 90, 160]
 secondary_color = [250, 210, 60]
 agenda = { name = "Lawgiver", description = "Likes civilizations with many districts and great people. Dislikes the lawless." }
+ai = { aggression = 1, focus = "science", agenda = "districts" }
 traits = [{ id = "TRAIT_LEADER_HAMMURABI", name = "Code of Laws", description = "An eye for an eye, carved in stone for everyone to read.", effects = [
   { kind = "district_production", percent = 15 },
   { kind = "great_person_points", class = "scientist", amount = 1 },
@@ -768,6 +802,7 @@ capital = "Bogotá"
 primary_color = [1, 42, 108]
 secondary_color = [247, 216, 1]
 agenda = { name = "The Liberator", description = "Dislikes civilizations that rule over other peoples. Likes free nations." }
+ai = { aggression = 2, focus = "expansion", agenda = "peaceful" }
 traits = [{ id = "TRAIT_LEADER_BOLIVAR", name = "El Libertador", description = "He freed six nations from Spanish rule.", effects = [
   { kind = "combat", amount = 2, class = "light_cavalry" },
   { kind = "combat_in_territory", amount = 2 },
@@ -791,6 +826,7 @@ capital = "Naranjo"
 primary_color = [116, 163, 243]
 secondary_color = [1, 79, 81]
 agenda = { name = "Keeper of Her Cities", description = "Likes those who stay far away. Dislikes neighbors who settle close." }
+ai = { aggression = 1, focus = "science", agenda = "space" }
 traits = [{ id = "TRAIT_LEADER_SIX_SKY", name = "Lady of Naranjo", description = "She restored a fallen city and led it to war.", effects = [
   { kind = "city_yield", yield = "science", amount = 1 },
   { kind = "combat_in_territory", amount = 3 },
@@ -813,6 +849,7 @@ capital = "Lisbon"
 primary_color = [249, 249, 249]
 secondary_color = [1, 42, 108]
 agenda = { name = "Navigator's Heir", description = "Likes those he trades with. Dislikes those who close their ports." }
+ai = { aggression = 0, focus = "trade", agenda = "trade" }
 traits = [{ id = "TRAIT_LEADER_JOAO", name = "The Pious Colonizer", description = "Trading posts from Brazil to Macau.", effects = [
   { kind = "trade_capacity", amount = 1 },
   { kind = "unit_production", domain = "sea", percent = 20 },
@@ -835,6 +872,7 @@ capital = "Thăng Long"
 primary_color = [247, 216, 1]
 secondary_color = [117, 0, 115]
 agenda = { name = "Defender of the Homeland", description = "Dislikes those who invade. Respects those who defend." }
+ai = { aggression = 1, focus = "balanced", agenda = "peaceful" }
 traits = [{ id = "TRAIT_LEADER_TRIEU", name = "Lady General", description = "She rode an elephant into battle against occupation.", effects = [
   { kind = "combat_in_territory", amount = 5 },
   { kind = "unit_production", class = "ranged", percent = 20 },

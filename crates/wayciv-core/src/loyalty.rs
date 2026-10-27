@@ -93,6 +93,10 @@ impl Game {
                 mood,
             ));
         }
+        let age = self.players[owner].era.age;
+        if age.loyalty() != 0 {
+            report.lines.push((age.name().into(), age.loyalty()));
+        }
         if city.founder != owner {
             report.lines.push(("Occupied".into(), -3));
             if city.original_capital_of.is_some_and(|p| p != owner) {

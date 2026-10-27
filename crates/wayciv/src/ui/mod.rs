@@ -14,7 +14,9 @@
 //! * `widgets`    labelled action pills and round tool buttons
 //! * `city_panel` the right-hand city panel
 //! * `cards`      cards, grids and buttons the menus are built from
-//! * `menus`      Religion, Government, Great People, City-States, Victory
+//! * `menus`      Religion, Government, Great People, City-States, Victory,
+//!                Eras, and the policy card offer
+//! * `story`      the wonder reveal and the end-of-game screen
 
 pub mod anim;
 pub mod cards;
@@ -25,6 +27,7 @@ pub mod leaders;
 pub mod menus;
 pub mod minimap;
 pub mod notify;
+pub mod story;
 pub mod theme;
 pub mod topbar;
 pub mod trackers;

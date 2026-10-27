@@ -27,6 +27,43 @@ pub struct Relation {
     pub denounced: bool,
     /// Opinion of the other player, -100..100 (AI only).
     pub opinion: i32,
+    /// What this player holds against the other: surprise wars, captured
+    /// cities, refused demands, settling too close. Fades in peacetime.
+    pub grievances: i32,
+    /// A defensive alliance: allies share vision and join each other's
+    /// defensive wars.
+    pub alliance: bool,
+    /// Turn friendship (or the alliance) was declared.
+    pub friend_since: u32,
+    /// Blows struck in the current war (kills, captured cities).
+    pub war_score: i32,
+    /// Turn of the last peace treaty between the two (0 if none).
+    pub made_peace: u32,
+}
+
+/// A computer player's planned war: it denounces the target, builds up and
+/// gathers its army, then declares war on `declare_at`.
+#[derive(Clone, Debug)]
+pub struct WarPlan {
+    pub target: PlayerId,
+    pub since: u32,
+    pub declare_at: u32,
+}
+
+/// Policy cards: a player can slot only the cards it has adopted. Culture
+/// fills `inspiration`; when it reaches the cost, three cards are offered
+/// (`draft`) and the player keeps one.
+#[derive(Clone, Debug, Default)]
+pub struct PolicyCards {
+    pub adopted: Vec<bool>,
+    pub inspiration: i32,
+    pub draft: Vec<usize>,
+}
+
+impl PolicyCards {
+    pub fn count(&self) -> usize {
+        self.adopted.iter().filter(|a| **a).count()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -78,6 +115,14 @@ pub struct Player {
     pub barbarians_killed: u32,
     /// For city-states: `SCIENTIFIC`, `CULTURAL`, ...
     pub city_state_category: String,
+    pub war_plan: Option<WarPlan>,
+    /// Turn of this player's last demand for tribute (AI).
+    pub last_demand: u32,
+    pub cards: PolicyCards,
+    pub era: crate::eras::EraState,
+    pub great_people_earned: u32,
+    /// Victory warnings already given about this player (by victory key).
+    pub warned: HashMap<String, u8>,
 }
 
 impl Player {
@@ -277,6 +322,19 @@ pub struct Game {
     pub popups: Vec<(PlayerId, crate::diplomacy::DiploEvent)>,
     /// Animation events for the front end (see `events`).
     pub events: Vec<crate::events::Event>,
+    /// Tribal villages not yet explored.
+    pub villages: std::collections::BTreeSet<Pos>,
+    /// The world's current era (index into `content.eras`), by calendar.
+    pub world_era: usize,
+    /// "First in the world" moments already claimed.
+    pub world_firsts: std::collections::HashSet<String>,
+    /// Per-turn statistics for the end-of-game graphs.
+    pub history: Vec<crate::history::TurnStats>,
+    /// Wonders just completed by the human, for the full-screen reveal:
+    /// (wonder, city).
+    pub reveals: Vec<(usize, CityId)>,
+    /// (player, wonder) pairs whose start has been announced.
+    pub wonder_starts: std::collections::HashSet<(PlayerId, usize)>,
 }
 
 impl Game {
@@ -293,8 +351,12 @@ impl Game {
         });
     }
 
+    /// The city on `pos`. A city's center tile always belongs to it, so the
+    /// tile's owning city finds it without a search.
     pub fn city_at(&self, pos: Pos) -> Option<&City> {
-        self.cities.values().find(|c| c.pos == pos)
+        let p = self.map.grid.normalize(pos)?;
+        let id = self.map.tile(p).owning_city?;
+        self.cities.get(&id).filter(|c| c.pos == pos)
     }
 
     pub fn city_id_at(&self, pos: Pos) -> Option<CityId> {

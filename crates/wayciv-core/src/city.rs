@@ -84,6 +84,7 @@ impl Game {
             tile.feature = None;
         }
         tile.improvement = None;
+        self.villages.remove(&pos);
         self.cities.insert(id, city);
         for p in self.map.grid.within(pos, 1) {
             if self.map.tile(p).owner.is_none() {
@@ -100,6 +101,26 @@ impl Game {
         });
         if self.players[owner].is_major() {
             self.notify(owner, format!("{name} has been founded."), Some(pos));
+            if first {
+                self.moment(owner, format!("Founded the capital, {name}"), crate::eras::score::CITY);
+            } else {
+                self.moment(owner, format!("Founded {name}"), crate::eras::score::CITY);
+                self.dedication_moment(owner, "city", &format!("Founded {name}"));
+            }
+            // Neighbors resent cities planted at their doorstep.
+            let crowded: Vec<PlayerId> = self
+                .cities
+                .values()
+                .filter(|c| {
+                    c.owner != owner
+                        && self.players[c.owner].is_major()
+                        && self.map.grid.distance(c.pos, pos) <= 5
+                })
+                .map(|c| c.owner)
+                .collect();
+            for other in crowded {
+                self.add_grievance(other, owner, crate::rivalry::grievance::SETTLED_CLOSE);
+            }
         }
         id
     }
@@ -922,6 +943,7 @@ impl Game {
             return Err("This city can't build that here.".into());
         }
         self.cities.get_mut(&city).unwrap().production = Some(item);
+        self.announce_wonder_start(city);
         Ok(())
     }
 
@@ -1063,6 +1085,11 @@ impl Game {
                     pos: *at,
                     what: Built::Wonder,
                 });
+                self.moment(owner, format!("Built {wonder}"), crate::eras::score::WONDER);
+                self.wonder_lost(*i, owner);
+                if self.players[owner].human {
+                    self.reveals.push((*i, city));
+                }
             }
             Production::District(i, at) => {
                 self.cities
@@ -1083,6 +1110,11 @@ impl Game {
                     tile.feature = None;
                 }
                 self.on_district(owner, *i);
+                let district = content.districts[*i].name.clone();
+                if self.first_moment(owner, &format!("district:{i}"), format!("Built a first {district}"), 1) {
+                    self.world_first(owner, &format!("district:{i}"), &format!("to build a {district}"));
+                }
+                self.dedication_moment(owner, "district", &format!("Completed a {district}"));
                 self.emit(Event::Built {
                     pos: *at,
                     what: Built::District,
@@ -1100,6 +1132,8 @@ impl Game {
                     what: Built::Project,
                 });
                 self.players[owner].space_projects.push(*i);
+                let project = content.projects[*i].name.clone();
+                self.moment(owner, format!("Completed {project}"), crate::eras::score::SPACE);
                 self.notify(
                     owner,
                     format!("{name} completed {}.", content.projects[*i].name),
@@ -1185,6 +1219,20 @@ impl Game {
                     .map(|&b| self.rules.content.buildings[b].outer_defense)
                     .sum();
                 c.wall_hp = (c.wall_hp + 10).min(max_walls);
+            }
+        }
+        let (owner, pop, name) = {
+            let c = &self.cities[&id];
+            (c.owner, c.population, c.name.clone())
+        };
+        for size in [10, 15, 20] {
+            if pop >= size {
+                self.first_moment(
+                    owner,
+                    &format!("pop{size}:{id}"),
+                    format!("{name} grew to {size} citizens"),
+                    crate::eras::score::POP_10,
+                );
             }
         }
         self.expand_borders(id);

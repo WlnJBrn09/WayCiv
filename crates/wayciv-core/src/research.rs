@@ -148,6 +148,7 @@ impl Game {
 
     pub(crate) fn complete(&mut self, player: PlayerId, tree: Tree, i: usize) {
         let name = self.tree_items(tree)[i].name.clone();
+        let era_before = self.era_of(player);
         let p = &mut self.players[player];
         match tree {
             Tree::Tech => p.techs[i] = true,
@@ -164,6 +165,23 @@ impl Game {
                 "The AI tree is open. Build Datacenters to produce Compute for it.",
                 None,
             );
+        }
+        if tree == Tree::Tech && self.era_of(player) > era_before {
+            let era = self.era_of(player);
+            let era_name = self
+                .rules
+                .content
+                .eras
+                .get(era)
+                .map(|e| e.name.clone())
+                .unwrap_or_default();
+            self.first_moment(
+                player,
+                &format!("civera:{era}"),
+                format!("Researched a first technology of the {era_name}"),
+                1,
+            );
+            self.world_first(player, &format!("era:{era}"), &format!("to research a technology of the {era_name}"));
         }
         self.check_boosts(player, Trigger::Poll);
     }
@@ -190,6 +208,9 @@ impl Game {
             Tree::Ai => "AI boost",
         };
         self.notify(player, format!("{kind}! {name} is boosted."), None);
+        if tree == Tree::Tech {
+            self.dedication_moment(player, "eureka", &format!("Eureka for {name}"));
+        }
     }
 
     /// Checks boosts whose trigger matches `event`, or every state-based
@@ -402,11 +423,21 @@ impl Game {
             .collect()
     }
 
-    /// Policies whose year has come, without those replaced by an
-    /// available successor.
-    pub fn available_policies(&self, _player: PlayerId) -> Vec<usize> {
+    /// Adopted policy cards the player can slot now (see `policy_cards`).
+    pub fn available_policies(&self, player: PlayerId) -> Vec<usize> {
+        let adopted = &self.players[player].cards.adopted;
+        self.unlocked_policies(player)
+            .into_iter()
+            .filter(|&i| adopted.get(i).copied().unwrap_or(false))
+            .collect()
+    }
+
+    /// Policies whose year has come, minus those replaced by a successor
+    /// card the player has adopted.
+    pub fn unlocked_policies(&self, player: PlayerId) -> Vec<usize> {
         let year = self.year();
         let content = &self.rules.content;
+        let adopted = &self.players[player].cards.adopted;
         (0..content.policies.len())
             .filter(|&i| {
                 let policy = &content.policies[i];
@@ -415,8 +446,8 @@ impl Game {
                         content
                             .policies
                             .iter()
-                            .find(|x| x.id == o)
-                            .is_some_and(|next| next.unlock_year <= year)
+                            .position(|x| x.id == o)
+                            .is_some_and(|next| adopted.get(next).copied().unwrap_or(false))
                     })
             })
             .collect()
@@ -449,6 +480,7 @@ impl Game {
         self.fit_policies(player);
         let name = self.rules.content.governments[government].name.clone();
         self.notify(player, format!("Adopted {name}."), None);
+        self.first_moment(player, &format!("gov:{government}"), format!("Adopted {name}"), 1);
         Ok(())
     }
 

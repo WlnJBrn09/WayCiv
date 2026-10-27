@@ -762,6 +762,27 @@ fn item_row(
         13.5,
         TEXT_DIM,
     );
+    // The wonder race: rivals you know of who are building it too.
+    let rivals = match item {
+        Production::Wonder(w, _) => s.game.wonder_rivals(me, *w),
+        _ => Vec::new(),
+    };
+    let race = rivals
+        .iter()
+        .map(|(p, _, f)| format!("{} ({:.0}% done)", s.game.players[*p].civ_name, f * 100.0))
+        .collect::<Vec<_>>();
+    if let Some((p, _, f)) = rivals.iter().max_by(|a, b| a.2.total_cmp(&b.2)) {
+        let label = format!("Race: {} {:.0}%", s.game.players[*p].civ_name, f * 100.0);
+        let label = super::trackers::fit(&painter, &label, 13.0, rect.width() * 0.42);
+        theme::text_bold(
+            &painter,
+            pos2(rect.right() - right_pad, rect.top() + 37.0),
+            Align2::RIGHT_CENTER,
+            label,
+            13.0,
+            palette::BAD,
+        );
+    }
     // A visible Buy button: the price in gold, dimmed when you can't pay.
     let mut buy_clicked = false;
     if let Some(p) = price {
@@ -811,6 +832,14 @@ fn item_row(
             item_tooltip(&s.game, item)
         ),
         None => item_tooltip(&s.game, item),
+    };
+    let tip = if race.is_empty() {
+        tip
+    } else {
+        format!(
+            "{tip}\n\nAlso being built by {}. If they finish first, this city's progress turns into Gold.",
+            race.join(", ")
+        )
     };
     let response = response.on_hover_text(tip);
     if (response.secondary_clicked() || buy_clicked) && price.is_some() {

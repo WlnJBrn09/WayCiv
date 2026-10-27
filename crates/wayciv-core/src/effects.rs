@@ -307,6 +307,7 @@ impl Game {
                 effects.extend(&content.buildings[b].effects);
             }
         }
+        effects.extend(self.dedication_effects(player));
         let mut slotted: Vec<(String, usize)> = Vec::new();
         for &i in &p.policies {
             let slot = &content.policies[i].slot;

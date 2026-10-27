@@ -132,6 +132,21 @@ pub const TEXT_DIM: Color32 = Color32::from_rgb(158, 172, 186);
 pub const GOOD: Color32 = Color32::from_rgb(112, 212, 112);
 pub const BAD: Color32 = Color32::from_rgb(242, 94, 84);
 /// The AI tree and Compute.
+/// Ages: Golden, Heroic, Dark, and Normal.
+pub const AGE_GOLDEN: Color32 = Color32::from_rgb(255, 210, 90);
+pub const AGE_HEROIC: Color32 = Color32::from_rgb(110, 220, 210);
+pub const AGE_DARK: Color32 = Color32::from_rgb(160, 130, 210);
+
+pub fn age_color(age: wayciv_core::eras::Age) -> Color32 {
+    use wayciv_core::eras::Age;
+    match age {
+        Age::Golden => AGE_GOLDEN,
+        Age::Heroic => AGE_HEROIC,
+        Age::Dark => AGE_DARK,
+        Age::Normal => TEXT_DIM,
+    }
+}
+
 pub const COMPUTE: Color32 = Color32::from_rgb(70, 225, 235);
 
 /// Noto Sans Bold, for names, numbers and button labels.

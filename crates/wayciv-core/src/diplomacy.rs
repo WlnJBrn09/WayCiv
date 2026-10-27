@@ -19,6 +19,14 @@ pub enum DiploEvent {
     MakePeaceRefuse,
     MakePeaceFromAi,
     Defeat,
+    /// They demand tribute.
+    Demand { gold: i32 },
+    /// They propose a defensive alliance.
+    AllianceOffer,
+    /// A friend invites you to join its war on `against`.
+    JoinWar { against: PlayerId },
+    /// An ally under attack calls on you to fight `against`.
+    CallToArms { against: PlayerId },
 }
 
 impl DiploEvent {
@@ -38,6 +46,9 @@ impl DiploEvent {
             DiploEvent::MakePeaceRefuse => "peace_refuse",
             DiploEvent::MakePeaceFromAi => "peace_offer",
             DiploEvent::Defeat => "defeat",
+            DiploEvent::Demand { .. } => "demand",
+            DiploEvent::AllianceOffer => "alliance",
+            DiploEvent::JoinWar { .. } | DiploEvent::CallToArms { .. } => "join_war",
         }
     }
 }
@@ -62,6 +73,25 @@ impl Game {
             DiploEvent::DeclareFriendFromAi => "Shall we be friends?".into(),
             DiploEvent::MakePeaceFromAi => "Perhaps it is time for peace.".into(),
             DiploEvent::Defeat => "You have defeated us.".into(),
+            DiploEvent::Demand { .. } => {
+                if leader.ai.aggression >= 2 {
+                    "Your treasury is full and your walls are thin. Share your gold with us, or we will come and take it.".into()
+                } else {
+                    "A gift would go a long way toward keeping our peoples friends. We trust you understand.".into()
+                }
+            }
+            DiploEvent::AllianceOffer => {
+                "We have been friends long enough. Let us stand together: an attack on one of us is an attack on both.".into()
+            }
+            DiploEvent::JoinWar { .. } => {
+                "We march to war. Fight beside us, and share in the spoils.".into()
+            }
+            DiploEvent::CallToArms { .. } => {
+                "We are under attack! Our alliance calls you to arms.".into()
+            }
+            DiploEvent::DenounceFromAi => {
+                "We have watched you long enough. The world will know what you are.".into()
+            }
             _ => "...".into(),
         }
     }
@@ -74,22 +104,48 @@ impl Game {
             && self.players[b].is_major()
     }
 
+    /// `a` declares war on `b`. Their allies are called to arms.
     pub fn declare_war(&mut self, a: PlayerId, b: PlayerId) {
+        self.declare_war_as(a, b, true);
+    }
+
+    /// Declares war; `aggressive` is false when answering an ally's call
+    /// (no grievances, no calls to further allies).
+    pub(crate) fn declare_war_as(&mut self, a: PlayerId, b: PlayerId, aggressive: bool) {
         if !self.can_declare_war(a, b) {
             return;
         }
+        // Breaking a friendship or an alliance with war.
+        let betrayal = self.players[a].relations[b].friendship;
+        // A war after a denouncement is formal; otherwise it's a surprise.
+        let formal = self.players[a].relations[b].denounced;
         let turn = self.turn;
         for (x, y) in [(a, b), (b, a)] {
             let r = &mut self.players[x].relations[y];
             r.at_war = true;
             r.since = turn;
             r.friendship = false;
+            r.alliance = false;
+            r.war_score = 0;
             r.opinion -= 40;
         }
-        // Third parties disapprove of warmongers.
-        for p in 0..self.players.len() {
-            if p != a && p != b && self.players[p].relations[a].met {
-                self.players[p].relations[a].opinion -= 10;
+        if aggressive {
+            use crate::rivalry::grievance;
+            let mut g = if formal {
+                grievance::FORMAL_WAR
+            } else {
+                grievance::SURPRISE_WAR
+            };
+            if betrayal {
+                g += grievance::BROKE_ALLIANCE;
+            }
+            self.add_grievance(b, a, g);
+            // Third parties disapprove of warmongers.
+            for p in 0..self.players.len() {
+                if p != a && p != b && self.players[p].relations[a].met {
+                    self.players[p].relations[a].opinion -= 10;
+                    self.add_grievance(p, a, grievance::WAR_ON_SOMEONE);
+                }
             }
         }
         let (an, bn) = (
@@ -114,6 +170,9 @@ impl Game {
         });
         self.check_boosts(b, crate::research::Trigger::DeclaredWarOn);
         self.check_boosts(a, crate::research::Trigger::DeclaredWarOn);
+        if aggressive {
+            self.call_allies(a, b);
+        }
     }
 
     pub fn can_make_peace(&self, a: PlayerId, b: PlayerId) -> bool {
@@ -121,11 +180,13 @@ impl Game {
     }
 
     pub fn make_peace(&mut self, a: PlayerId, b: PlayerId) {
+        self.settle_war(a, b);
         let turn = self.turn;
         for (x, y) in [(a, b), (b, a)] {
             let r = &mut self.players[x].relations[y];
             r.at_war = false;
             r.since = turn;
+            r.made_peace = turn;
         }
         let (an, bn) = (
             self.players[a].civ_name.clone(),
@@ -174,16 +235,11 @@ impl Game {
         if near {
             o -= 10;
         }
-        // Reagan's agenda: Cold Warrior.
-        if self.rules.content.leaders[me.leader].id == REAGAN
-            && let Some(g) = self.players[about].government
-        {
-            match self.rules.content.governments[g].id.as_str() {
-                "GOVERNMENT_DEMOCRACY" => o += 20,
-                "GOVERNMENT_COMMUNISM" | "GOVERNMENT_FASCISM" => o -= 20,
-                _ => {}
-            }
+        if r.alliance {
+            o += 20;
         }
+        o -= (r.grievances / 2).min(60);
+        o += self.agenda_opinion(of, about).0;
         o.clamp(-100, 100)
     }
 
@@ -192,8 +248,13 @@ impl Game {
         let accept = !self.players[from].at_war_with(to)
             && (self.players[to].human || self.opinion(to, from) >= 10);
         if accept {
-            self.players[from].relations[to].friendship = true;
-            self.players[to].relations[from].friendship = true;
+            let turn = self.turn;
+            for (x, y) in [(from, to), (to, from)] {
+                let r = &mut self.players[x].relations[y];
+                r.friendship = true;
+                r.friend_since = turn;
+                r.denounced = false;
+            }
             for (who, other) in [(from, to), (to, from)] {
                 if self.rules.content.leaders[self.players[who].leader].id == REAGAN {
                     self.players[who].gold += 50;
@@ -220,6 +281,7 @@ impl Game {
         self.players[from].relations[to].friendship = false;
         self.players[to].relations[from].friendship = false;
         self.players[to].relations[from].opinion -= 20;
+        self.add_grievance(to, from, crate::rivalry::grievance::DENOUNCED);
         let name = self.players[from].civ_name.clone();
         self.notify(to, format!("{name} has denounced you."), None);
     }
@@ -229,9 +291,7 @@ impl Game {
         if !self.can_make_peace(from, to) {
             return false;
         }
-        let tired = self.turn >= self.players[to].relations[from].since + 25;
-        let losing = self.military_strength(to) < self.military_strength(from);
-        let accept = self.players[to].human || tired || losing;
+        let accept = self.players[to].human || self.ai_wants_peace(to, from);
         if accept {
             self.make_peace(from, to);
         }

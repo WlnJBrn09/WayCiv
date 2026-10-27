@@ -327,6 +327,8 @@ impl Game {
                 if self.players[defender.owner].is_barbarian() {
                     self.players[unit.owner].barbarians_killed += 1;
                 }
+                self.add_war_score(unit.owner, defender.owner, crate::rivalry::WAR_SCORE_KILL);
+                self.dedication_moment(unit.owner, "kill", "Defeated an enemy unit");
                 self.check_boosts(
                     unit.owner,
                     crate::research::Trigger::Killed { with: unit.kind },
@@ -497,6 +499,14 @@ impl Game {
             (c.owner, c.pos, c.name.clone(), c.capital)
         };
         self.destroy_based_aircraft(city, old_owner);
+        self.add_war_score(new_owner, old_owner, crate::rivalry::WAR_SCORE_CITY);
+        self.add_grievance(old_owner, new_owner, crate::rivalry::grievance::CAPTURED_CITY);
+        let capital_of = self.cities[&city].original_capital_of;
+        if capital_of.is_some_and(|c| self.players[c].is_major()) {
+            self.moment(new_owner, format!("Captured {name}, an original capital"), crate::eras::score::CAPTURE_CAPITAL);
+        } else if self.players[old_owner].is_major() {
+            self.moment(new_owner, format!("Captured {name}"), crate::eras::score::CAPTURE);
+        }
         self.cancel_routes(|_, r| r.origin != city && r.destination != city);
         // Civilians in the city are captured or destroyed.
         let civilians: Vec<UnitId> = self
@@ -578,6 +588,18 @@ impl Game {
                 || self.players[player].cities_founded > 0 && !has_settler)
         {
             self.players[player].alive = false;
+            // The dead fight no wars and keep no alliances.
+            for o in 0..self.players.len() {
+                if self.players[o].is_barbarian() {
+                    continue;
+                }
+                for (x, y) in [(player, o), (o, player)] {
+                    let r = &mut self.players[x].relations[y];
+                    r.at_war = false;
+                    r.alliance = false;
+                    r.friendship = false;
+                }
+            }
             let units: Vec<UnitId> = self.player_units(player).map(|u| u.id).collect();
             for id in units {
                 self.units.remove(&id);

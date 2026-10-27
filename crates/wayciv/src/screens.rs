@@ -23,6 +23,8 @@ pub struct Windows {
     pub great_people: bool,
     pub city_states: bool,
     pub victory: bool,
+    pub eras: bool,
+    pub cards: bool,
     pub leaders: bool,
     pub notifications: bool,
     pub legend: bool,
@@ -42,6 +44,8 @@ pub enum Panel {
     GreatPeople,
     CityStates,
     Victory,
+    Eras,
+    Cards,
     Leaders,
     Notifications,
     Diplomacy(PlayerId),
@@ -64,6 +68,8 @@ impl Windows {
             || self.great_people
             || self.city_states
             || self.victory
+            || self.eras
+            || self.cards
             || self.leaders
             || self.notifications
             || self.diplomacy.is_some()
@@ -83,6 +89,8 @@ impl Windows {
             Panel::GreatPeople => self.great_people,
             Panel::CityStates => self.city_states,
             Panel::Victory => self.victory,
+            Panel::Eras => self.eras,
+            Panel::Cards => self.cards,
             Panel::Leaders => self.leaders,
             Panel::Notifications => self.notifications,
             Panel::Diplomacy(p) => self.diplomacy == Some(p),
@@ -100,6 +108,8 @@ impl Windows {
             Panel::GreatPeople => self.great_people = true,
             Panel::CityStates => self.city_states = true,
             Panel::Victory => self.victory = true,
+            Panel::Eras => self.eras = true,
+            Panel::Cards => self.cards = true,
             Panel::Leaders => self.leaders = true,
             Panel::Notifications => self.notifications = true,
             Panel::Diplomacy(p) => self.diplomacy = Some(p),
@@ -195,13 +205,20 @@ fn themed_window(
     open
 }
 
+/// A modal moment is up: a leader, a wonder reveal, or the end of the game.
+pub fn modal_up(s: &Session) -> bool {
+    s.popup.is_some()
+        || !s.game.reveals.is_empty()
+        || (s.game.winner.is_some() && !s.game_over_seen)
+}
+
 pub fn windows(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) {
-    let before = (s.windows.big_open(), s.popup.is_some());
+    let before = (s.windows.big_open(), modal_up(s));
     anim::backdrop(ctx, before.0 || before.1, if before.1 { 120 } else { 90 }, before.1);
     windows_inner(s, portraits, ctx);
     anim::ghosts(ctx);
     // A window closed by a click needs one more frame to start fading out.
-    if before != (s.windows.big_open(), s.popup.is_some()) {
+    if before != (s.windows.big_open(), modal_up(s)) {
         ctx.request_repaint();
     }
 }
@@ -232,7 +249,7 @@ fn windows_inner(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context
     }
     // The empire menus close themselves once their choice is made.
     type Menu = fn(&mut Session, &mut egui::Ui) -> bool;
-    let menus: [(Panel, &str, Glyph, &str, egui::Vec2, Menu); 5] = [
+    let menus: [(Panel, &str, Glyph, &str, egui::Vec2, Menu); 7] = [
         (
             Panel::Government,
             "Government",
@@ -273,13 +290,30 @@ fn windows_inner(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context
             vec2(760.0, 720.0),
             ui::menus::victory,
         ),
+        (
+            Panel::Eras,
+            "Eras and Timeline",
+            Glyph::Hourglass,
+            "T",
+            vec2(1040.0, 860.0),
+            ui::menus::eras,
+        ),
+        (
+            Panel::Cards,
+            "Policy Cards",
+            Glyph::Temple,
+            "",
+            vec2(1000.0, 640.0),
+            ui::menus::policy_cards,
+        ),
     ];
     for (panel, title, glyph, key, size, menu) in menus {
         if !s.windows.is_open(panel) {
             continue;
         }
         let mut done = false;
-        let open = themed_window(ctx, title, glyph, Some(key), size, |ui| done = menu(s, ui));
+        let key = (!key.is_empty()).then_some(key);
+        let open = themed_window(ctx, title, glyph, key, size, |ui| done = menu(s, ui));
         if !open || done {
             s.windows.close_all();
         }
@@ -305,6 +339,8 @@ fn windows_inner(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context
     }
     if let Some((other, event)) = s.popup {
         leader_popup(s, portraits, ctx, other, event);
+    } else if !ui::story::wonder_reveal(s, ctx) {
+        ui::story::game_over(s, ctx);
     }
 }
 
@@ -861,6 +897,27 @@ fn diplomacy(s: &mut Session, portraits: &mut Portraits, ui: &mut egui::Ui, othe
                     let greeting = s.game.dialogue(other, DiploEvent::Greeting);
                     quote(ui, &greeting, 17.0);
                     ui.label(RichText::new(&rel.detail).color(palette::TEXT_DIM));
+                    if let (_, Some(reason)) = s.game.agenda_opinion(other, me) {
+                        ui.label(
+                            RichText::new(format!("Agenda: {reason}."))
+                                .color(palette::TEXT_DIM),
+                        );
+                    }
+                    let theirs = s.game.players[other].relations[me].grievances;
+                    let mine = s.game.players[me].relations[other].grievances;
+                    if theirs > 0 || mine > 0 {
+                        ui.label(
+                            RichText::new(format!(
+                                "Grievances: theirs against you {theirs}, yours against them {mine}. They fade in peacetime."
+                            ))
+                            .color(if theirs > 20 { palette::BAD } else { palette::TEXT_DIM }),
+                        );
+                    }
+                    if let Some(plan) = &s.game.players[other].war_plan
+                        && plan.target == me
+                    {
+                        ui.label(RichText::new("They are preparing for war against you.").color(palette::BAD));
+                    }
                     opinion(ui, &rel, s.game.score(other), s.game.player_cities(other).count());
                     if let Some((name, desc)) = &leader.agenda {
                         trait_block(ui, &format!("Agenda: {name}"), desc);
@@ -906,6 +963,32 @@ fn diplomacy(s: &mut Session, portraits: &mut Portraits, ui: &mut egui::Ui, othe
                         DiploEvent::RejectFriendFromHuman
                     },
                 );
+            }
+            if s.game.can_ally(me, other)
+                && theme::pill_button(ui, Some(Glyph::Shield), "Propose Alliance", palette::TEAL, 180.0)
+                    .on_hover_text("Allies share their maps and join each other's wars when attacked.")
+                    .clicked()
+            {
+                let accepted = s.game.propose_alliance(me, other);
+                say(
+                    s,
+                    if accepted {
+                        DiploEvent::AcceptFriendFromHuman
+                    } else {
+                        DiploEvent::RejectFriendFromHuman
+                    },
+                );
+            }
+            if let Some(gold) = s.game.tribute_asked(me, other)
+                && theme::pill_button(ui, Some(Glyph::Gold), &format!("Demand {gold} Gold"), palette::GOLD, 180.0)
+                    .on_hover_text("They pay only if your army clearly outmatches theirs. Either way they will resent it.")
+                    .clicked()
+            {
+                match s.game.demand_from_ai(me, other) {
+                    Some(true) => s.toast(format!("{} pays the tribute.", leader.name)),
+                    Some(false) => say(s, DiploEvent::DenounceFromHuman),
+                    None => {}
+                }
             }
             if !s.game.players[me].relations[other].denounced
                 && theme::pill_button(
@@ -993,11 +1076,41 @@ fn leader_popup(
                         ui.label(theme::title(&leader.name, 34.0));
                         ui.label(theme::bold(&o.civ_name, 19.0));
                         quote(ui, &line, 18.0);
-                        if event == DiploEvent::DeclareFriendFromAi {
-                            ui.label(format!(
+                        let civ_of = |p: PlayerId| s.game.players[p].civ_name.clone();
+                        let summary = match event {
+                            DiploEvent::DeclareFriendFromAi => Some(format!(
                                 "{} proposes a declaration of friendship.",
                                 leader.name
-                            ));
+                            )),
+                            DiploEvent::Demand { gold } => Some(format!(
+                                "{} demands {gold} Gold in tribute. Refusing will be remembered, and may mean war.",
+                                leader.name
+                            )),
+                            DiploEvent::AllianceOffer => Some(format!(
+                                "{} proposes a defensive alliance: allies share their maps and join each other's wars when attacked.",
+                                leader.name
+                            )),
+                            DiploEvent::JoinWar { against } => Some(format!(
+                                "{} invites you to join its war on {}.",
+                                leader.name,
+                                civ_of(against)
+                            )),
+                            DiploEvent::CallToArms { against } => Some(format!(
+                                "{} has attacked your ally. If you stand aside, the alliance ends.",
+                                civ_of(against)
+                            )),
+                            DiploEvent::MakePeaceFromAi => Some(format!(
+                                "{} offers peace. The side ahead in the war is paid reparations.",
+                                leader.name
+                            )),
+                            DiploEvent::DenounceFromAi => Some(format!(
+                                "{} has denounced you. A denouncement often comes before a war.",
+                                leader.name
+                            )),
+                            _ => None,
+                        };
+                        if let Some(summary) = summary {
+                            ui.label(summary);
                         }
                         ui.add_space(6.0);
                         ui.horizontal(|ui| {
@@ -1024,6 +1137,103 @@ fn leader_popup(
                                         130.0,
                                     )
                                     .clicked()
+                                    {
+                                        close = true;
+                                    }
+                                }
+                                DiploEvent::Demand { gold } => {
+                                    let can_pay = s.game.players[me].gold >= gold;
+                                    if theme::pill_button_if(
+                                        ui,
+                                        Some(Glyph::Gold),
+                                        &format!("Pay {gold} Gold"),
+                                        palette::GOLD,
+                                        170.0,
+                                        can_pay,
+                                    )
+                                    .on_disabled_hover_text("You don't have that much Gold.")
+                                    .clicked()
+                                    {
+                                        s.game.answer_demand(other, me, gold, true);
+                                        close = true;
+                                    }
+                                    if theme::pill_button(
+                                        ui,
+                                        Some(Glyph::Cross),
+                                        "Refuse",
+                                        palette::BAD,
+                                        130.0,
+                                    )
+                                    .clicked()
+                                    {
+                                        s.game.answer_demand(other, me, gold, false);
+                                        close = true;
+                                    }
+                                }
+                                DiploEvent::AllianceOffer => {
+                                    if theme::pill_button(
+                                        ui,
+                                        Some(Glyph::Shield),
+                                        "Form Alliance",
+                                        palette::GOOD,
+                                        170.0,
+                                    )
+                                    .clicked()
+                                    {
+                                        let r = s.game.propose_alliance(other, me);
+                                        if !r {
+                                            s.toast("The alliance is no longer possible.");
+                                        }
+                                        close = true;
+                                    }
+                                    if theme::pill_button(ui, None, "Decline", palette::TEXT_DIM, 130.0)
+                                        .clicked()
+                                    {
+                                        close = true;
+                                    }
+                                }
+                                DiploEvent::JoinWar { against } | DiploEvent::CallToArms { against } => {
+                                    let defensive = matches!(event, DiploEvent::CallToArms { .. });
+                                    let can = s.game.can_declare_war(me, against);
+                                    if theme::pill_button_if(
+                                        ui,
+                                        Some(Glyph::Swords),
+                                        "Join the War",
+                                        palette::BAD,
+                                        170.0,
+                                        can,
+                                    )
+                                    .on_disabled_hover_text("You can't declare war on them now.")
+                                    .clicked()
+                                    {
+                                        s.game.answer_join_war(me, other, against, true, defensive);
+                                        close = true;
+                                    }
+                                    let label = if defensive { "Stand Aside" } else { "Decline" };
+                                    if theme::pill_button(ui, None, label, palette::TEXT_DIM, 150.0)
+                                        .clicked()
+                                    {
+                                        s.game.answer_join_war(me, other, against, false, defensive);
+                                        close = true;
+                                    }
+                                }
+                                DiploEvent::MakePeaceFromAi => {
+                                    let can = s.game.players[me].at_war_with(other);
+                                    if theme::pill_button_if(
+                                        ui,
+                                        Some(Glyph::Shield),
+                                        "Make Peace",
+                                        palette::TEAL,
+                                        160.0,
+                                        can,
+                                    )
+                                    .clicked()
+                                    {
+                                        s.game.make_peace(other, me);
+                                        close = true;
+                                    }
+                                    if theme::pill_button(ui, None, "Fight On", palette::BAD, 140.0)
+                                        .clicked()
                                     {
                                         close = true;
                                     }

@@ -120,6 +120,8 @@ impl Game {
         }
         let origin = self.city_at(u.pos).unwrap().id;
         self.units.remove(&trader);
+        self.first_moment(u.owner, "trade_route", "Established a first trade route", crate::eras::score::TRADE_ROUTE);
+        self.dedication_moment(u.owner, "trade_route", "Started a trade route");
         self.trade_routes.push(TradeRoute {
             owner: u.owner,
             origin,

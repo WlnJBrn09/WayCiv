@@ -97,6 +97,13 @@ impl Game {
             let unit = content.great_person_classes[class].unit.clone();
             let name = content.great_people[person].name.clone();
             let class_name = content.great_person_classes[class].name.clone();
+            self.players[player].great_people_earned += 1;
+            self.moment(
+                player,
+                format!("Recruited {name}, a {class_name}"),
+                crate::eras::score::GREAT_PERSON,
+            );
+            self.dedication_moment(player, "great_person", &format!("Recruited {name}"));
             let Some(capital) = self.players[player].capital.map(|c| self.cities[&c].pos) else {
                 continue;
             };

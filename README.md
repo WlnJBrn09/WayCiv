@@ -24,14 +24,22 @@ cargo run --release -p wayciv
    rivals, city-states, and seed.
 2. **Turn 1**: found your capital with the Settler (`B`, or the Found City button).
 3. Each turn, as in Civ VI, the End Turn button shows what's blocking it: "Choose
-   Research", "Choose Production", "Unit Needs Orders", "Choose
-   Pantheon". Clicking it takes you to the blocker. `Enter` presses it.
+   Research", "Choose Production", "Unit Needs Orders", "Choose Pantheon",
+   "Choose Policy Card", "Choose Dedication". Clicking it takes you to the
+   blocker. `Enter` presses it.
 4. AI civilizations and city-states take their turns. Then cities grow and build,
    and science, culture, faith, and gold accumulate.
-5. Meeting leaders, wars, denouncements, and friendship offers open a leader
-   screen with their portrait and their own lines.
-6. Win by Science (space projects), Culture (tourism), Domination (all original
-   capitals), Religion, or Score at the turn limit.
+5. Meeting leaders, wars, denouncements, demands for tribute, friendship and
+   alliance offers, calls to arms, and peace offers open a leader screen with
+   their portrait and their own lines.
+6. Historic moments earn era score; each new era brings a Golden, Normal,
+   Dark, or Heroic Age and a dedication. Completing a wonder shows it full
+   screen.
+7. Win by Science (space projects), Culture (tourism), Domination (all original
+   capitals), Religion, or Score at the turn limit. Everyone is warned when a
+   civilization is 50%, 75%, and 90% of the way to a victory. The end screen
+   graphs every civilization's score, science, culture, military, and cities
+   over the game.
 
 Controls: left-click selects, right-click moves or attacks, drag or the arrow
 keys scroll, the mouse wheel zooms. The minimap (bottom right) recenters the view.
@@ -43,6 +51,7 @@ keys scroll, the mouse wheel zooms. The minimap (bottom right) recenters the vie
 | `R` | Religion | | |
 | `G` | Government | `P` | Great people |
 | `E` | City-states | `V` | Victory progress |
+| `T` | Eras and timeline | | |
 | `K` | Map key | `Enter` | Next turn, or the next thing that needs a decision |
 | `.` | Next unit | `Space` | Skip unit |
 | `F` | Fortify | `Z` | Sleep |
@@ -103,6 +112,40 @@ pick a name, a founder belief and a follower belief.
 - **Governments and policies unlock by calendar year** instead of civics. When
   a year brings new ones, everyone gets a free policy change and an envoy. The
   Government screen shows what unlocks next and on which turn.
+- **Policy cards** (`policy_cards.rs`): you can only slot the cards you have
+  kept. Culture fills an inspiration meter; when it is full, three unlocked
+  cards are offered (newer ones more often) and you keep one. A card leaves
+  once you keep the card that supersedes it. The first offer comes on turn 1.
+- **Eras and ages** (`eras.rs`): the world's era follows the calendar.
+  Historic moments earn era score: founding cities, meeting civilizations,
+  discovering natural wonders, wonders, religions, great people, clearing
+  camps, capturing cities, winning wars, cities growing to 10/15/20, the first
+  district of each kind, new governments, and firsts in the world. When the
+  next era begins, your score sets your age: Dark, Normal, Golden, or Heroic (a
+  Golden Age right after a Dark one). Thresholds scale with the era's length
+  and your empire's size. Each age comes with a dedication (two in a Heroic
+  Age): in a Golden or Heroic Age its bonus applies (+15% Science, +15%
+  Culture, district and wonder production, +20% Gold, +5 combat strength, or
+  +20% Faith); otherwise it earns +1 era score for its kind of moment. Golden
+  Ages give +3 Loyalty per city; Dark Ages take 3.
+- **Rivals** (`rivalry.rs`): every leader has a personality in
+  `leaders.toml` (`ai`: aggression 0-3, a focus, and the rule their agenda is
+  scored by). Agendas really change opinions (Gorgo admires wars, Qin
+  wonders, Philip shared faith, Lady Six Sky distance...). Surprise wars,
+  captured cities, refused demands, broken alliances, and settling too close
+  leave grievances that fade in peacetime. AIs plan wars: they denounce the
+  target, mass troops on the border (you get a warning), then declare war and
+  invite their friends. Strong AIs demand tribute, and you can demand it from
+  them. Friends of long standing can form alliances (shared maps, and allies
+  join each other's defensive wars when called to arms). Peace pays
+  reparations to the side ahead on war score, and a truce follows. The AI
+  spends its Gold and picks governments, policies, and dedications by focus.
+- **Tribal villages** (`villages.rs`) dot the unclaimed land at the start,
+  glowing gold. The first explorer to enter one gets a gift: Gold, Faith, a
+  Eureka, a citizen, a map of the region, a Builder or Scout, or a level.
+- **The wonder race**: you hear when a civilization starts a wonder, the city
+  panel shows rivals building the same one, and a wonder lost to a rival
+  refunds its progress as Gold.
 - **Great people** use one simplified effect per class, plus WayCiv's modern
   great people: Elon Musk (minor boosts to AI, rockets, and solar), Gwynne
   Shotwell (a big boost to a space race project), Palmer Luckey (a flight of

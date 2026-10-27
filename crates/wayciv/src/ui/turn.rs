@@ -13,6 +13,22 @@ use wayciv_core::turn::Blocker;
 pub const DIAMETER: f32 = 124.0;
 /// How long the new-turn banner stays up.
 const BANNER_SECS: f32 = 2.6;
+/// How long the screen wash that marks a turn change lasts.
+const WASH_SECS: f32 = 1.0;
+/// How long the extra "a new era begins" announcement stays up.
+const ERA_SECS: f32 = 4.4;
+/// One accent per era (ancient .. information); tints the wash and banner so
+/// the turns of different eras don't look alike.
+const ERA_TINTS: [Color32; 8] = [
+    Color32::from_rgb(214, 170, 96),
+    Color32::from_rgb(120, 200, 150),
+    Color32::from_rgb(190, 130, 220),
+    Color32::from_rgb(230, 130, 110),
+    Color32::from_rgb(150, 170, 190),
+    Color32::from_rgb(120, 170, 240),
+    Color32::from_rgb(240, 200, 90),
+    Color32::from_rgb(90, 224, 232),
+];
 const READY: Color32 = Color32::from_rgb(70, 214, 140);
 
 /// Draws the button and returns the left edge of its footprint.
@@ -33,6 +49,8 @@ pub fn show(s: &mut Session, ctx: &egui::Context) -> f32 {
                 Blocker::ChooseResearch => Glyph::Science,
                 Blocker::ChoosePantheon => Glyph::Faith,
                 Blocker::ChooseAiResearch => Glyph::Chip,
+                Blocker::ChoosePolicyCard => Glyph::Temple,
+                Blocker::ChooseDedication => Glyph::Hourglass,
                 Blocker::ChooseProduction(_) => Glyph::Production,
                 Blocker::UnitNeedsOrders(_) => Glyph::Shield,
             },
@@ -238,10 +256,26 @@ fn flash_id() -> Id {
 /// "Turn 42 · 2350 BC", fading and sliding in at the top when a turn begins.
 fn banner(s: &Session, ctx: &egui::Context) {
     let id = Id::unique("turn_banner");
+    let era_idx = s.game.era_of(s.me());
+    let era = s
+        .game
+        .rules
+        .content
+        .eras
+        .get(era_idx)
+        .map(|e| e.name.clone())
+        .unwrap_or_default();
+    let tint = ERA_TINTS[era_idx.min(ERA_TINTS.len() - 1)];
+    if anim::changed(ctx, id.with("era"), era_idx as u64) {
+        anim::trigger(ctx, id.with("era_up"));
+    }
     if anim::changed(ctx, id.with("turn"), s.game.turn as u64) {
         anim::trigger(ctx, id);
         anim::trigger(ctx, flash_id());
+        anim::trigger(ctx, id.with("wash"));
     }
+    wash(ctx, id.with("wash"), tint);
+    era_announcement(ctx, id.with("era_up"), &era, tint);
     let Some(p) = anim::progress(ctx, id, 1.0) else {
         return;
     };
@@ -263,7 +297,12 @@ fn banner(s: &Session, ctx: &egui::Context) {
     );
     painter.rect_filled(plate.translate(vec2(0.0, 4.0)), 31.0, Color32::from_black_alpha((90.0 * a) as u8));
     painter.rect_filled(plate, 31.0, ga(palette::with_alpha(NAVY, 235)));
-    painter.rect_stroke(plate, 31.0, Stroke::new(2.0, ga(GOLD)), egui::StrokeKind::Inside);
+    painter.rect_stroke(plate, 31.0, Stroke::new(2.0, ga(anim::mix(GOLD, tint, 0.5))), egui::StrokeKind::Inside);
+    if !era.is_empty() {
+        // The era, in its own color, tucked under the plate.
+        let cap = painter.layout_no_wrap(era.to_uppercase(), FontId::proportional(12.0), ga(tint));
+        painter.galley(pos2(plate.center().x - cap.size().x / 2.0, plate.bottom() + 8.0), cap, ga(tint));
+    }
     painter.rect_stroke(
         plate.shrink(4.0),
         27.0,
@@ -303,6 +342,74 @@ fn banner(s: &Session, ctx: &egui::Context) {
     let dot = pos2(x + turn.size().x + gap / 2.0, y);
     painter.circle_filled(dot, 3.0, ga(GOLD_DIM));
     painter.galley(pos2(x + turn.size().x + gap, y - year.size().y / 2.0), year, ga(TEXT));
+}
+
+/// A turn-change wash: the world dips into shadow for a moment while a band
+/// of era-colored light sweeps across it, so each turn visibly "ticks over".
+fn wash(ctx: &egui::Context, id: Id, tint: Color32) {
+    let Some(p) = anim::progress(ctx, id, WASH_SECS) else {
+        return;
+    };
+    let screen = ctx.content_rect();
+    let painter = ctx.layer_painter(LayerId::new(Order::Middle, id.with("layer")));
+    let fade = 1.0 - anim::ease_out(p);
+    painter.rect_filled(screen, 0.0, NAVY.gamma_multiply(0.5 * fade));
+    // Edges glow in the era color and fade inward.
+    for i in 0..8 {
+        let k = i as f32 / 8.0;
+        let a = (1.0 - k) * 0.22 * fade;
+        let inset = k * 60.0;
+        painter.rect_stroke(
+            screen.shrink(inset),
+            0.0,
+            Stroke::new(8.0, tint.gamma_multiply(a)),
+            egui::StrokeKind::Inside,
+        );
+    }
+    // The sweeping band.
+    let sweep = anim::ease_in_out((p * 1.25).min(1.0));
+    let x = anim::lerp(screen.left() - 160.0, screen.right() + 160.0, sweep);
+    let fade_band = 1.0 - ((p - 0.7) / 0.3).clamp(0.0, 1.0);
+    // Thin slices with a smooth falloff, so the band has no visible edges.
+    const SLICES: i32 = 40;
+    let reach = 150.0;
+    let slice_w = reach * 2.0 / SLICES as f32;
+    for i in 0..SLICES {
+        let u = (i as f32 + 0.5) / SLICES as f32 * 2.0 - 1.0;
+        let falloff = (1.0 - u.abs()).powi(2);
+        painter.rect_filled(
+            Rect::from_min_size(
+                pos2(x - reach + i as f32 * slice_w, screen.top()),
+                vec2(slice_w + 0.5, screen.height()),
+            ),
+            0.0,
+            tint.gamma_multiply(0.22 * falloff * fade_band),
+        );
+    }
+}
+
+/// "The Medieval Era begins": a bigger, longer card when the era changes.
+fn era_announcement(ctx: &egui::Context, id: Id, era: &str, tint: Color32) {
+    let Some(p) = anim::progress(ctx, id, ERA_SECS) else {
+        return;
+    };
+    if era.is_empty() {
+        return;
+    }
+    let secs = p * ERA_SECS;
+    let a = anim::ease_out(secs / 0.5) * (1.0 - anim::ease_in_out((secs - (ERA_SECS - 0.8)) / 0.8));
+    let screen = ctx.content_rect();
+    let painter = ctx.layer_painter(LayerId::new(Order::Foreground, id.with("layer")));
+    let ga = |c: Color32| c.gamma_multiply(a);
+    let title = painter.layout_no_wrap(era.to_uppercase(), FontId::proportional(40.0), ga(tint));
+    let kicker = painter.layout_no_wrap("A NEW ERA BEGINS".into(), FontId::proportional(14.0), ga(TEXT));
+    let w = title.size().x.max(kicker.size().x) + 120.0;
+    let rect = Rect::from_center_size(pos2(screen.center().x, screen.center().y - 60.0), vec2(w, 112.0));
+    painter.rect_filled(rect, 6.0, ga(palette::with_alpha(NAVY, 225)));
+    painter.rect_stroke(rect, 6.0, Stroke::new(2.0, ga(tint)), egui::StrokeKind::Inside);
+    painter.rect_stroke(rect.shrink(5.0), 3.0, Stroke::new(1.0, ga(palette::with_alpha(GOLD, 120))), egui::StrokeKind::Inside);
+    painter.galley(pos2(rect.center().x - kicker.size().x / 2.0, rect.top() + 18.0), kicker, ga(TEXT));
+    painter.galley(pos2(rect.center().x - title.size().x / 2.0, rect.top() + 44.0), title, ga(tint));
 }
 
 /// Greedy word wrap by measured width.

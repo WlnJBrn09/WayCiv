@@ -251,6 +251,36 @@ pub struct Leader {
     /// What the leader says, by event (`first_meet`, `greeting`, ...).
     #[serde(default)]
     pub lines: HashMap<String, String>,
+    /// How the leader plays as a computer player.
+    #[serde(default)]
+    pub ai: LeaderAi,
+}
+
+/// A computer leader's personality.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields, default)]
+pub struct LeaderAi {
+    /// 0 (peaceful) to 3 (conqueror): how readily they plan wars, make
+    /// demands, and build armies.
+    pub aggression: i32,
+    /// What they build and which governments they favor: `war`, `science`,
+    /// `culture`, `faith`, `trade`, `expansion`, or `balanced`.
+    pub focus: String,
+    /// The agenda's rule, scored in `Game::agenda_opinion`: `military`,
+    /// `navy`, `wonders`, `great_people`, `trade`, `religion`, `culture`,
+    /// `science`, `cities`, `districts`, `warlike`, `peaceful`, `space`,
+    /// `happiness`, `luxuries`, `loyal`, `democracy`, `weak_prey`.
+    pub agenda: String,
+}
+
+impl Default for LeaderAi {
+    fn default() -> Self {
+        Self {
+            aggression: 1,
+            focus: "balanced".into(),
+            agenda: String::new(),
+        }
+    }
 }
 
 fn agenda<'de, D: Deserializer<'de>>(
@@ -590,6 +620,24 @@ fn grey() -> [u8; 3] {
     [220, 220, 220]
 }
 
+/// A dedication chosen at the start of an era. In a Golden or Heroic Age
+/// its `effects` apply; in a Normal or Dark Age its `moment` earns extra
+/// era score instead.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Dedication {
+    pub id: String,
+    pub name: String,
+    /// What earns +1 era score outside a Golden Age: `eureka`,
+    /// `great_person`, `district`, `trade_route`, `kill`, `city`.
+    pub moment: String,
+    /// The golden-age bonus, described from `effects` on load.
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub effects: Vec<Effect>,
+}
+
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Era {
@@ -700,6 +748,8 @@ struct File {
     #[serde(default)]
     era: Vec<Era>,
     #[serde(default)]
+    dedication: Vec<Dedication>,
+    #[serde(default)]
     great_person_class: Vec<GreatPersonClass>,
     #[serde(default)]
     great_person: Vec<GreatPerson>,
@@ -750,6 +800,7 @@ pub struct Content {
     pub beliefs: Vec<Belief>,
     pub religions: Vec<Religion>,
     pub eras: Vec<Era>,
+    pub dedications: Vec<Dedication>,
     pub great_person_classes: Vec<GreatPersonClass>,
     pub great_people: Vec<GreatPerson>,
     pub projects: Vec<Project>,
@@ -793,6 +844,7 @@ impl Content {
             content.beliefs.extend(file.belief);
             content.religions.extend(file.religion);
             content.eras.extend(file.era);
+            content.dedications.extend(file.dedication);
             content.great_person_classes.extend(file.great_person_class);
             content.great_people.extend(file.great_person);
             content.projects.extend(file.project);
@@ -963,6 +1015,9 @@ impl Content {
         }
         for g in &mut self.governments {
             g.bonus = describe_all(&g.bonus, &g.effects, &name);
+        }
+        for d in &mut self.dedications {
+            d.description = describe_all(&d.description, &d.effects, &name);
         }
         for b in &mut self.beliefs {
             b.description = describe_all(&b.description, &b.effects, &name);

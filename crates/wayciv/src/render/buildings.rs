@@ -76,6 +76,13 @@ impl BuildingArt {
         self.sprites.get(name).and_then(|s| s.as_ref())
     }
 
+    /// The full-size texture of a wonder (by building id), for the reveal.
+    pub fn wonder_texture(&mut self, ctx: &egui::Context, id: &str) -> Option<TextureHandle> {
+        let name = format!("wonder_{}", slug(id));
+        self.load(ctx, &name)
+            .and_then(|s| s.lods.first().map(|(_, t)| t.clone()))
+    }
+
     /// Paint sprite `name` for a tile centered at `c`; false if it is missing.
     fn paint(
         &mut self,

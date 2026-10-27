@@ -26,7 +26,13 @@ pub fn relationship(s: &Session, other: PlayerId) -> Relationship {
     let me = s.me();
     let r = &s.game.players[me].relations[other];
     let theirs = &s.game.players[other].relations[me];
-    let (status, status_color, detail) = if r.at_war {
+    let (status, status_color, detail) = if r.alliance {
+        (
+            "Allied",
+            GOOD,
+            "You are allies: you share maps and join each other's defensive wars.".to_string(),
+        )
+    } else if r.at_war {
         (
             "At war",
             BAD,

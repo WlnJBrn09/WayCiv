@@ -52,12 +52,18 @@ fn governments_and_policies_unlock_by_year() {
     g.turn = g.turn_of_year(1790);
     assert!(g.available_governments(me).contains(&democracy));
 
-    // A successor replaces its predecessor once it unlocks.
+    // Policies unlock by year; a card leaves once its successor is adopted.
     let war_chants = g.rules.idx("POLICY_WAR_CHANTS").unwrap();
+    let standing_army = g.rules.idx("POLICY_STANDING_ARMY").unwrap();
     let mut g = game_with(GameLength::Turns500);
-    assert!(g.available_policies(me).contains(&war_chants));
+    assert!(g.unlocked_policies(me).contains(&war_chants));
+    assert!(!g.unlocked_policies(me).contains(&standing_army));
     g.turn = g.turn_of_year(-200);
-    assert!(!g.available_policies(me).contains(&war_chants));
+    assert!(g.unlocked_policies(me).contains(&war_chants));
+    g.players[me].cards.adopted[standing_army] = true;
+    assert!(!g.unlocked_policies(me).contains(&war_chants));
+    // Only adopted cards can be slotted.
+    assert_eq!(g.available_policies(me), vec![standing_army]);
 }
 
 #[test]
@@ -112,6 +118,7 @@ fn policies_and_abilities_change_yields() {
     g.set_government(me, chiefdom).unwrap();
     let before = g.bonuses(me).city_flat[FOOD];
     let granaries = g.rules.idx("POLICY_TRIBAL_GRANARIES").unwrap();
+    g.players[me].cards.adopted[granaries] = true;
     g.set_policies(me, vec![granaries]).unwrap();
     assert_eq!(g.bonuses(me).city_flat[FOOD], before + 1.0);
 

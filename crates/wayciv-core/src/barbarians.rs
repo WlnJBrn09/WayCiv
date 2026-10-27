@@ -270,5 +270,6 @@ impl Game {
             Some(pos),
         );
         self.check_boosts(owner, crate::research::Trigger::ClearedCamp);
+        self.moment(owner, "Destroyed a barbarian camp", crate::eras::score::CAMP);
     }
 }

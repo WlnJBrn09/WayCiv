@@ -140,6 +140,39 @@ impl Game {
         }
         let grid = self.map.grid;
         let full = self.unit_type(unit).moves.max(1) + self.bonus_moves(unit);
+        // The AI searches a little beyond the straight-line distance; the
+        // human's orders may take long detours.
+        let radius = if self.players[unit.owner].human {
+            MAX_SEARCH
+        } else {
+            MAX_SEARCH.min(grid.distance(unit.pos, goal) * 2 + 8)
+        };
+        // Who stands where, gathered once for the whole search:
+        // (foreign unit or city here, enemy zone of control here).
+        let mut foreign: std::collections::HashSet<Pos> = std::collections::HashSet::new();
+        let mut hostile: std::collections::HashSet<Pos> = std::collections::HashSet::new();
+        let me = &self.players[unit.owner];
+        for u in self.units.values() {
+            if u.owner != unit.owner && !self.is_air(u) {
+                foreign.insert(u.pos);
+                if me.at_war_with(u.owner) && self.is_military(u) {
+                    hostile.insert(u.pos);
+                }
+            }
+        }
+        for c in self.cities.values() {
+            if c.owner != unit.owner {
+                foreign.insert(c.pos);
+                if me.at_war_with(c.owner) {
+                    hostile.insert(c.pos);
+                }
+            }
+        }
+        let zoc = |p: Pos| {
+            !hostile.is_empty()
+                && (hostile.contains(&p) || grid.neighbors(p).any(|n| hostile.contains(&n)))
+        };
+        let zoc_applies = self.zoc_applies(unit);
         // Priority: fewer turns, then more moves left, then distance.
         let mut heap = BinaryHeap::new();
         let mut best: HashMap<Pos, (i32, i32)> = HashMap::new();
@@ -172,12 +205,10 @@ impl Game {
                 continue;
             }
             for next in grid.neighbors(pos) {
-                if grid.distance(unit.pos, next) > MAX_SEARCH || !self.passable(unit, next) {
+                if grid.distance(unit.pos, next) > radius || !self.passable(unit, next) {
                     continue;
                 }
-                let occupied_by_other = self.ground_units_at(next).any(|u| u.owner != unit.owner)
-                    || self.city_at(next).is_some_and(|c| c.owner != unit.owner);
-                if occupied_by_other && next != goal {
+                if foreign.contains(&next) && next != goal {
                     continue;
                 }
                 let cost = self.move_cost(unit, pos, next);
@@ -195,8 +226,7 @@ impl Game {
                 } else {
                     (left - cost).max(0)
                 };
-                if next != goal && self.zone_of_control(unit.owner, next) && self.zoc_applies(unit)
-                {
+                if next != goal && zoc_applies && zoc(next) {
                     left = 0;
                 }
                 if best
@@ -350,6 +380,7 @@ impl Game {
     /// natural wonders, popping into an empty enemy city.
     fn on_entered(&mut self, id: UnitId, pos: Pos) {
         self.check_camp_cleared(id, pos);
+        self.check_village(id, pos);
         let Some(unit) = self.units.get(&id).cloned() else {
             return;
         };
@@ -397,13 +428,32 @@ impl Game {
                 visible[grid.index(p)] = true;
             }
         }
+        let mut discovered: Vec<usize> = Vec::new();
         let p = &mut self.players[player];
         for i in 0..visible.len() {
             if visible[i] {
+                if !p.revealed[i]
+                    && let Some(f) = self.map.tiles[i].feature
+                    && self.rules.content.features[f].natural_wonder
+                {
+                    discovered.push(f);
+                }
                 p.revealed[i] = true;
             }
         }
         p.visible = visible;
+        discovered.dedup();
+        for f in discovered {
+            let name = self.rules.content.features[f].name.clone();
+            if self.first_moment(
+                player,
+                &format!("wonder:{f}"),
+                format!("Discovered {name}"),
+                crate::eras::score::NATURAL_WONDER,
+            ) {
+                self.world_first(player, &format!("natural:{f}"), &format!("to discover {name}"));
+            }
+        }
         self.check_contact(player);
     }
 
@@ -432,6 +482,14 @@ impl Game {
             }
             self.players[player].relations[other].met = true;
             self.players[other].relations[player].met = true;
+            if self.players[player].is_major() && self.players[other].is_major() {
+                let (pn, on) = (
+                    self.players[player].civ_name.clone(),
+                    self.players[other].civ_name.clone(),
+                );
+                self.moment(player, format!("Met {on}"), crate::eras::score::MEET);
+                self.moment(other, format!("Met {pn}"), crate::eras::score::MEET);
+            }
             let (a, b) = (
                 self.players[player].clone_name(),
                 self.players[other].clone_name(),

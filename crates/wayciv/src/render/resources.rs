@@ -557,6 +557,26 @@ pub fn draw_improvement(art: &mut ResourceArt, painter: &egui::Painter, t: &Tile
         let mut glow = Mesh::default();
         mesh::puff(&mut glow, c, z * 1.0, Color32::from_rgba_unmultiplied(190, 34, 30, 70));
         painter.add(Shape::mesh(glow));
+    } else if name == "imp_goody_hut" {
+        // Tribal villages glow gold, slowly breathing, to invite explorers.
+        let t = painter.ctx().input(|i| i.time) as f32;
+        let pulse = 0.5 + 0.5 * (t * 1.6 + (h % 1000) as f32).sin();
+        let mut glow = Mesh::default();
+        mesh::puff(
+            &mut glow,
+            c,
+            z * 1.3,
+            Color32::from_rgba_unmultiplied(255, 236, 170, (150.0 + 60.0 * pulse) as u8),
+        );
+        painter.add(Shape::mesh(glow));
+        painter.circle_stroke(
+            c + vec2(0.0, 0.05 * z),
+            z * (0.66 + 0.04 * pulse),
+            Stroke::new(
+                (z * 0.035).max(1.5),
+                Color32::from_rgba_unmultiplied(255, 205, 80, (140.0 + 90.0 * pulse) as u8),
+            ),
+        );
     }
     let tint = if pillaged {
         Color32::from_rgb(150, 138, 130)

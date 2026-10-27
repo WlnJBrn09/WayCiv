@@ -2,7 +2,8 @@
 //!
 //! Windows and panels: `N` notifications, `L` leaders, `S` research (tech
 //! tree), `A` AI tree, `R` religion, `G` government, `P` great
-//! people, `E` city-states and envoys, `V` victory, `K` map key. Pressing a
+//! people, `E` city-states and envoys, `V` victory, `T` eras and the
+//! timeline, `K` map key. Pressing a
 //! window's key again, or `Esc`, closes it; opening one closes the others.
 //!
 //! Units and turns: `Enter` next turn / resolve the next blocker, `Space`
@@ -15,7 +16,7 @@ use egui::Key;
 use wayciv_core::actions::UnitAction;
 
 /// (key, label, panel) for every window hotkey, in menu order.
-pub const PANEL_KEYS: [(Key, &str, Panel); 9] = [
+pub const PANEL_KEYS: [(Key, &str, Panel); 10] = [
     (Key::N, "N", Panel::Notifications),
     (Key::L, "L", Panel::Leaders),
     (Key::S, "S", Panel::Tech),
@@ -25,10 +26,11 @@ pub const PANEL_KEYS: [(Key, &str, Panel); 9] = [
     (Key::P, "P", Panel::GreatPeople),
     (Key::E, "E", Panel::CityStates),
     (Key::V, "V", Panel::Victory),
+    (Key::T, "T", Panel::Eras),
 ];
 
 pub fn handle(s: &mut Session, ctx: &egui::Context) {
-    if ctx.egui_wants_keyboard_input() || s.popup.is_some() {
+    if ctx.egui_wants_keyboard_input() || crate::screens::modal_up(s) {
         return;
     }
     let pressed = |key: Key| {

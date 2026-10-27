@@ -41,6 +41,12 @@ pub struct Session {
     pub art: crate::render::Art,
     /// Map animation: walks, fights, fades, the camera pan.
     pub anim: crate::render::anim::Anims,
+    /// The end-of-game screen was closed to look at the world.
+    pub game_over_seen: bool,
+    /// Which statistic the end-of-game graph shows.
+    pub graph_stat: usize,
+    /// Return to the main menu at the end of this frame.
+    pub quit_to_menu: bool,
 }
 
 impl Session {
@@ -74,6 +80,9 @@ impl Session {
             icons: crate::icons::Icons::new(crate::portraits::assets_dir()),
             art: crate::render::Art::new(crate::portraits::assets_dir()),
             anim: Default::default(),
+            game_over_seen: false,
+            graph_stat: 0,
+            quit_to_menu: false,
         };
         let first = s
             .game
@@ -273,6 +282,8 @@ impl Session {
             Some(Blocker::ChooseResearch) => self.windows.open(Panel::Tech),
             Some(Blocker::ChoosePantheon) => self.windows.open(Panel::Religion),
             Some(Blocker::ChooseAiResearch) => self.windows.open(Panel::Ai),
+            Some(Blocker::ChoosePolicyCard) => self.windows.open(Panel::Cards),
+            Some(Blocker::ChooseDedication) => self.windows.open(Panel::Eras),
             Some(Blocker::ChooseProduction(city)) => {
                 self.select_city(Some(city));
                 let pos = self.game.cities[&city].pos;
@@ -455,6 +466,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     banners(s, &ctx);
 
     screens::windows(s, &mut app.portraits, &ctx);
+    if s.quit_to_menu
+        && let Some(rules) = app.rules.clone()
+    {
+        app.stage = crate::Stage::Setup(crate::setup_screen::Setup::new(&rules));
+    }
 }
 
 /// Instructions while placing a district or wonder, or aiming the city's
@@ -738,6 +754,12 @@ mod tests {
             .find(|&i| s.game.researchable(me, Tree::Tech, i))
             .unwrap();
         s.game.set_research(me, Tree::Tech, tech).unwrap();
+
+        // Then it offers the first policy cards: keep one.
+        s.end_turn_clicked();
+        assert!(s.windows.cards, "End Turn opens the policy card offer");
+        let card = s.game.players[me].cards.draft[0];
+        s.game.adopt_policy(me, card).unwrap();
 
         // Clicking the city tile selects it; choose a Warrior.
         let pos = s.game.cities[&city].pos;

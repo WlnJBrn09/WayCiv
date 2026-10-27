@@ -40,6 +40,7 @@ impl Game {
         p.pantheon = Some(belief);
         let name = self.rules.content.beliefs[belief].name.clone();
         self.notify(player, format!("Your people now worship {name}."), None);
+        self.moment(player, format!("Adopted the pantheon {name}"), crate::eras::score::PANTHEON);
         self.check_boosts(player, crate::research::Trigger::Pantheon);
         Ok(())
     }
@@ -114,6 +115,7 @@ impl Game {
         c.followers.insert(religion, c.population);
         let name = self.rules.content.religions[religion].name.clone();
         let founder_name = self.players[u.owner].civ_name.clone();
+        self.moment(u.owner, format!("Founded {name}"), crate::eras::score::RELIGION);
         for p in 0..self.players.len() {
             if self.players[p].is_major() {
                 let text = if p == u.owner {

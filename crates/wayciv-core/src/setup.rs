@@ -140,6 +140,15 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
         units_killed: 0,
         barbarians_killed: 0,
         city_state_category: String::new(),
+        war_plan: None,
+        last_demand: 0,
+        cards: crate::state::PolicyCards {
+            adopted: vec![false; content.policies.len()],
+            ..Default::default()
+        },
+        era: Default::default(),
+        great_people_earned: 0,
+        warned: HashMap::new(),
     };
 
     let mut players = Vec::new();
@@ -220,6 +229,12 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
         popups: Vec::new(),
         trade_routes: Vec::new(),
         camps: BTreeMap::new(),
+        villages: Default::default(),
+        world_era: 0,
+        world_firsts: Default::default(),
+        history: Vec::new(),
+        reveals: Vec::new(),
+        wonder_starts: Default::default(),
     };
 
     for (player, start) in starts.iter().enumerate().take(game.players.len()) {
@@ -243,6 +258,13 @@ pub fn new_game(rules: Arc<Rules>, settings: Settings) -> Game {
         game.update_visibility(player);
     }
     game.place_starting_camps();
+    game.place_villages(&starts);
+    game.world_era = game.world_era_now();
+    for p in 0..game.players.len() {
+        if game.players[p].is_major() {
+            game.offer_policy_draft(p);
+        }
+    }
     game.notify(
         game.human(),
         "A new age begins. Found your capital with the Settler.",

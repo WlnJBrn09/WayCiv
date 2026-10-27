@@ -205,6 +205,7 @@ impl App {
             }
             game.players[human].human = true;
             game.popups.clear();
+            game.reveals.clear();
         }
         if let Some(faith) = env("WAYCIV_FAITH").and_then(|f| f.parse().ok()) {
             let human = game.human();
@@ -325,6 +326,45 @@ impl App {
                         .find(|&o| o != me && s.game.players[o].is_major())
                         .unwrap_or(1);
                     s.popup = Some((other, wayciv_core::diplomacy::DiploEvent::FirstMeet));
+                }
+                Some(kind @ ("demand" | "alliance" | "calltoarms" | "joinwar" | "peace")) => {
+                    use wayciv_core::diplomacy::DiploEvent;
+                    let me = s.game.human();
+                    let majors: Vec<usize> = (0..s.game.players.len())
+                        .filter(|&o| o != me && s.game.players[o].is_major())
+                        .collect();
+                    let (other, third) = (majors[0], majors[1]);
+                    let event = match kind {
+                        "demand" => DiploEvent::Demand { gold: 120 },
+                        "alliance" => DiploEvent::AllianceOffer,
+                        "calltoarms" => DiploEvent::CallToArms { against: third },
+                        "joinwar" => DiploEvent::JoinWar { against: third },
+                        _ => DiploEvent::MakePeaceFromAi,
+                    };
+                    s.popup = Some((other, event));
+                }
+                Some("eras") => s.windows.open(Panel::Eras),
+                Some("dedication") => {
+                    let me = s.game.human();
+                    s.game.players[me].era.pending = 1;
+                    s.windows.open(Panel::Eras);
+                }
+                Some("cards") => {
+                    let me = s.game.human();
+                    s.game.offer_policy_draft(me);
+                    s.windows.open(Panel::Cards);
+                }
+                Some("wonder") => {
+                    let wonder = env("WAYCIV_WONDER")
+                        .and_then(|id| s.game.rules.idx(&id))
+                        .or_else(|| (0..s.game.rules.content.buildings.len()).find(|&i| s.game.rules.content.buildings[i].wonder));
+                    if let (Some(w), Some((city, _))) = (wonder, first_city) {
+                        s.game.reveals.push((w, city));
+                    }
+                }
+                Some("gameover") => {
+                    let me = s.game.human();
+                    s.game.winner = Some((me, wayciv_core::state::Victory::Science));
                 }
                 _ => {}
             }

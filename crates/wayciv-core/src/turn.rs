@@ -14,6 +14,8 @@ pub enum Blocker {
     ChooseProduction(CityId),
     ChoosePantheon,
     ChooseAiResearch,
+    ChoosePolicyCard,
+    ChooseDedication,
     UnitNeedsOrders(UnitId),
 }
 
@@ -79,6 +81,12 @@ impl Game {
         {
             blockers.push(Blocker::ChooseAiResearch);
         }
+        if p.era.pending > 0 {
+            blockers.push(Blocker::ChooseDedication);
+        }
+        if !p.cards.draft.is_empty() {
+            blockers.push(Blocker::ChoosePolicyCard);
+        }
         if self.can_choose_pantheon(player)
             && !self.beliefs_of_class("BELIEF_CLASS_PANTHEON").is_empty()
         {
@@ -102,6 +110,8 @@ impl Game {
             Blocker::ChooseResearch => "Choose Research".into(),
             Blocker::ChoosePantheon => "Choose Pantheon".into(),
             Blocker::ChooseAiResearch => "Choose AI Research".into(),
+            Blocker::ChoosePolicyCard => "Choose Policy Card".into(),
+            Blocker::ChooseDedication => "Choose Dedication".into(),
             Blocker::ChooseProduction(_) => "Choose Production".into(),
             Blocker::UnitNeedsOrders(_) => "Unit Needs Orders".into(),
         }
@@ -125,9 +135,11 @@ impl Game {
         }
         self.spread_pressure();
         self.process_loyalty();
+        self.decay_grievances();
         let before = self.year();
         self.turn += 1;
         self.process_year_unlocks(before);
+        self.process_era();
         for p in 0..self.players.len() {
             if self.players[p].alive {
                 self.refresh_units(p);
@@ -145,6 +157,9 @@ impl Game {
         for id in moving {
             self.continue_path(id);
         }
+        self.share_maps();
+        self.record_history();
+        self.victory_warnings();
         self.check_victory();
         if self.notifications.len() > 400 {
             let drop = self.notifications.len() - 400;
@@ -163,6 +178,7 @@ impl Game {
         }
         self.advance(player, Tree::Tech, income.yields[SCIENCE]);
         self.process_ai(player);
+        self.process_inspiration(player, income.yields[crate::rules::CULTURE]);
         let p = &mut self.players[player];
         p.gold += income.net_gold;
         p.faith += income.yields[FAITH].round() as i32;

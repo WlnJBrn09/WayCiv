@@ -24,3 +24,32 @@ great_person_class = [
   { id = "artist",    name = "Great Artist",    unit = "UNIT_GREAT_ARTIST",    district = "DISTRICT_THEATER" },
   { id = "musician",  name = "Great Musician",  unit = "UNIT_GREAT_MUSICIAN",  district = "DISTRICT_THEATER" },
 ]
+
+# Dedications: each era, every civilization dedicates itself to one (two
+# in a Heroic Age). In a Golden or Heroic Age the effects apply; in a
+# Normal or Dark Age each `moment` earns +1 era score instead.
+dedication = [
+  { id = "DEDICATION_FREE_INQUIRY", name = "Free Inquiry", moment = "eureka", effects = [
+    { kind = "city_percent", yield = "science", percent = 15 },
+  ] },
+  { id = "DEDICATION_PEN_BRUSH_VOICE", name = "Pen, Brush, and Voice", moment = "great_person", effects = [
+    { kind = "city_percent", yield = "culture", percent = 15 },
+    { kind = "amenities", amount = 1 },
+  ] },
+  { id = "DEDICATION_MONUMENTALITY", name = "Monumentality", moment = "district", effects = [
+    { kind = "district_production", percent = 25 },
+    { kind = "wonder_production", percent = 15 },
+  ] },
+  { id = "DEDICATION_REFORM_COINAGE", name = "Reform the Coinage", moment = "trade_route", effects = [
+    { kind = "city_percent", yield = "gold", percent = 20 },
+    { kind = "trade_capacity", amount = 1 },
+  ] },
+  { id = "DEDICATION_TO_ARMS", name = "To Arms!", moment = "kill", effects = [
+    { kind = "combat", amount = 5 },
+    { kind = "unit_production", military = true, percent = 15 },
+  ] },
+  { id = "DEDICATION_EXODUS", name = "Exodus of the Evangelists", moment = "city", effects = [
+    { kind = "city_percent", yield = "faith", percent = 20 },
+    { kind = "housing", amount = 1 },
+  ] },
+]

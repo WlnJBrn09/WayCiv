@@ -47,8 +47,38 @@ fn main() -> wayciv_data::Result<()> {
     let human = game.human();
     game.players[human].human = false;
     let start = std::time::Instant::now();
+    // Rivalry counters: wars declared, cities changing hands, alliances.
+    let mut wars = 0;
+    let mut captures = 0;
+    let mut alliances = 0;
+    let mut owners: std::collections::BTreeMap<u32, usize> = Default::default();
+    let pairs = |g: &wayciv_core::Game, f: &dyn Fn(&wayciv_core::state::Relation) -> bool| {
+        let mut n = 0;
+        for a in g.players.iter().filter(|p| p.is_major()) {
+            for b in g.players.iter().filter(|p| p.is_major() && p.id > a.id) {
+                n += usize::from(f(&a.relations[b.id]));
+            }
+        }
+        n
+    };
+    let mut at_war = 0;
+    let mut allied = 0;
     while game.turn <= turns && game.winner.is_none() {
         game.end_turn();
+        let now_war = pairs(&game, &|r| r.at_war);
+        wars += now_war.saturating_sub(at_war);
+        at_war = now_war;
+        let now_allied = pairs(&game, &|r| r.alliance);
+        alliances += now_allied.saturating_sub(allied);
+        allied = now_allied;
+        for c in game.cities.values() {
+            if let Some(&o) = owners.get(&c.id)
+                && o != c.owner
+            {
+                captures += 1;
+            }
+            owners.insert(c.id, c.owner);
+        }
         if game.turn.is_multiple_of(25) {
             println!(
                 "--- turn {} ({:.1}s)",
@@ -57,10 +87,12 @@ fn main() -> wayciv_data::Result<()> {
             );
             let barbarian = game.barbarian().unwrap();
             println!(
-                "camps={} barbarian units={} roads={}",
+                "camps={} barbarian units={} roads={} villages={} era={} | wars declared={wars} at war now={at_war} cities changed hands={captures} alliances={alliances} (now {allied})",
                 game.camps.len(),
                 game.player_units(barbarian).count(),
-                game.map.tiles.iter().filter(|t| t.road).count()
+                game.map.tiles.iter().filter(|t| t.road).count(),
+                game.villages.len(),
+                game.era_name(game.world_era),
             );
             for p in game.players.iter().filter(|p| p.is_major()) {
                 let air = game.player_units(p.id).filter(|u| game.is_air(u)).count();
@@ -87,15 +119,24 @@ fn main() -> wayciv_data::Result<()> {
                 let policies = p.policies.len();
                 let units = game.player_units(p.id).count();
                 let wars = game.real_wars(p.id);
+                let ages: String = p
+                    .era
+                    .past
+                    .iter()
+                    .map(|(_, s, a)| format!("{}{s}", &a.name()[..1]))
+                    .collect::<Vec<_>>()
+                    .join(" ");
                 println!(
-                    "{:<24} {:<12} alive={} cities={:>2} pop={:>3} techs={:>2} policies={:>2} units={:>3} gold={:>5} wars={} gov={} score={}",
+                    "{:<24} {:<12} alive={} cities={:>2} pop={:>3} techs={:>2} cards={:>2} slotted={} era score={:>3} ages=[{ages}] units={:>3} gold={:>5} wars={} gov={} score={}",
                     p.name,
                     p.civ_name,
                     p.alive,
                     cities.len(),
                     pop,
                     techs,
+                    p.cards.count(),
                     policies,
+                    p.era.score,
                     units,
                     p.gold,
                     wars,

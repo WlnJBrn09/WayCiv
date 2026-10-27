@@ -1,5 +1,5 @@
 //! The empire menus: Religion (R), Government (G), Great People (P),
-//! City-States (E) and Victory (V).
+//! City-States (E), Victory (V), Eras (T), and the policy card offer.
 //!
 //! Each one starts with an instruction strip saying what to do next, shows
 //! its choices as cards (click to pick, gold frame = chosen, dimmed = not
@@ -443,6 +443,7 @@ enum GovAct {
     Full(String),
     Confirm,
     Undo,
+    Cards,
 }
 
 pub fn government(s: &mut Session, ui: &mut Ui) -> bool {
@@ -498,6 +499,24 @@ pub fn government(s: &mut Session, ui: &mut Ui) -> bool {
     };
     cards::instruction(ui, &text);
     let mut act = None;
+    // Policy cards: only kept cards can be slotted; Culture earns more.
+    ui.horizontal(|ui| {
+        let cost = game.inspiration_cost(me);
+        ui.label(
+            RichText::new(format!(
+                "You can slot the {} policy cards you have kept. Next card: {} / {cost} Culture.",
+                p.cards.count(),
+                p.cards.inspiration.min(cost)
+            ))
+            .color(TEXT_DIM),
+        );
+        if !p.cards.draft.is_empty()
+            && super::theme::pill_button(ui, Some(Glyph::Star), "Choose a new card", palette::TEAL, 0.0)
+                .clicked()
+        {
+            act = Some(GovAct::Cards);
+        }
+    });
 
     body(ui, 64.0, |ui| {
         cards::section(ui, "Government", "click another to switch");
@@ -672,6 +691,10 @@ pub fn government(s: &mut Session, ui: &mut Ui) -> bool {
         )),
         Some(GovAct::Undo) => {
             s.windows.policy_draft = None;
+            return false;
+        }
+        Some(GovAct::Cards) => {
+            s.windows.open(crate::screens::Panel::Cards);
             return false;
         }
         Some(GovAct::Confirm) => match s.game.set_policies(me, draft.clone()) {
@@ -950,6 +973,258 @@ pub fn victory(s: &mut Session, ui: &mut Ui) -> bool {
     false
 }
 
+// ------------------------------------------------------------ Policy cards
+
+/// The policy card offer: keep one of three. Closes once a card is kept.
+pub fn policy_cards(s: &mut Session, ui: &mut Ui) -> bool {
+    let me = s.me();
+    let game = &s.game;
+    let icons = &mut s.icons;
+    let content = &game.rules.content;
+    let p = &game.players[me];
+    let draft = p.cards.draft.clone();
+    let cost = game.inspiration_cost(me);
+    let culture = game.income(me).yields[4];
+    if draft.is_empty() {
+        cards::instruction(
+            ui,
+            "No cards on offer right now. Culture fills the meter below; when it is full, you choose a new card.",
+        );
+    } else {
+        cards::instruction(
+            ui,
+            "Choose one card to keep. You can slot kept cards in Government (G); the others may be offered again later.",
+        );
+    }
+    let mut picked = None;
+    body(ui, 20.0, |ui| {
+        if !draft.is_empty() {
+            cards::section(ui, "On offer", "click one to keep it");
+            cards::grid(ui, 280.0, draft.len(), |ui, i, w| {
+                let q = draft[i];
+                let pol = &content.policies[q];
+                let replaces: Vec<&str> = content
+                    .policies
+                    .iter()
+                    .enumerate()
+                    .filter(|(k, x)| {
+                        p.cards.adopted[*k] && x.obsoleted_by.as_deref() == Some(pol.id.as_str())
+                    })
+                    .map(|(_, x)| x.name.as_str())
+                    .collect();
+                let footer = if replaces.is_empty() {
+                    format!("{} policy · since {}", slot_name(&pol.slot), year_label(pol.unlock_year))
+                } else {
+                    format!("{} policy · replaces {}", slot_name(&pol.slot), replaces.join(", "))
+                };
+                let card = Card::new(&pol.name, &pol.description)
+                    .glyph(slot_glyph(&pol.slot))
+                    .accent(slot_color(&pol.slot))
+                    .footer(&footer)
+                    .corner("Keep", palette::TEAL)
+                    .state(State::Open);
+                if card.show(ui, icons, w).clicked() {
+                    picked = Some(q);
+                }
+            });
+        }
+        cards::section(ui, "Next card", "Culture fills the meter");
+        let have = p.cards.inspiration.min(cost);
+        let hint = if have >= cost {
+            "Full: the next offer comes as soon as you keep a card.".to_string()
+        } else {
+            match turns_to(have as f32, cost as f32, culture) {
+                Some(t) => format!("About {t} turns at {culture:.1} Culture per turn."),
+                None => "Earn Culture to fill it.".into(),
+            }
+        };
+        cards::progress(
+            ui,
+            Glyph::Culture,
+            YIELD_COLORS[4],
+            "Inspiration",
+            &format!("{have} / {cost}"),
+            have as f32 / cost.max(1) as f32,
+            &hint,
+        );
+        let kept = p.cards.count();
+        let waiting = game.draftable_policies(me).len();
+        ui.label(
+            RichText::new(format!(
+                "You have kept {kept} card{}. {waiting} unlocked card{} you haven't kept can still be offered; the calendar unlocks more.",
+                if kept == 1 { "" } else { "s" },
+                if waiting == 1 { "" } else { "s" }
+            ))
+            .color(TEXT_DIM),
+        );
+    });
+    if let Some(q) = picked {
+        let r = s.game.adopt_policy(me, q);
+        s.result(r);
+        return s.game.players[me].cards.draft.is_empty();
+    }
+    false
+}
+
+// -------------------------------------------------------------------- Eras
+
+fn moment_kind(kind: &str) -> &'static str {
+    match kind {
+        "eureka" => "Eureka",
+        "great_person" => "great person recruited",
+        "district" => "district completed",
+        "trade_route" => "trade route started",
+        "kill" => "enemy unit defeated",
+        "city" => "city founded",
+        _ => "moment",
+    }
+}
+
+/// What an age means, in a sentence.
+fn age_text(age: wayciv_core::eras::Age) -> &'static str {
+    use wayciv_core::eras::Age;
+    match age {
+        Age::Golden => "Your dedication's bonus applies, and every city gains +3 Loyalty per turn. Golden Ages are harder to keep: the next era needs 3 more era score.",
+        Age::Heroic => "A comeback from a Dark Age: choose two dedications, whose bonuses apply, and every city gains +3 Loyalty per turn.",
+        Age::Dark => "Cities lose 3 Loyalty per turn. Your dedication earns +1 era score for each of its moments, and the next Golden Age needs 3 less.",
+        Age::Normal => "Your dedication earns +1 era score for each of its moments. Earn enough era score this era to reach a Golden Age.",
+    }
+}
+
+/// Eras (T): your age, era score toward the next one, dedications, and the
+/// timeline of historic moments. Closes once the last dedication is chosen.
+pub fn eras(s: &mut Session, ui: &mut Ui) -> bool {
+    let me = s.me();
+    let game = &s.game;
+    let icons = &mut s.icons;
+    let content = &game.rules.content;
+    let e = &game.players[me].era;
+    let era_name = game.era_name(game.world_era).to_string();
+    let next_era = content.eras.get(game.world_era + 1);
+    let pending = e.pending;
+    let text = if pending > 0 {
+        format!(
+            "The {era_name} has begun: you are in a {}. Choose {} dedication{} for this era.",
+            e.age.name(),
+            pending,
+            if pending > 1 { "s" } else { "" }
+        )
+    } else {
+        "Historic moments earn era score. Your score this era decides your age in the next one.".to_string()
+    };
+    cards::instruction(ui, &text);
+    let mut chosen = None;
+    body(ui, 20.0, |ui| {
+        // The age banner.
+        ui.horizontal(|ui| {
+            super::theme::tag(ui, e.age.name(), palette::age_color(e.age));
+            ui.label(RichText::new(&era_name).size(20.0).color(TEXT));
+        });
+        ui.label(RichText::new(age_text(e.age)).color(TEXT_DIM));
+        ui.add_space(6.0);
+
+        // Dedications.
+        let golden = e.age.is_golden();
+        if pending > 0 {
+            cards::section(ui, "Dedications", "click to choose");
+            let options = game.dedication_options(me);
+            cards::grid(ui, 270.0, options.len(), |ui, i, w| {
+                let d = &content.dedications[options[i]];
+                let body = if golden {
+                    d.description.clone()
+                } else {
+                    format!(
+                        "+1 era score for each {}.\nIn a Golden Age: {}",
+                        moment_kind(&d.moment),
+                        d.description
+                    )
+                };
+                let card = Card::new(&d.name, &body)
+                    .glyph(Glyph::Hourglass)
+                    .accent(palette::age_color(e.age))
+                    .corner("Dedicate", palette::TEAL)
+                    .state(State::Open);
+                if card.show(ui, icons, w).clicked() {
+                    chosen = Some(options[i]);
+                }
+            });
+        } else if !e.dedications.is_empty() {
+            cards::section(ui, "Your dedication", if golden { "its bonus applies" } else { "earns era score" });
+            cards::grid(ui, 270.0, e.dedications.len(), |ui, i, w| {
+                let d = &content.dedications[e.dedications[i]];
+                let body = if golden {
+                    d.description.clone()
+                } else {
+                    format!("+1 era score for each {}.", moment_kind(&d.moment))
+                };
+                Card::new(&d.name, &body)
+                    .glyph(Glyph::Hourglass)
+                    .accent(palette::age_color(e.age))
+                    .state(State::Chosen)
+                    .show(ui, icons, w);
+            });
+        }
+
+        // Era score toward the next age.
+        let (dark, gold_at) = game.era_thresholds(me);
+        let projected = game.projected_age(me);
+        let when = next_era.map_or("by the end of the game".to_string(), |n| {
+            format!("when the {} begins ({}, turn {})", n.name, year_label(n.start_year), game.turn_of_year(n.start_year))
+        });
+        cards::section(ui, "Era score", &when);
+        cards::progress(
+            ui,
+            Glyph::Star,
+            palette::age_color(projected),
+            "This era",
+            &format!("{} (Dark Age below {dark}, Golden Age at {gold_at})", e.score),
+            e.score as f32 / gold_at.max(1) as f32,
+            &format!("Heading for a {}.", projected.name()),
+        );
+
+        // The timeline.
+        if !e.past.is_empty() {
+            cards::section(ui, "Past eras", "score earned, and the age it led to");
+            ui.horizontal_wrapped(|ui| {
+                for &(era, score, age) in &e.past {
+                    super::theme::tag(
+                        ui,
+                        &format!("{}: {score} → {}", game.era_name(era), age.name()),
+                        palette::age_color(age),
+                    );
+                }
+            });
+        }
+        cards::section(ui, "Historic moments", "newest first");
+        let mut last_era = usize::MAX;
+        for m in e.moments.iter().rev().take(200) {
+            if m.era != last_era {
+                last_era = m.era;
+                ui.label(RichText::new(game.era_name(m.era)).strong().color(GOLD));
+            }
+            ui.horizontal(|ui| {
+                ui.label(RichText::new(format!("Turn {:>3}", m.turn)).monospace().color(TEXT_DIM));
+                let score = if m.score > 0 {
+                    RichText::new(format!("+{}", m.score)).color(GOOD)
+                } else {
+                    RichText::new("   ").color(TEXT_DIM)
+                };
+                ui.label(score);
+                ui.label(RichText::new(&m.text).color(TEXT));
+            });
+        }
+        if e.moments.is_empty() {
+            ui.label(RichText::new("No moments yet. Found cities, meet other civilizations, explore.").color(TEXT_DIM));
+        }
+    });
+    if let Some(d) = chosen {
+        let r = s.game.choose_dedication(me, d);
+        s.result(r);
+        return s.game.players[me].era.pending == 0;
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1080,5 +1355,43 @@ mod tests {
         );
         assert!(s.game.players[me].religion.is_some());
         assert_eq!(s.game.players[me].beliefs.len(), 2);
+    }
+
+    #[test]
+    fn keeping_a_policy_card_closes_the_offer() {
+        let Some(mut s) = session() else {
+            eprintln!("skipped: content failed to load");
+            return;
+        };
+        let me = s.me();
+        assert!(!s.game.players[me].cards.draft.is_empty());
+        let ctx = egui::Context::default();
+        crate::palette::style(&ctx);
+        frame(&ctx, &mut s, policy_cards, vec![]);
+        let done = (100..700)
+            .step_by(20)
+            .any(|y| click(&ctx, &mut s, policy_cards, pos2(150.0, y as f32)));
+        assert!(done, "a card click should close the offer");
+        assert_eq!(s.game.players[me].cards.count(), 1);
+        assert!(s.game.players[me].cards.draft.is_empty());
+    }
+
+    #[test]
+    fn choosing_a_dedication_closes_the_eras_menu() {
+        let Some(mut s) = session() else {
+            eprintln!("skipped: content failed to load");
+            return;
+        };
+        let me = s.me();
+        s.game.players[me].era.pending = 1;
+        let ctx = egui::Context::default();
+        crate::palette::style(&ctx);
+        frame(&ctx, &mut s, eras, vec![]);
+        let done = (100..900)
+            .step_by(20)
+            .any(|y| click(&ctx, &mut s, eras, pos2(150.0, y as f32)));
+        assert!(done, "a dedication click should close the menu");
+        assert_eq!(s.game.players[me].era.dedications.len(), 1);
+        assert_eq!(s.game.players[me].era.pending, 0);
     }
 }

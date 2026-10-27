@@ -38,7 +38,22 @@ fn chips(s: &Session) -> Vec<Chip> {
     let capacity = game.trade_capacity(me);
     let population: i32 = game.player_cities(me).map(|c| c.population).sum();
     let net = income.net_gold;
+    let (dark, golden) = game.era_thresholds(me);
+    let projected = game.projected_age(me);
     vec![
+        Chip {
+            glyph: Glyph::Hourglass,
+            color: palette::age_color(p.era.age),
+            main: format!("{}", p.era.score),
+            sub: Some((format!("/{golden}"), palette::age_color(projected))),
+            tip: format!(
+                "Era score this era. You are in a {}. Dark Age below {dark}, Golden Age at {golden}: heading for a {}. Press T for the timeline.",
+                p.era.age.name(),
+                projected.name()
+            ),
+            priority: 4,
+            id: "era",
+        },
         Chip {
             glyph: Glyph::Science,
             color: YIELD_COLORS[3],
@@ -138,7 +153,7 @@ fn bar(s: &mut Session, ui: &mut Ui) {
     let unread = s.unread_notifications();
     let ai = s.game.ai_tree_unlocked(me);
     let _ = ai;
-    let menu: [MenuItem; 8] = [
+    let menu: [MenuItem; 9] = [
         MenuItem::new(Glyph::Bell, "Notifications", "Alerts", "N", Some(Panel::Notifications), GOLD, "What happened recently"),
         MenuItem::new(Glyph::Crown, "Leaders", "Leaders", "L", Some(Panel::Leaders), GOLD, "Other leaders, how they feel about you, diplomacy"),
         MenuItem::new(Glyph::Temple, "Government", "Policies", "G", Some(Panel::Government), GOLD, "Your government and policy cards"),
@@ -146,6 +161,7 @@ fn bar(s: &mut Session, ui: &mut Ui) {
         MenuItem::new(Glyph::Star, "Great People", "Great People", "P", Some(Panel::GreatPeople), GOLD, "Who comes next and how close you are"),
         MenuItem::new(Glyph::City, "City-States", "City-States", "E", Some(Panel::CityStates), GOLD, "Send envoys for bonuses"),
         MenuItem::new(Glyph::Cup, "Victory Progress", "Victory", "V", Some(Panel::Victory), GOLD, "How close everyone is to winning"),
+        MenuItem::new(Glyph::Hourglass, "Eras and Timeline", "Eras", "T", Some(Panel::Eras), palette::AGE_GOLDEN, "Your age, era score, dedications, and historic moments"),
         MenuItem::new(Glyph::Hex, "Map Key", "Map Key", "K", None, TEXT, "What the map colors and symbols mean"),
     ];
     let gap = 6.0;
