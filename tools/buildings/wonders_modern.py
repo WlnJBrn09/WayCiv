@@ -411,9 +411,57 @@ def starbase_la():
         tree(x, y, 0.8, 'round', g)
 
 
+def prometheus():
+    g = bl.plot('concrete')
+    # a plaza with a long reflecting pool in front of a stepped plinth
+    stone = M('stone', rgb='#d9d4c8', style='blocks')
+    box(0, -0.55, g, 0.9, 0.24, 0.035, stone)
+    box(0, -0.55, g + 0.004, 0.82, 0.17, 0.034, M('water', rgb='#3f8fbf', rough=0.04))
+    for k, w in enumerate((0.62, 0.5, 0.4)):
+        box(0, 0.05, g + 0.05 * k, w, w, 0.05, stone)
+    box(0, 0.05, g + 0.15, 0.3, 0.3, 0.22, M('dark', rgb='#3c3f46'), taper=0.92)
+    box(0, 0.05 - 0.151, g + 0.2, 0.18, 0.004, 0.05, M('gold'))
+    gold = M('gold', rgb='#e6b450', rough=0.25, metal=0.95)
+    z = g + 0.37
+    h = 0.95
+    with at(0, 0.05, z, -25):
+        # striding legs with knees and calves, a draped hip cloth
+        for sx, fwd in ((-1, -0.06), (1, 0.08)):
+            knee = (sx * 0.07, fwd, 0.24 * h)
+            rod((sx * 0.06, fwd * 1.6, 0.0), knee, 0.038, gold, r1=0.048)
+            sphere(knee[0], knee[1], knee[2], 0.045, gold, n=10, rings=6)
+            rod(knee, (sx * 0.06, 0.0, 0.45 * h), 0.05, gold, r1=0.062)
+            box(sx * 0.06, fwd * 1.6 + 0.02, 0.0, 0.05, 0.1, 0.03, gold)
+        lathe(0, 0, 0.38 * h, [(0.13, 0), (0.12, 0.08 * h), (0.1, 0.12 * h)], gold, n=16)
+        # a broad chest and shoulders, the head turned up toward the fire
+        lathe(0, 0, 0.48 * h, [(0.095, 0), (0.12, 0.12 * h), (0.15, 0.24 * h), (0.07, 0.3 * h)], gold, n=16)
+        for sx in (-1, 1):
+            sphere(sx * 0.14, 0.0, 0.74 * h, 0.06, gold, n=12, rings=8)
+        rod((0, 0, 0.77 * h), (0.01, -0.01, 0.82 * h), 0.035, gold)
+        sphere(0.015, -0.02, 0.87 * h, 0.055, gold, n=14, rings=10)
+        blob(0.0, 0.0, 0.89 * h, 0.05, M('gold', rgb='#c99a3a', rough=0.4, metal=0.9), seed=5, sub=1, squash=0.8)
+        # right arm raised high with the flame; left arm reaching back
+        rod((0.15, 0, 0.75 * h), (0.2, -0.02, 0.98 * h), 0.04, gold, r1=0.034)
+        rod((0.2, -0.02, 0.98 * h), (0.22, -0.03, 1.18 * h), 0.034, gold, r1=0.028)
+        sphere(0.22, -0.03, 1.2 * h, 0.035, gold, n=10, rings=6)
+        fire = M('flame', rgb='#ffcf50', emit='#ffa830', emit_strength=14.0)
+        cone(0.22, -0.03, 1.21 * h, 0.06, 0.16, fire, n=10)
+        cone(0.22, -0.03, 1.23 * h, 0.035, 0.22, M('flame2', rgb='#fff2a8', emit='#fff0a0', emit_strength=16.0), n=8)
+        rod((-0.15, 0, 0.75 * h), (-0.22, 0.06, 0.56 * h), 0.04, gold, r1=0.034)
+        rod((-0.22, 0.06, 0.56 * h), (-0.26, 0.14, 0.42 * h), 0.034, gold, r1=0.03)
+    point_light(0.2, 0.0, z + 1.25 * h, (1.0, 0.7, 0.35), power=8.0, size=0.06)
+    # flame-coloured banners and lamps around the plaza, palms behind
+    for sx in (-1, 1):
+        banner(sx * 0.48, -0.25, g, h=0.36, w=0.07, mat=M('orange', rgb='#e0702a'))
+        lamp(sx * 0.32, -0.38, g, h=0.14)
+    for (x, y) in [(-0.62, 0.35), (0.62, 0.38), (-0.35, 0.62), (0.4, 0.64)]:
+        tree(x, y, 0.95, 'palm', g)
+    crowd(g, [(-0.3, -0.3), (0.28, -0.32), (-0.12, -0.42), (0.1, -0.44)], ('white', 'blue', 'orange', 'cream'))
+
+
 WONDERS = {
     'eiffel_tower': eiffel_tower, 'ruhr_valley': ruhr_valley, 'broadway': broadway, 'cristo_redentor': cristo_redentor,
     'estadio_do_maracana': maracana, 'sydney_opera_house': sydney_opera_house, 'biosphere': biosphere, 'generic': generic,
-    'starbase_tx': starbase_tx, 'starbase_la': starbase_la,
+    'starbase_tx': starbase_tx, 'starbase_la': starbase_la, 'prometheus': prometheus,
 }
 SPRITES = {f'wonder_{k}': (v, False) for k, v in WONDERS.items()}

@@ -240,8 +240,12 @@ def item_shield(o, side=NEAR, kind="round", r=0.34, c="team", rim="bronze", boss
     with xf(cen, (0, 0, side * 50)):
         # local X is the shield normal
         if kind == "round":
-            cyl((0, 0, 0), r, 0.07, c, rot=(0, 90, 0), seg=14, name="shield")
-            torus((0.0, 0, 0), r, 0.035, metal(rim), plane="YZ", seg=16, tseg=5)
+            cyl((0, 0, 0), r, 0.07, c, rot=(0, 90, 0), seg=24, name="shield")
+            torus((0.0, 0, 0), r, 0.035, metal(rim), plane="YZ", seg=24, tseg=6)
+            torus((0.037, 0, 0), r * 0.62, 0.016, "white" if c == "team" else "team", plane="YZ", seg=20, tseg=4)
+            for k in range(10):
+                a = 2 * math.pi * k / 10
+                sph((0.04, r * 0.84 * math.cos(a), r * 0.84 * math.sin(a)), 0.018, metal(rim), seg=6, rings=4, name="rivet")
             if boss:
                 sph((0.06, 0, 0), 0.1, metal(rim), scale=(0.6, 1, 1))
         elif kind == "rect":      # Roman scutum
@@ -538,6 +542,32 @@ ITEMS = dict(
 
 
 # ------------------------------------------------------------------ human
+def boot_(foot, boot):
+    """A boot: rounded toe cap, shaft, and a darker sole with a heel."""
+    x, y, z = foot
+    sph((x + 0.1, y, z - 0.01), 0.075, boot, scale=(1.35, 0.85, 0.7), seg=12, rings=7, name="toe")
+    limb((x - 0.01, y, z - 0.03), (x - 0.01, y, z + 0.1), 0.075, boot, r1=0.07, seg=10, name="bootshaft")
+    box((x + 0.06, y, z - 0.07), (0.28, 0.13, 0.03), "dkwood", bevel=0.012, name="sole")
+    box((x - 0.04, y, z - 0.055), (0.08, 0.12, 0.04), "dkwood", bevel=0.01, name="heel")
+
+
+def fist(c, skin, side):
+    """A closed hand: palm, a row of knuckles, and the thumb."""
+    sph(c, 0.07, skin, scale=(1.0, 0.85, 1.0), seg=10, rings=7, name="hand")
+    for k in range(4):
+        sph(c + Vector((0.045, side * (-0.035 + 0.023 * k), 0.015 - 0.008 * k)), 0.025, skin, seg=6, rings=4,
+            name="knuckle")
+    sph(c + Vector((0.025, -side * 0.055, 0.03)), 0.026, skin, scale=(1.2, 1, 1), seg=6, rings=4, name="thumb")
+
+
+def hem(z, rx, ry, m, n=14, depth=0.022):
+    """A loose hem: a skirt ring with soft vertical folds."""
+    for k in range(n):
+        a = 2 * math.pi * k / n
+        limb((rx * 0.97 * math.cos(a), ry * 0.97 * math.sin(a), z + 0.01), (rx * 0.9 * math.cos(a), ry * 0.9 * math.sin(a), z + 0.22),
+             depth, m, r1=depth * 0.4, seg=6, name="fold")
+
+
 def _torso(o, kind):
     top = C(o, "top", "undyed")
     legs = C(o, "legs", "brown")
@@ -585,17 +615,20 @@ def human(o):
                 else:
                     lc = legc
                 limb((0, sy * 0.11, 0.8), knee, 0.105, lc, r1=0.085)
+                sph(knee, 0.088, lc, seg=10, rings=7, name="knee")
                 limb(knee, foot, 0.085, lc, r1=0.07)
-                box((foot[0] + 0.06, foot[1], foot[2]), (0.26, 0.13, 0.12), boot, bevel=0.03)
+                boot_(foot, boot)
         if kind == "bare":
             _torso(dict(o, top=o.get("skin", "skin")), "tunic")
             # kilt
             cyl((0, 0, 0.62), 0.22, 0.34, C(o, "legs", "undyed"), r2=0.17, seg=10)
         elif kind == "tunic":
             _torso(o, "tunic")
-            cyl((0, 0, 0.68), 0.25, 0.3, C(o, "top", "undyed"), r2=0.18, seg=10)
+            cyl((0, 0, 0.68), 0.25, 0.3, C(o, "top", "undyed"), r2=0.18, seg=14)
+            hem(0.62, 0.25, 0.25, C(o, "top", "undyed"))
         elif kind == "robe":
             _torso(o, "robe")
+            hem(0.0, 0.34, 0.36, C(o, "top", "undyed"), n=18, depth=0.024)
             for sy in (-1, 1):
                 box((0.1, sy * 0.1, 0.04), (0.28, 0.13, 0.08), boot)
         elif kind == "coat":
@@ -613,7 +646,8 @@ def human(o):
             _torso(o, "tunic")
         # belt
         if kind in ("tunic", "armor", "uniform", "coat", "plate", "bare"):
-            cyl((0, 0, 0.74), 0.205, 0.07, o.get("belt", "leather"), r2=0.2, seg=10)
+            cyl((0, 0, 0.74), 0.205, 0.07, o.get("belt", "leather"), r2=0.2, seg=14)
+            box((0.205, 0, 0.775), (0.02, 0.07, 0.055), metal("bronze"), bevel=0.008, name="buckle")
         # team pieces
         tm = o.get("team", ())
         if "tabard" in tm:
@@ -702,4 +736,4 @@ def arm(sh, hand, side, sleeve, skin, bare):
     limb(elbow, hand_c, 0.08, sleeve if not bare else skin, r1=0.07)
     if not bare:
         limb(elbow + (hand_c - elbow) * 0.78, hand_c, 0.075, skin, r1=0.065)
-    sph(hand_c, 0.075, skin, seg=7, rings=5, name="hand")
+    fist(hand_c, skin, side)

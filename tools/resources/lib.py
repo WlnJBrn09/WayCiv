@@ -581,6 +581,60 @@ def crate(b, pos, s=1.0, yaw=0.0, col="#9a6a38"):
     b.box(wm, (x, y, z + 0.08 * s), (0.2 * s, 0.2 * s, 0.16 * s), yaw=yaw)
 
 
+def ore_cart(b, pos, yaw=0.0, load=None, s=1.0):
+    """A little mine cart on a stub of rail, heaped with `load` (a material)."""
+    x, y, z = pos
+    wd = wood_mat("#7a5232", "#4e331d")
+    ir = mat("cartiron", c("#3a3c40"), 0.45, metal=0.8)
+    ca, sa = math.cos(yaw), math.sin(yaw)
+    def at_(lx, ly):
+        return (x + (lx * ca - ly * sa) * s, y + (lx * sa + ly * ca) * s)
+    for ly in (-0.07, 0.07):  # the rails and sleepers
+        p0, p1 = at_(-0.26, ly), at_(0.26, ly)
+        b.cyl(ir, (p0[0], p0[1], z + 0.008 * s), (p1[0], p1[1], z + 0.008 * s), 0.008 * s, 0.008 * s, seg=4)
+    for k in range(4):
+        px, py = at_(-0.21 + k * 0.14, 0.0)
+        b.box(wd, (px, py, z + 0.004 * s), (0.04 * s, 0.2 * s, 0.008 * s), yaw=yaw)
+    for lx in (-0.07, 0.07):  # wheels, their axles across the cart
+        for ly in (-0.075, 0.075):
+            p0, p1 = at_(lx, ly - 0.012), at_(lx, ly + 0.012)
+            b.cyl(ir, (p0[0], p0[1], z + 0.035 * s), (p1[0], p1[1], z + 0.035 * s), 0.03 * s, 0.03 * s, seg=12)
+    cx, cy = at_(0.0, 0.0)
+    b.box(wd, (cx, cy, z + 0.09 * s), (0.22 * s, 0.15 * s, 0.1 * s), yaw=yaw)
+    b.box(ir, (cx, cy, z + 0.142 * s), (0.23 * s, 0.16 * s, 0.012 * s), yaw=yaw)
+    if load is not None:
+        b.rock(load, (cx, cy, z + 0.16 * s), (0.11 * s, 0.08 * s, 0.06 * s), 77, subdiv=1, rough=0.35)
+
+
+def pickaxe(b, pos, yaw=0.0, s=1.0):
+    """A pick lying on the ground."""
+    x, y, z = pos
+    ca, sa = math.cos(yaw), math.sin(yaw)
+    wd = wood_mat("#b08050", "#7a5230")
+    ir = mat("pickiron", c("#5a5e66"), 0.4, metal=0.85)
+    hx, hy = x + 0.18 * ca * s, y + 0.18 * sa * s
+    b.cyl(wd, (x - 0.18 * ca * s, y - 0.18 * sa * s, z + 0.015 * s), (hx, hy, z + 0.02 * s), 0.012 * s, 0.012 * s, seg=6)
+    b.cyl(ir, (hx - 0.12 * sa * s, hy + 0.12 * ca * s, z + 0.02 * s), (hx + 0.12 * sa * s, hy - 0.12 * ca * s, z + 0.02 * s),
+          0.018 * s, 0.004 * s, seg=6)
+
+
+def ingots(b, pos, m, n=5, yaw=0.0, s=1.0):
+    """Cast bars stacked in a little pyramid."""
+    x, y, z = pos
+    ca, sa = math.cos(yaw), math.sin(yaw)
+    k = 0
+    row, level = 3, 0
+    while k < n and row > 0:
+        for i in range(row):
+            if k >= n:
+                break
+            lx = (i - (row - 1) / 2) * 0.075 * s
+            b.box(m, (x - lx * sa, y + lx * ca, z + (0.022 + 0.04 * level) * s), (0.17 * s, 0.065 * s, 0.04 * s), yaw=yaw)
+            k += 1
+        row -= 1
+        level += 1
+
+
 def pot(b, pos, s=1.0, col="#b0583a", fill=None):
     x, y, z = pos
     m = mat("clay" + col, c(col), 0.7, col2=c(col), scale=8, bump=0.1)

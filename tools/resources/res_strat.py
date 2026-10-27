@@ -37,8 +37,9 @@ def iron(b):
         b.rock(rust, (x, y, z), (r, r * 0.9, r * 0.8), 10 + i, rough=0.35)
     for i, (x, y, z) in enumerate([(0.1, 0.2, 0.16), (-0.12, -0.1, 0.3), (0.32, -0.24, 0.1)]):
         b.rock(fe, (x, y, z), (0.07, 0.06, 0.05), 20 + i, rough=0.3)
-    b.box(fe, (0.1, 0.36, 0.03), (0.2, 0.08, 0.05), yaw=0.2)
-    b.box(fe, (0.14, 0.36, 0.08), (0.2, 0.08, 0.05), yaw=0.25)
+    ore_cart(b, (0.2, -0.32, 0.0), yaw=0.35, load=rust, s=1.5)
+    pickaxe(b, (-0.3, -0.38, 0.0), yaw=-0.4)
+    ingots(b, (0.12, 0.38, 0.0), fe, n=3, yaw=0.2)
     return {}
 
 
@@ -50,6 +51,8 @@ def coal(b):
         b.rock(cm, (x, y, z), (r, r * 0.9, r * 0.8), i, subdiv=1, rough=0.3)
     for i in range(6):
         b.rock(sp, (-0.2 + 0.08 * i, 0.0 + 0.05 * (i % 3), 0.24), (0.03, 0.03, 0.02), 40 + i, subdiv=1)
+    ore_cart(b, (0.22, -0.36, 0.0), yaw=0.3, load=cm, s=1.5)
+    pickaxe(b, (-0.25, -0.42, 0.0), yaw=0.5)
     return {}
 
 
@@ -68,6 +71,8 @@ def niter(b):
         h = 0.1 + rng.random() * 0.14
         lx, ly = (rng.random() - 0.5) * 0.3, (rng.random() - 0.5) * 0.3
         b.cyl(nm if i % 3 else ym, (x, y, 0.14), (x + lx * h, y + ly * h, 0.14 + h), 0.016, 0.004, seg=4)
+    sack(b, (0.3, -0.38, 0), 1.2, "#d8c8a0", "#f4f0d8")
+    sack(b, (0.12, -0.42, 0), 1.0, "#c8b890", "#f4f0d8")
     return {}
 
 

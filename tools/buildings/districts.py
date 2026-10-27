@@ -209,6 +209,19 @@ def commercial(lvl):
         barrel(0.15, -0.54, g)
         barrel(0.19, -0.5, g)
         cart(-0.22, -0.55, g, rot=-6, load='orange')
+        # merchants' shops along both sides of the square, awnings out front
+        walls = ['cream', 'sand', 'plaster', 'cream']
+        for sx in (-1, 1):
+            for k, y in enumerate((-0.12, 0.12, 0.34)[: 1 + lvl]):
+                x = sx * 0.66
+                with at(x, y, g, -sx * 90):
+                    box(0, 0, 0, 0.18, 0.14, 0.13 + 0.02 * (k % 2), M(walls[(k + (sx > 0)) % 4]))
+                    gable(0, 0, 0.13 + 0.02 * (k % 2), 0.2, 0.16, 0.07, M('terra'), overhang=0.01, mat_end=M('cream'))
+                    windows(0, 0, 0, 0.18, 0.14, 0.13, 2, 1, ww=0.03, wh=0.035, z0=0.65, z1=0.65, sides='f')
+                    door(0, 0, 0, 0.18, 0.14, 0.035, 0.06)
+                    for ci in range(5):
+                        box(-0.072 + ci * 0.036, -0.1, 0.07, 0.036, 0.06, 0.008,
+                            M(cols[(k + ci + (sx > 0)) % 6] if ci % 2 == 0 else 'white'))
         # hall at the back
         if lvl == 1:
             box(0, 0.4, g, 0.34, 0.16, 0.12, M('cream'))

@@ -61,7 +61,7 @@ for name, fn in models.items():
     b = lib.Builder(name)
     opts = fn(b) or {}
     sc = lib.setup_render(
-        res=opts.get("res", 256),
+        res=opts.get("res", 512),
         samples=opts.get("samples", 40),
         top_down=opts.get("top_down", False),
         ortho=opts.get("ortho", 1.7),

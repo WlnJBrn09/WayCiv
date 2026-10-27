@@ -399,6 +399,20 @@ effects = [
 ]
 
 [[wonder]]
+id = "BUILDING_PROMETHEUS"
+name = "Prometheus"
+cost = 1850
+tech = "TECH_SATELLITES"
+yields = { culture = 8, science = 2 }
+on = ["TERRAIN_PLAINS", "TERRAIN_PLAINS_HILLS", "TERRAIN_DESERT", "TERRAIN_DESERT_HILLS"]
+ocean = true
+description = "The titan who stole fire for humankind, raised at Starbase, TX with his flame held toward the sky."
+effects = [
+  { kind = "city_percent", yield = "culture", percent = 15 },
+  { kind = "city_percent", yield = "science", percent = 5 },
+]
+
+[[wonder]]
 id = "BUILDING_STARBASE_LA"
 name = "Starbase, LA"
 cost = 2150

@@ -141,7 +141,31 @@ def sand(seed):
     return col
 
 
-BIOMES = [grass, plains, desert, tundra, snow, coast, ocean, deep]
+def relief(col, seed, amp, grain=0.0, clumps=0.0):
+    """Light the flat colour over a small heightfield (rolling ground and
+    clumps of sod or stone) so each tile has gentle bumps and soft shading.
+    The result is rescaled to the flat colour's mean brightness, so biomes
+    keep their colour and tiles still match their neighbours."""
+    h = (fft_noise(N, 2.6, seed) - 0.5) * amp
+    if grain:
+        h = h + (fft_noise(N, 1.6, seed + 1) - 0.5) * grain
+    if clumps:
+        h = h + smoothstep(0.6, 0.92, fft_noise(N, 1.9, seed + 2)) * clumps
+    h = blurn(h, 2.0)
+    out = shade(h, col, ambient=0.55, sun=0.7, shadows=True, shadow_len=18, shadow_strength=0.3, ao=0.3)
+    out = out * (col.mean() / max(out.mean(), 1e-4))
+    return np.clip(out, 0, 1)
+
+
+def lit(fn, amp, grain=0.0, clumps=0.0):
+    def cell(seed):
+        return relief(fn(seed), seed + 500, amp, grain, clumps)
+    cell.__name__ = fn.__name__
+    return cell
+
+
+BIOMES = [lit(grass, 0.02, 0.0, 0.012), lit(plains, 0.02, 0.0, 0.01), lit(desert, 0.03, 0.0, 0.0),
+          lit(tundra, 0.025, 0.0, 0.015), lit(snow, 0.03, 0.0, 0.0), coast, ocean, deep]
 BIOME_NAMES = ["GRASS", "PLAINS", "DESERT", "TUNDRA", "SNOW", "COAST", "OCEAN", "DEEP_OCEAN"]
 
 
@@ -152,7 +176,7 @@ def build_atlas():
     for b, fn in enumerate(BIOMES):
         for v in range(3):
             cells.append(fn(1000 * (b + 1) + 37 * v))
-    cells.append(rock(77))
+    cells.append(relief(rock(77), 577, 0.03, 0.0, 0.012))
     cells.append(sand(78))
     cells.append(np.ones((N, N, 3), np.float32))
     for i, c in enumerate(cells):

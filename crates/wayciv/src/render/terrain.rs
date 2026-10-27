@@ -7,6 +7,7 @@
 //!   features.png  forest, rainforest, taiga, marsh, floodplains, dunes,
 //!                 glacier, oasis, sea ice
 //!   wonders.png   one sprite per natural wonder (+ a generic marker)
+//!   doodads.png   small ground details (grass, flowers, rocks, scrub...)
 //! Missing files fall back to the flat-colour drawing in `flat`.
 //!
 //! To keep thousands of tiles cheap, tiles are not painted one by one:
@@ -60,10 +61,25 @@ const WONDER_OFF: f32 = -0.3;
 const MTN_SCALE: f32 = 0.86;
 /// Natural wonders are drawn larger than ordinary relief.
 const WONDER_SCALE: f32 = 1.2;
-/// Sprite sheet cell numbers: relief first, then features, then wonders.
+/// Sprite sheet cell numbers: relief first, then features, wonders, doodads.
 const SPRITE_FEATURES: usize = 48;
 const SPRITE_WONDERS: usize = 80;
-const SPRITE_ROWS: usize = 13;
+const SPRITE_DOODADS: usize = 104;
+const SPRITE_ROWS: usize = 15;
+/// A doodad cell covers this many hex radii (square); see tools/terrain/doodads.py.
+const DOODAD_SPAN: f32 = 1.2;
+/// Doodad cells per land biome (grass, plains, desert, tundra, snow), in
+/// the order of tools/terrain/doodads.py; repeats make a cell more common.
+const DOODAD_SETS: [&[usize]; 5] = [
+    &[0, 0, 0, 1, 2, 3, 3, 4, 5, 15],
+    &[6, 6, 6, 7, 3, 4, 1, 15],
+    &[8, 8, 9, 9, 10, 7],
+    &[11, 12, 12, 4, 6, 6],
+    &[13, 13, 4],
+];
+/// Rocky doodads, for hills.
+const DOODAD_ROCKS: [usize; 5] = [4, 5, 4, 8, 11];
+const DOODAD_REEDS: usize = 14;
 /// Mountain variants per biome.
 const MOUNTAINS: usize = 6;
 const WONDERS: [&str; 20] = [
@@ -509,6 +525,47 @@ impl Frame {
     }
 }
 
+/// Small ground details on open land: a few tufts, flowers, rocks or scrub
+/// per tile (fewer on hills, around resources and improvements; none under
+/// cities, districts and wonders), placed off-centre so units stay clear.
+fn doodads(f: &mut Frame, t: &TileCtx, biome: usize, hills: bool, h: u32) {
+    let (game, c, z) = (t.game, t.c, t.z);
+    if z < 18.0 {
+        return;
+    }
+    let tile = t.tile();
+    if tile.district.is_some() || tile.wonder.is_some() || game.city_at(t.pos).is_some() {
+        return;
+    }
+    let busy = tile.improvement.is_some() || tile.resource.is_some();
+    let count = if hills || busy { 1 + h % 2 } else { 4 + (h >> 3) % 3 };
+    let mut spots: Vec<(Vec2, usize, f32)> = (0..count)
+        .map(|k| {
+            let r = hash2(t.pos.x, t.pos.y, 101 + k);
+            let a = (r & 0xffff) as f32 / 65535.0 * TAU;
+            let d = 0.36 + 0.34 * ((r >> 16) & 0xff) as f32 / 255.0;
+            let cell = if hills {
+                DOODAD_ROCKS[(r >> 24) as usize % DOODAD_ROCKS.len()]
+            } else if tile.river && (r >> 28) % 3 == 0 && biome <= 1 {
+                DOODAD_REEDS
+            } else {
+                let set = DOODAD_SETS[biome];
+                set[(r >> 24) as usize % set.len()]
+            };
+            let scale = 0.8 + 0.4 * ((r >> 8) & 0xff) as f32 / 255.0;
+            (vec2(a.cos() * d, a.sin() * d * 0.85), cell, scale)
+        })
+        .collect();
+    // Back to front, so nearer details overlap farther ones.
+    spots.sort_by(|a, b| a.0.y.total_cmp(&b.0.y));
+    for (off, cell, scale) in spots {
+        let size = DOODAD_SPAN * z * scale;
+        let center = c + off * z - vec2(0.0, 0.08 * size);
+        let rect = Rect::from_center_size(center, vec2(size, size));
+        f.sprite(SPRITES, SPRITE_DOODADS + cell, rect, (h >> (cell % 7)) & 1 == 1);
+    }
+}
+
 /// Appends a `cols` x `rows` vertex grid as quads.
 fn push_grid(m: &mut Mesh, verts: &[Vertex], cols: usize, rows: usize) {
     let base = m.vertices.len() as u32;
@@ -529,6 +586,7 @@ struct Has {
     relief: bool,
     features: bool,
     wonders: bool,
+    doodads: bool,
 }
 
 enum Load {
@@ -614,6 +672,7 @@ impl TerrainArt {
                     relief: put("relief.png", 0, 6),
                     features: put("features.png", 6, 4),
                     wonders: put("wonders.png", 10, 3),
+                    doodads: put("doodads.png", 13, 2),
                 };
                 self.sprites = Some(Atlas::new("sprites", w, h, px));
             }
@@ -954,6 +1013,9 @@ fn tile(
             let rect = Frame::sprite_rect(c, z, HILL_OFF, 1.0, 0.0);
             f.sprite(SPRITES, bidx * 3 + variant, rect, false);
         }
+    }
+    if has.doodads && !info.water && !info.mountain && biome <= 4 && feat.is_none() {
+        doodads(f, t, bidx, info.hills, h);
     }
     if let Some(feat) = feat {
         if has.features

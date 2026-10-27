@@ -134,6 +134,9 @@ struct Slot {
 /// middle, civilians along the bottom, aircraft across the top.
 fn slots(game: &Game, units: &[&Unit]) -> Vec<Slot> {
     let (mut civilians, mut aircraft) = (0, 0);
+    // In a city the garrison stands aside in the lower corner, a little
+    // smaller, so the city itself stays in view.
+    let city = units.first().is_some_and(|u| game.city_at(u.pos).is_some());
     units
         .iter()
         .map(|u| {
@@ -147,15 +150,15 @@ fn slots(game: &Game, units: &[&Unit]) -> Vec<Slot> {
                 }
             } else if game.is_military(u) {
                 Slot {
-                    off: vec2(0.0, -0.05),
-                    radius: 0.42,
+                    off: if city { vec2(0.4, 0.36) } else { vec2(0.0, -0.05) },
+                    radius: if city { 0.34 } else { 0.42 },
                     air: false,
                 }
             } else {
                 civilians += 1;
                 Slot {
-                    off: vec2(-0.45 + 0.25 * ((civilians - 1) % 4) as f32, 0.4),
-                    radius: 0.3,
+                    off: vec2(-0.45 + 0.25 * ((civilians - 1) % 4) as f32, if city { 0.5 } else { 0.4 }),
+                    radius: if city { 0.26 } else { 0.3 },
                     air: false,
                 }
             }

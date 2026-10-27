@@ -663,8 +663,8 @@ pub fn draw_resource(
         return;
     }
     let color = class_color(&res.class);
-    // Kept small and low-key: a little model on the tile and a small,
-    // slightly see-through badge tucked into the corner.
+    // The model on the tile, large enough to read at a glance, and the
+    // class badge in the corner.
     let corner = c + vec2(0.5 * z, -0.42 * z);
 
     // Tiny zoom: just a small class dot.
@@ -680,10 +680,10 @@ pub fn draw_resource(
         tile.district.is_some() || tile.wonder.is_some() || game.city_at(t.pos).is_some();
     if !crowded {
         let (at, scale) = match improvement_of(t).map(|n| layout_of(&n)) {
-            None => (c + vec2(0.0, 0.12 * z), 0.6),
-            Some(Layout::Field) => (c + vec2(0.0, 0.08 * z), 0.5),
-            Some(Layout::Ring) => (c + vec2(0.0, 0.1 * z), 0.45),
-            Some(Layout::Side) => (c + vec2(0.24 * z, -0.04 * z), 0.42),
+            None => (c + vec2(0.0, 0.1 * z), 0.86),
+            Some(Layout::Field) => (c + vec2(0.0, 0.08 * z), 0.62),
+            Some(Layout::Ring) => (c + vec2(0.0, 0.1 * z), 0.58),
+            Some(Layout::Side) => (c + vec2(0.26 * z, -0.04 * z), 0.52),
         };
         if let Some(tex) = art.tex(&ctx, "sprites", &name) {
             blit(painter, tex, at, SPRITE * z * scale, Color32::WHITE, 0);
@@ -691,9 +691,10 @@ pub fn draw_resource(
     }
 
     // The class badge in the corner.
-    let radius = (z * 0.15).max(5.0);
+    let radius = (z * 0.19).max(6.0);
     let badge = Rect::from_center_size(corner, vec2(radius * 2.0, radius * 2.0));
-    let tint = Color32::from_white_alpha(215);
+    let tint = Color32::WHITE;
+    painter.circle_filled(corner + vec2(0.0, radius * 0.12), radius * 1.04, Color32::from_black_alpha(90));
     if let Some(tex) = art.tex(&ctx, "icons", &name) {
         painter.image(
             tex.handle.id(),

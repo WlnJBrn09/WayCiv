@@ -3,7 +3,7 @@
 
   python post.py RAW_DIR OUT_DIR       (OUT_DIR = assets/resources)
 
-  sprites/<id>.png        map sprites of resources        (160 px, RGBA)
+  sprites/<id>.png        map sprites of resources        (224 px, RGBA, dark rim)
   icons/<id>.png          class-coloured circular badges  (128 px, RGBA)
   improvements/<id>.png   improvement and camp sprites    (160 px; field decals 224 px)
 Needs Pillow + numpy.
@@ -13,7 +13,7 @@ import sys
 import zlib
 
 import numpy as np
-from PIL import Image, ImageChops, ImageDraw
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 RAW, OUT = sys.argv[1], sys.argv[2]
 
@@ -100,6 +100,23 @@ def make_icon(raw, klass_name, size=128):
     return premul_resize(badge, size)
 
 
+SPRITE_PX = 224
+
+
+def outlined(sprite):
+    """A thin dark rim under the model (not its soft ground shadow), so a
+    resource stands out from busy terrain."""
+    a = np.asarray(sprite)[..., 3]
+    solid = Image.fromarray(np.where(a > 150, 255, 0).astype(np.uint8), "L")
+    rim = solid.filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.GaussianBlur(1.0))
+    lay = Image.new("RGBA", sprite.size, (24, 20, 14, 0))
+    lay.putalpha(rim.point(lambda v: int(v * 0.6)))
+    out = Image.new("RGBA", sprite.size, (0, 0, 0, 0))
+    out.alpha_composite(lay)
+    out.alpha_composite(sprite)
+    return out
+
+
 def noise_field(W, seed, cells=(5, 11, 23)):
     """Smooth value noise in [-1, 1], a few octaves."""
     rng = np.random.default_rng(seed)
@@ -136,13 +153,13 @@ def main():
     for name in names:
         raw = Image.open(os.path.join(RAW, name + ".png")).convert("RGBA")
         if name.startswith("resource_"):
-            premul_resize(raw, 160).save(os.path.join(OUT, "sprites", name + ".png"), optimize=True)
+            outlined(premul_resize(raw, SPRITE_PX)).save(os.path.join(OUT, "sprites", name + ".png"), optimize=True)
             make_icon(raw, klass(name)).save(os.path.join(OUT, "icons", name + ".png"), optimize=True)
         else:
             if name.startswith(("imp_farm_", "imp_plantation_")):
                 im = premul_resize(soften_field(raw, zlib.crc32(name.encode())), 224)
             else:
-                im = premul_resize(raw, 160)
+                im = premul_resize(raw, SPRITE_PX)
             im.save(os.path.join(OUT, "improvements", name + ".png"), optimize=True)
     print("post: wrote", len(names), "assets")
 
