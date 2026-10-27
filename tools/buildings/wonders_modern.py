@@ -1,5 +1,6 @@
 """Industrial and modern wonders (and the generic fallback)."""
 import math
+import random
 
 import bl
 import bmesh
@@ -110,53 +111,68 @@ def ruhr_valley():
 
 def broadway():
     g = bl.plot('asphalt')
-    cols = ['#ff3f8a', '#37d4ff', '#ffd23a', '#7dff5a', '#ff7a30']
-    road(0, -0.85, 0, 0.8, g, 0.2, 'asphalt')
+    signs = ['#ff3f8a', '#37d4ff', '#ffd23a', '#7dff5a', '#ff7a30', '#c86bff']
+    # the avenue across the front, with yellow cabs
+    box(0, -0.2, g, 1.7, 0.3, 0.004, M('asphalt'))
     for k in range(7):
-        box(0.0, -0.7 + k * 0.22, g + 0.006, 0.014, 0.1, 0.002, M('yellow'))
-    for i, (x, y, w, h) in enumerate([(-0.4, 0.34, 0.34, 0.6), (0.4, 0.34, 0.34, 0.5), (-0.4, -0.18, 0.34, 0.36), (0.4, -0.18, 0.34, 0.5)]):
-        box(x, y, g, w, 0.3, h, M('brick' if i % 2 else 'brickD'))
-        # glowing video screens and marquee bars
-        for j in range(3):
-            c = cols[(i + j) % 5]
-            glow(x + (0.0 if i % 2 else 0.0), y - 0.151, g + h * (0.25 + 0.25 * j), w * 0.7, 0.01, 0.07, c, strength=9)
-        box(x, y, g + h, w * 1.02, 0.31, 0.015, M('stone'))
-        glow(x + (0.15 if x < 0 else -0.15), y - 0.151, g + 0.05, 0.1, 0.012, 0.05, '#ffdf50', strength=10)
-    glow(0.0, 0.1, g + 0.5, 0.36, 0.014, 0.14, '#ff3f8a', strength=10)
-    glow(0.0, 0.1, g + 0.52, 0.28, 0.016, 0.1, '#37d4ff', strength=10)
-    for k in range(5):
-        lamp(-0.13 + (k % 2) * 0.26, -0.7 + k * 0.3, g, h=0.12)
-    for (x, y, c) in [(0.05, -0.35, 'yellow'), (-0.06, 0.0, 'yellow'), (0.06, -0.62, 'red')]:
-        with at(x, y, g, 90):
-            box(0, 0, 0.003, 0.05, 0.026, 0.014, M(c, rough=0.3))
-            box(0.002, 0, 0.017, 0.026, 0.022, 0.011, M('glassD'))
-    crowd(g, [(-0.2, -0.3), (0.2, -0.28), (-0.19, 0.1), (0.2, 0.12), (0.16, -0.5)], ('white', 'red', 'orange', 'cream', 'blue'))
-    point_light(0, -0.2, g + 0.3, (1.0, 0.5, 0.8), power=2.0, size=0.1)
+        box(-0.6 + k * 0.2, -0.2, g + 0.005, 0.1, 0.012, 0.002, M('yellow'))
+    for (x, y, rot) in [(-0.35, -0.26, 0), (0.15, -0.14, 180), (0.5, -0.26, 0)]:
+        with at(x, y, g, rot):
+            box(0, 0, 0.004, 0.11, 0.05, 0.03, M('yellow', rough=0.3))
+            box(0.005, 0, 0.034, 0.06, 0.045, 0.022, M('glassD'))
+    # the theatres along the back, their lit fronts toward the street
+    rnd = random.Random(7)
+    for i, (x, w, h) in enumerate([(-0.58, 0.28, 0.75), (-0.27, 0.3, 0.95), (0.05, 0.3, 0.8), (0.37, 0.3, 1.05), (0.66, 0.24, 0.7)]):
+        y = 0.28
+        box(x, y, g, w, 0.4, h, M('brick' if i % 2 else 'brickD'))
+        box(x, y, g + h, w * 1.03, 0.41, 0.02, M('stone'))
+        front = y - 0.201
+        for k in range(int(h / 0.14)):  # rows of windows
+            box(x, front, g + 0.28 + k * 0.14, w * 0.8, 0.006, 0.05, M('glassD'))
+        c = signs[i % len(signs)]
+        glow(x, front - 0.035, g + 0.14, w * 0.95, 0.05, 0.06, c, strength=10)   # the marquee
+        glow(x + w * 0.38, front - 0.02, g + 0.26, 0.04, 0.03, h * 0.5, signs[(i + 2) % 6], strength=12)  # blade sign
+        glow(x, y, g + h + 0.02, w * 0.7, 0.03, 0.12, signs[(i + 3) % 6], strength=9)  # rooftop billboard
+        box(x, front - 0.01, g, w * 0.4, 0.01, 0.12, M('glow_door', rgb='#ffe2a0', emit='#ffd27a', emit_strength=4))
+    # the near side of the street: lamps and the crowd
+    for k in range(6):
+        lamp(-0.7 + k * 0.28, -0.42, g, h=0.12)
+    crowd(g, [(-0.5, -0.02), (-0.2, -0.0), (0.12, -0.03), (0.4, 0.0), (0.6, -0.04), (-0.3, -0.5), (0.25, -0.52)],
+          ('white', 'red', 'orange', 'cream', 'blue'))
+    point_light(0, -0.1, g + 0.4, (1.0, 0.55, 0.8), power=3.0, size=0.2)
 
 
 def cristo_redentor():
     g = bl.plot('grass')
-    peak = rock_hill(0, 0.0, g, 0.6, 0.6, seed=11, mat='rock', top=None, plateau=0.14)
+    # Corcovado: a steep granite peak with forest on its flanks
+    granite = M('rock', rgb='#8e8a80', style='rock')
+    prof = [(0.66, 0.0), (0.6, 0.08), (0.48, 0.24), (0.34, 0.42), (0.2, 0.58), (0.1, 0.66), (0.0, 0.68)]
+    lathe(0.0, 0.1, g, prof, granite, n=12, smooth=False)
+    rnd = random.Random(3)
+    for k in range(16):
+        a = 2 * math.pi * k / 16 + rnd.random() * 0.3
+        r = 0.52 + rnd.random() * 0.12
+        tree(r * math.cos(a), 0.1 + r * math.sin(a) * 0.95, 0.85, 'round', g + 0.02)
     for k in range(9):
-        a = 2 * math.pi * k / 9
-        tree(0.66 * math.cos(a), 0.62 * math.sin(a) - 0.04, 0.9, 'round', g)
-    for k in range(7):
-        a = 2 * math.pi * k / 7 + 0.3
-        tree(0.45 * math.cos(a), 0.4 * math.sin(a), 0.7, 'pine', g + 0.05)
-    # pedestal and the statue
-    box(0, 0, peak - 0.01, 0.2, 0.2, 0.2, M('stone', rgb='#cfc8b8', style='blocks'), taper=0.8)
-    z = peak + 0.19
-    white = M('white', rgb='#f2efe6', rough=0.55)
-    h = 0.7
-    with at(0, 0, z):
-        lathe(0, 0, 0, [(0.08, 0), (0.11, 0.18 * h), (0.07, 0.55 * h)], white, n=12)
-        rod((0, 0, 0.4 * h), (0, 0, 0.66 * h), 0.085, white, r1=0.06)
-        sphere(0, 0, 0.7 * h, 0.05, white, n=10, rings=7)
-        rod((-h * 0.5, 0, 0.6 * h), (h * 0.5, 0, 0.6 * h), 0.04, white, n=8)
-        box(0, 0, 0.58 * h, 0.14, 0.06, 0.06, white)
-    for k in range(5):
-        a = 2 * math.pi * k / 5
-        blob(0.3 * math.cos(a) + 0.1, 0.2 * math.sin(a), g + 0.5 + 0.03 * k, 0.07, M('white', rgb='#f4f6f8', rough=1.0, style='plain'), seed=k, sub=1, squash=0.45)
+        a = 2 * math.pi * k / 9 + 0.2
+        tree(0.36 * math.cos(a), 0.1 + 0.36 * math.sin(a), 0.7, 'round', g + 0.27)
+    peak = g + 0.68
+    box(0, 0.1, peak - 0.02, 0.14, 0.14, 0.14, M('stone', rgb='#d6cfbf', style='blocks'), taper=0.85)
+    z = peak + 0.12
+    white = M('white', rgb='#f4f1e8', rough=0.5)
+    h = 0.62
+    with at(0, 0.1, z):
+        # the robe, the body, arms spread wide, the head
+        lathe(0, 0, 0, [(0.07, 0), (0.085, 0.12 * h), (0.075, 0.5 * h), (0.06, 0.62 * h)], white, n=14)
+        rod((0, 0, 0.55 * h), (0, 0, 0.72 * h), 0.07, white, r1=0.06)
+        sphere(0, 0, 0.8 * h, 0.045, white, n=12, rings=8)
+        for sx in (-1, 1):
+            rod((sx * 0.04, 0, 0.7 * h), (sx * 0.36 * h, 0, 0.71 * h), 0.032, white, r1=0.026)
+            box(sx * 0.2 * h, 0, 0.62 * h, 0.2 * h, 0.03, 0.08 * h, white, taper=0.6)  # the hanging sleeves
+    for k in range(4):
+        a = 2 * math.pi * k / 4 + 0.6
+        blob(0.42 * math.cos(a), 0.1 + 0.3 * math.sin(a), g + 0.62 + 0.05 * k, 0.07,
+             M('white', rgb='#f4f6f8', rough=1.0, style='plain'), seed=k, sub=1, squash=0.45)
 
 
 def maracana():

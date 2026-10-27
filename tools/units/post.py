@@ -38,6 +38,18 @@ def grade(beauty):
     return Image.fromarray((a * 255 + 0.5).astype(np.uint8), "RGBA")
 
 
+def edge_fade(size, margin=0.16):
+    """1 inside, falling smoothly to 0 at the image border, so a cast shadow
+    that reaches the edge of the frame fades out instead of being cut off."""
+    w, h = size
+    x = np.minimum(np.arange(w), np.arange(w)[::-1]) / (w * margin)
+    y = np.minimum(np.arange(h), np.arange(h)[::-1]) / (h * margin)
+    fx = np.clip(x, 0, 1)
+    fy = np.clip(y, 0, 1)
+    f = np.outer(fy, fx)
+    return f * f * (3 - 2 * f)
+
+
 def outline_under(sprite, shadow_raw, size):
     """Cast shadow and a thin dark rim placed under the finished sprite, so the
     silhouette reads on any terrain."""
@@ -45,6 +57,7 @@ def outline_under(sprite, shadow_raw, size):
     if shadow_raw and os.path.exists(shadow_raw):
         sh = Image.open(shadow_raw).convert("RGBA").getchannel("A")
         sh = sh.resize(sprite.size, Image.LANCZOS).filter(ImageFilter.GaussianBlur(size / 128))
+        sh = Image.fromarray((np.asarray(sh).astype(np.float32) * edge_fade(sprite.size)).astype(np.uint8), "L")
         lay = Image.new("RGBA", sprite.size, SHADOW_RGB + (0,))
         lay.putalpha(sh.point(lambda v: int(v * SHADOW_ALPHA)))
         out.alpha_composite(lay)

@@ -429,40 +429,65 @@ def roman_fort(b):
 
 @model("imp_sphinx")
 def sphinx(b):
-    sn = mat("sphinx", c("#d8b878"), 0.95, col2=c("#b89858"), scale=8, bump=0.4)
+    """A recumbent lion with a pharaoh's head on a sandstone plinth."""
+    sn = mat("sphinx", c("#dcbc7c"), 0.95, col2=c("#b89858"), scale=8, bump=0.4)
+    plinth = mat("sphplinth", c("#c8a868"), 0.95, col2=c("#a88848"), scale=10, bump=0.3)
     soft_ground(b, "#e0c88a", "#c8b070", 0.75, 0.80)
-    P = lib._P(0, 0, 0.0, 1.0)
-    b.blob(sn, (0, 0.0, 0.13), (0.38, 0.14, 0.12), 0.0)
-    b.box(sn, (0.0, 0.0, 0.05), (0.7, 0.26, 0.1))
-    for y in (-0.1, 0.1):
-        b.box(sn, (0.42, y, 0.05), (0.26, 0.09, 0.09))
-    b.tube(sn, [(0.3, 0, 0.14), (0.36, 0, 0.3)], 0.08, 0.07, seg=8)
-    b.blob(sn, (0.37, 0, 0.38), (0.09, 0.085, 0.11), seg=10)
-    hm = mat("nemes", c("#3a5aa8"), 0.5, stripes=10, col2=c("#e8c048"), scale=1)
-    b.blob(hm, (0.35, 0, 0.42), (0.12, 0.13, 0.1), seg=10)
-    b.box(hm, (0.3, 0.0, 0.3), (0.05, 0.2, 0.12))
-    b.box(sn, (-0.4, 0.0, 0.1), (0.1, 0.1, 0.1))
+    b.box(plinth, (0.0, 0.0, 0.03), (0.92, 0.42, 0.06))
+    # haunches and back, then the chest rising to the head
+    b.blob(sn, (-0.2, 0.0, 0.16), (0.24, 0.15, 0.11), 0.0, seg=16)
+    b.blob(sn, (0.05, 0.0, 0.17), (0.26, 0.14, 0.11), 0.0, seg=16)
+    b.blob(sn, (0.24, 0.0, 0.22), (0.12, 0.13, 0.14), 0.0, seg=14)
+    for y in (-0.08, 0.08):  # front legs stretched out, back paws tucked
+        b.box(sn, (0.4, y, 0.1), (0.3, 0.075, 0.07))
+        b.blob(sn, (0.56, y, 0.09), (0.05, 0.045, 0.035), seg=8)
+        b.blob(sn, (-0.12, y * 1.8, 0.09), (0.12, 0.05, 0.05), seg=8)
+    b.tube(sn, [(-0.4, 0.12, 0.08), (-0.3, 0.2, 0.07), (-0.1, 0.22, 0.07)], 0.02, 0.015, seg=6)  # the tail
+    # the head and nemes headcloth, flaring onto the shoulders
+    hm = mat("nemes", c("#d8b878"), 0.9, stripes=14, col2=c("#a8884a"), scale=1)
+    b.box(hm, (0.27, 0.0, 0.33), (0.08, 0.26, 0.16))
+    b.blob(sn, (0.33, 0.0, 0.42), (0.075, 0.07, 0.09), seg=12)
+    b.blob(hm, (0.3, 0.0, 0.47), (0.09, 0.1, 0.07), seg=12)
+    b.blob(sn, (0.405, 0.0, 0.42), (0.02, 0.018, 0.03), seg=6)  # the nose
+    b.box(sn, (0.39, 0.0, 0.33), (0.02, 0.025, 0.06))  # the beard
     return {"fit": False}
 
 
 @model("imp_stepwell")
 def stepwell(b):
+    """A deep square well: flights of steps zig-zagging down four walls to green water."""
     st = mat("swell", c("#d8b890"), 0.9, col2=c("#b89870"), scale=8, bump=0.3)
-    dk = mat("swdark", c("#1a1410"), 1.0)
-    wt = mat("swwater", c("#3a7a9a"), 0.1, coat=1.0)
-    b.box(st, (0, 0, 0.04), (1.0, 0.8, 0.08))
-    n = 5
+    st2 = mat("swell2", c("#c4a27a"), 0.9, col2=c("#a8865e"), scale=8, bump=0.3)
+    sh = mat("swshade", c("#7a5e44"), 0.95)
+    wt = mat("swwater", c("#3a7a6a"), 0.08, coat=1.0)
+    soft_ground(b, "#c8a878", "#a88a5e", 0.75, 0.8)
+    # the terraces step down inward; alternate tones mark each landing
+    # (built up from the ground as square rings, each lower than the one
+    # outside it, so the pit reads from above)
+    n = 7
     for i in range(n):
-        s = 0.64 - i * 0.11
-        z = 0.08 - 0.0
-        b.box(st if i % 2 == 0 else mat("swell2", c("#c8a880"), 0.9), (0, 0, 0.09 + 0.001 * i), (s + 0.01 * 0, s * 0.8, 0.012))
-    b.box(wt, (0, 0, 0.09), (0.13, 0.1, 0.015))
-    # raised rim walls with pillars
-    for (x, y, w, d) in [(0, 0.32, 0.9, 0.08), (0.45, 0.0, 0.08, 0.6), (-0.45, 0.0, 0.08, 0.6), (0, -0.34, 0.9, 0.06)]:
-        b.box(st, (x, y, 0.15), (w, d, 0.15))
-    for x in (-0.4, 0.4):
-        b.box(mat("swpil", c("#e8c8a0"), 0.85), (x, 0.3, 0.3), (0.07, 0.07, 0.3))
-        b.box(mat("swpil", c("#e8c8a0"), 0.85), (x, -0.32, 0.25), (0.07, 0.07, 0.2))
+        w = 0.86 - i * 0.1
+        z = 0.3 - 0.04 * i
+        t = 0.05  # half the step between rings
+        m_ = st if i % 2 == 0 else st2
+        d = w * 0.9
+        for (x, y, sx, sy) in [(0, d / 2 - t / 2, w, t), (0, -d / 2 + t / 2, w, t),
+                               (w / 2 - t / 2, 0, t, d), (-w / 2 + t / 2, 0, t, d)]:
+            b.box(m_, (x, y, z / 2), (sx, sy, z))
+        # little zig-zag flights on the near and side faces of each terrace
+        for k in range(3):
+            x = -w / 2 + 0.1 + k * (w - 0.2) / 2
+            b.box(sh, (x, -w * 0.45 + 0.012, z), (0.035, 0.02, 0.008))
+            b.box(sh, (-w / 2 + 0.012, -w * 0.3 + k * w * 0.3, z), (0.02, 0.035, 0.008))
+    b.box(wt, (0, 0, 0.3 - 0.04 * n), (0.2, 0.18, 0.012))
+    # the pavilion on the far side
+    pl = mat("swpil", c("#e8c8a0"), 0.85)
+    b.box(st, (0, 0.47, 0.15), (0.8, 0.14, 0.3))
+    for x in (-0.32, -0.11, 0.11, 0.32):
+        b.box(pl, (x, 0.47, 0.39), (0.05, 0.05, 0.18))
+    b.box(st2, (0, 0.47, 0.5), (0.86, 0.18, 0.04))
+    for x in (-0.25, 0.25):
+        b.blob(st, (x, 0.47, 0.55), (0.07, 0.07, 0.06), seg=10)
     return {"fit": False}
 
 
@@ -570,18 +595,30 @@ def monastery(b):
 
 @model("imp_rock_hewn_church")
 def rock_hewn(b):
-    rm = mat("rhrock", c("#a87858"), 0.95, col2=c("#8a5a3e"), scale=5, bump=0.6)
+    """A church carved down into the red rock: a cross-shaped roof flush with the
+    ground, sheer walls dropping into a trench around it."""
+    rm = mat("rhrock", c("#b07c58"), 0.95, col2=c("#8a5a3e"), scale=5, bump=0.6)
+    trench = mat("rhtrench", c("#5a3a26"), 1.0)
+    wall = mat("rhwall", c("#c08a62"), 0.9, col2=c("#a06e4a"), scale=8, bump=0.4)
+    roof = mat("rhroof", c("#cf9a70"), 0.85, col2=c("#b07c58"), scale=8, bump=0.3)
+    soft_ground(b, "#a87858", "#8a5e40", 0.75, 0.8)
+    # the rock shelf with a square trench cut into it
+    for (x, y, w, d) in [(0, 0.36, 0.86, 0.16), (0, -0.36, 0.86, 0.16), (0.36, 0, 0.16, 0.56), (-0.36, 0, 0.16, 0.56)]:
+        b.box(rm, (x, y, 0.06), (w, d, 0.12))
+    b.box(trench, (0, 0, -0.005), (0.58, 0.58, 0.01))
+    # the church: a stepped cross in plan, windows in its walls
+    for (w, d) in [(0.18, 0.46), (0.46, 0.18)]:
+        b.box(wall, (0, 0, 0.06), (w, d, 0.12))
+        b.box(roof, (0, 0, 0.125), (w + 0.02, d + 0.02, 0.012))
+    b.box(roof, (0, 0, 0.135), (0.1, 0.36, 0.008))
+    b.box(roof, (0, 0, 0.135), (0.36, 0.1, 0.008))
     dk = mat("rhdark", c("#1a0e08"), 1.0)
-    b.rock(rm, (0, 0.05, 0.0), (0.62, 0.5, 0.2), 1, rough=0.1)
-    b.box(rm, (0, 0.0, 0.1), (0.85, 0.68, 0.2))
-    # cross-shaped sunken court
-    b.box(dk, (0, 0, 0.202), (0.12, 0.5, 0.01))
-    b.box(dk, (0, 0.05, 0.202), (0.46, 0.12, 0.01))
-    b.box(mat("rhin", c("#c89870"), 0.9), (0, 0, 0.215), (0.08, 0.46, 0.01))
-    b.box(mat("rhin", c("#c89870"), 0.9), (0, 0.05, 0.215), (0.42, 0.08, 0.01))
-    b.box(dk, (0.0, -0.34, 0.07), (0.16, 0.02, 0.14))
-    b.box(mat("rhcross", c("#e8d8b0"), 0.6), (0.0, 0.28, 0.24), (0.03, 0.03, 0.14))
-    b.box(mat("rhcross", c("#e8d8b0"), 0.6), (0.0, 0.28, 0.27), (0.1, 0.03, 0.03))
+    for x in (-0.06, 0.06):
+        b.box(dk, (x, -0.231, 0.07), (0.03, 0.005, 0.05))
+    b.box(dk, (0, -0.231, 0.03), (0.05, 0.005, 0.06))
+    # the stair cut down to the trench
+    for i in range(4):
+        b.box(rm, (0.0, -0.44 + 0.03 * i, 0.12 - 0.03 * i), (0.12, 0.03, 0.03))
     return {"fit": False}
 
 

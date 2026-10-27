@@ -156,78 +156,100 @@ def oracle():
 
 
 def great_lighthouse():
-    g = bl.plot('paveL')
-    sea = M('stone2')
-    box(0, 0.05, g, 0.9, 0.7, 0.05, sea)
-    z = g + 0.05
-    box(0, 0.1, z, 0.46, 0.46, 0.5, M('stone', rgb='#e6dcc0'), taper=0.84)
-    box(0, 0.1 - 0.2, z, 0.1, 0.01, 0.16, M('dark'))
+    g = bl.plot('sand')
+    # the harbour: water in front and to the sides, the tower on a rocky islet
+    water = M('water', rgb='#3f8fbf', rough=0.06)
+    _face(water, [(0.82 * math.cos(a), -0.12 + 0.62 * math.sin(a), g + 0.003)
+                  for a in (2 * math.pi * k / 40 for k in range(40))])
+    isle = rock_hill(0.0, 0.12, g, 0.4, 0.07, seed=4, mat='rock', top='stone2', plateau=0.92)
+    z = isle
+    stone = M('stone', rgb='#e9dfc4', style='blocks')
+    # three stages: square, octagonal, round, as at Pharos
+    box(0, 0.12, z, 0.4, 0.4, 0.5, stone, taper=0.86)
+    box(0, 0.12, z + 0.5, 0.42, 0.42, 0.03, M('stone2'))
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            figure(sx * 0.19, 0.12 + sy * 0.19, z + 0.53, 0.07, 'bronze')
     for k in range(3):
-        box(0, 0.1 - 0.215 * (1 - 0.1 * k), z + 0.26 + 0.08 * k, 0.04, 0.008, 0.045, M('dark'))
-    z2 = z + 0.5
-    cyl(0, 0.1, z2, 0.17, 0.36, M('cream'), n=8, r2=0.145)
-    box(0, 0.1 - 0.15, z2 + 0.2, 0.04, 0.01, 0.05, M('dark'))
-    z3 = z2 + 0.36
-    cyl(0, 0.1, z3, 0.12, 0.26, M('stone'), n=14, r2=0.1)
-    cyl(0, 0.1, z3 + 0.26, 0.13, 0.025, M('stone2'), n=14)
-    z4 = z3 + 0.285
+        box(0, 0.12 - 0.19 * (1 - 0.06 * k), z + 0.12 + 0.13 * k, 0.04, 0.008, 0.05, M('dark'))
+    z2 = z + 0.53
+    cyl(0, 0.12, z2, 0.15, 0.32, M('cream', rgb='#f1e8cf'), n=8, r2=0.13)
+    cyl(0, 0.12, z2 + 0.32, 0.15, 0.025, M('stone2'), n=8)
+    z3 = z2 + 0.345
+    cyl(0, 0.12, z3, 0.1, 0.2, stone, n=16, r2=0.09)
+    z4 = z3 + 0.2
     for k in range(8):
         a = 2 * math.pi * k / 8 + 0.2
-        col(0.085 * math.cos(a), 0.1 + 0.085 * math.sin(a), z4, 0.011, 0.12, M('marble'), n=8, base=False)
-    cyl(0, 0.1, z4 + 0.0, 0.05, 0.1, M('flame', rgb='#ffcf50', emit='#ffb840', emit_strength=10.0), n=8)
-    cone(0, 0.1, z4 + 0.12, 0.115, 0.07, M('bronze'), n=12)
-    figure(0, 0.1, z4 + 0.19, 0.12, 'gold')
-    point_light(0, 0.1, z4 + 0.08, (1.0, 0.8, 0.5), power=3.0, size=0.05)
-    for (x, y) in [(-0.4, -0.3), (0.42, -0.28)]:
-        box(x, y, z, 0.18, 0.14, 0.1, M('stone2'))
-    stair_ramp(0.0, -0.58, g, 0.16, 0.18, 0.05, 3, 'stone2')
+        col(0.075 * math.cos(a), 0.12 + 0.075 * math.sin(a), z4, 0.01, 0.1, M('marble'), n=8, base=False)
+    fire = M('flame', rgb='#ffcf50', emit='#ffb840', emit_strength=14.0)
+    sphere(0, 0.12, z4 + 0.05, 0.055, fire, n=10, rings=6)
+    cone(0, 0.12, z4 + 0.1, 0.105, 0.06, M('bronze'), n=12)
+    figure(0, 0.12, z4 + 0.16, 0.13, 'gold', arms='torch')
+    point_light(0, 0.12, z4 + 0.05, (1.0, 0.75, 0.4), power=6.0, size=0.05)
+    # the causeway to the shore and ships at anchor
+    box(-0.48, 0.32, g, 0.5, 0.1, 0.05, M('stone2'), rot=-20)
+    dhow(-0.42, -0.42, g, L=0.3, rot=20, sail_mat='white')
+    dhow(0.45, -0.38, g, L=0.26, rot=-25, sail_mat='cream')
+    for (x, y) in [(-0.7, 0.42), (0.68, 0.45)]:
+        tree(x, y, 0.9, 'palm', g)
 
 
 def colossus():
-    g = bl.plot('paveL')
-    # a sea gate with the bronze giant striding over it
-    box(0, 0.0, g, 0.9, 0.22, 0.012, M('water', rough=0.04))
-    for sx in (-1, 1):
-        box(sx * 0.36, 0.0, g, 0.28, 0.34, 0.2, M('stone'), taper=0.88)
-        box(sx * 0.36, 0.0, g + 0.2, 0.3, 0.36, 0.025, M('stone2'))
-    bronze = M('bronze', rgb='#b87a44', rough=0.38, metal=0.85)
-    zb = g + 0.225
-    h = 1.0
-    with at(0, 0, zb):
+    g = bl.plot('stone2')
+    water = M('water', rgb='#3f8fbf', rough=0.06)
+    _face(water, [(0.8 * math.cos(a), -0.2 + 0.5 * math.sin(a), g + 0.003)
+                  for a in (2 * math.pi * k / 40 for k in range(40))])
+    # the harbour mole and the pedestal at its end
+    box(0, 0.32, g, 1.2, 0.3, 0.07, M('stone', style='blocks'))
+    box(0, 0.1, g, 0.34, 0.34, 0.12, M('stone', rgb='#e2d6b8', style='blocks'))
+    box(0, 0.1, g + 0.12, 0.28, 0.28, 0.16, M('marble'), taper=0.9)
+    box(0, 0.1, g + 0.28, 0.32, 0.32, 0.025, M('stone2'))
+    bronze = M('bronze', rgb='#c08850', rough=0.32, metal=0.9)
+    z = g + 0.305
+    h = 0.95
+    with at(0, 0.1, z, -20):
+        # legs, a short tunic, a draped cloak, the torso and head
         for sx in (-1, 1):
-            rod((sx * 0.36, 0, 0), (sx * 0.15, 0, 0.36 * h), 0.075, bronze, r1=0.055)
-            rod((sx * 0.15, 0, 0.36 * h), (sx * 0.07, 0, 0.5 * h), 0.055, bronze, r1=0.06)
-        lathe(0, 0, 0.44 * h, [(0.12, 0), (0.1, 0.1), (0.075, 0.3)], bronze, n=12)
-        rod((0, 0, 0.5 * h), (0, 0, 0.76 * h), 0.11, bronze, r1=0.12)
-        sphere(0, 0, 0.77 * h, 0.075, bronze, n=12, rings=8)
-        for k in range(9):
-            a = math.radians(-80 + 20 * k)
-            rod((0.07 * math.sin(a), -0.0, 0.83 * h), (0.16 * math.sin(a), 0, 0.83 * h + 0.11 * math.cos(a)), 0.007, M('gold'))
-        rod((0.1, 0, 0.7 * h), (0.2, 0, 0.88 * h), 0.045, bronze)
-        rod((0.2, 0, 0.88 * h), (0.28, 0, 1.08 * h), 0.04, bronze)
-        cone(0.28, 0, 1.06 * h, 0.04, 0.08, M('gold'), n=6)
-        cyl(0.28, 0, 1.12 * h, 0.032, 0.09, M('flame', rgb='#ffcf50', emit='#ffb840', emit_strength=10.0), n=6, r2=0.004)
-        rod((-0.1, 0, 0.7 * h), (-0.2, 0, 0.5 * h), 0.045, bronze)
-        for sx in (-0.2,):
-            box(sx - 0.0, 0.0, 0.3 * h, 0.12, 0.012, 0.3 * h, M('bronze', rgb='#9a643a'), taper=1.0)
-    dhow(-0.25, -0.42, g, L=0.3, rot=90)
-    for sx in (-1, 1):
-        tree(sx * 0.62, 0.5, 0.9, 'palm', g)
+            rod((sx * 0.06, 0, 0), (sx * 0.05, 0, 0.24 * h), 0.04, bronze, r1=0.045)
+            rod((sx * 0.05, 0, 0.24 * h), (sx * 0.05, 0, 0.44 * h), 0.045, bronze, r1=0.055)
+        lathe(0, 0, 0.36 * h, [(0.12, 0), (0.1, 0.1 * h), (0.09, 0.16 * h)], bronze, n=14)
+        lathe(0, 0, 0.5 * h, [(0.09, 0), (0.115, 0.14 * h), (0.105, 0.24 * h), (0.05, 0.28 * h)], bronze, n=14)
+        sphere(0, 0, 0.84 * h, 0.06, bronze, n=12, rings=8)
+        rod((0, 0, 0.76 * h), (0, 0, 0.8 * h), 0.03, bronze)
+        for k in range(9):  # the sun-ray crown
+            a = math.radians(-90 + 22.5 * k)
+            rod((0.05 * math.sin(a), 0.05 * math.cos(a) * 0.3, 0.88 * h),
+                (0.13 * math.sin(a), 0.13 * math.cos(a) * 0.3, 0.88 * h + 0.07 * abs(math.cos(a)) + 0.03), 0.008, M('gold'))
+        # right arm raised with the torch, left arm holding the cloak
+        rod((0.1, 0, 0.73 * h), (0.16, 0, 0.92 * h), 0.032, bronze)
+        rod((0.16, 0, 0.92 * h), (0.18, 0, 1.12 * h), 0.028, bronze)
+        cone(0.18, 0, 1.11 * h, 0.035, 0.06, M('gold'), n=8)
+        cyl(0.18, 0, 1.17 * h, 0.03, 0.08, M('flame', rgb='#ffcf50', emit='#ffb840', emit_strength=12.0), n=8, r2=0.004)
+        rod((-0.1, 0, 0.73 * h), (-0.15, 0.02, 0.5 * h), 0.032, bronze)
+        box(-0.16, 0.0, 0.2 * h, 0.06, 0.12, 0.3 * h, bronze, taper=1.3)
+    point_light(0.12, 0.1, z + 1.12 * h, (1.0, 0.75, 0.4), power=3.0, size=0.04)
+    dhow(-0.4, -0.36, g, L=0.3, rot=70, sail_mat='white')
+    dhow(0.42, -0.4, g, L=0.24, rot=110, sail_mat='cream')
+    for (x, y) in [(-0.62, 0.55), (0.6, 0.55)]:
+        tree(x, y, 0.9, 'palm', g)
 
 
 def petra():
     g = bl.plot('sand')
-    rosy = M('rose', rgb='#cf8566', style='rock')
+    tones = ['#d08a68', '#c27a5a', '#d99877', '#b86f52']
+    rosy = M('rose', rgb='#d08a68', style='rock')
     rose2 = M('rose', rgb='#b86f52', style='rock')
-    # the rose-red canyon wall, with crags on top
-    cliff = M('rose', rgb='#cf8566', style='rock')
-    box(0, 0.7, g, 1.8, 0.5, 0.78, cliff, taper=0.84)
-    box(-0.72, 0.3, g, 0.34, 0.5, 0.55, cliff, taper=0.7, rot=10)
-    box(0.72, 0.3, g, 0.34, 0.5, 0.55, cliff, taper=0.7, rot=-10)
-    for k, (x, h) in enumerate([(-0.5, 0.8), (-0.15, 0.86), (0.25, 0.82), (0.55, 0.78)]):
-        blob(x, 0.7, g + h - 0.1, 0.16, cliff, seed=k + 20, sub=1, squash=1.0, jitter=0.3)
-    # Al-Khazneh: the carved facade, drawn in its own frame and scaled up
-    with at(0.0, 0.2, g, 0, 1.3):
+    # the canyon wall in sandstone strata, kept inside the hex
+    for k, (y, w, h, t) in enumerate([(0.62, 1.36, 0.2, 0.96), (0.62, 1.3, 0.2, 0.95), (0.6, 1.2, 0.18, 0.92),
+                                      (0.58, 1.06, 0.16, 0.9)]):
+        box(0, y + 0.02 * k, g + 0.18 * k, w, 0.34, h, M('rose', rgb=tones[k], style='rock'), taper=t)
+    for k, (x, y, r) in enumerate([(-0.4, 0.62, 0.13), (-0.08, 0.66, 0.15), (0.24, 0.62, 0.13), (0.46, 0.6, 0.1)]):
+        blob(x, y, g + 0.7, r, M('rose', rgb=tones[k % 4], style='rock'), seed=k + 20, sub=1, squash=0.8, jitter=0.25)
+    for sx in (-1, 1):  # the walls of the Siq on each side
+        box(sx * 0.6, 0.18, g, 0.24, 0.5, 0.42, rosy, taper=0.7, rot=sx * 12)
+        blob(sx * 0.62, 0.2, g + 0.42, 0.1, rose2, seed=30 + sx, sub=1, squash=0.8)
+    # Al-Khazneh, carved into the wall
+    with at(0.0, 0.38, g, 0, 1.15):
         box(0, 0, 0, 0.54, 0.06, 0.62, rosy)
         for k in range(6):
             col(-0.2 + k * 0.08, -0.045, 0, 0.017, 0.26, rosy, n=10)
@@ -243,10 +265,10 @@ def petra():
         for sx in (-1, 1):
             box(sx * 0.16, -0.034, 0.03, 0.06, 0.008, 0.1, M('dark'))
         stair_ramp(0.0, -0.17, 0, 0.2, 0.12, 0.035, 2, 'rose')
-    road(0.0, -0.8, 0.0, 0.1, g, 0.22, 'sand')
-    tree(-0.5, -0.3, 1.0, 'palm', g)
-    tree(0.52, -0.4, 0.9, 'palm', g)
-    with at(0.3, -0.35, g, 15):                                           # a camel
+    road(0.0, -0.8, 0.0, 0.2, g, 0.2, 'sand')
+    tree(-0.45, -0.35, 1.0, 'palm', g)
+    tree(0.5, -0.45, 0.9, 'palm', g)
+    with at(0.25, -0.3, g, 15, 1.4):                                      # a camel
         box(0, 0, 0.05, 0.1, 0.035, 0.035, M('adobe'))
         sphere(0.0, 0, 0.1, 0.022, M('adobe'), n=6, rings=4)
         rod((0.05, 0, 0.07), (0.085, 0, 0.12), 0.01, M('adobe'))
@@ -491,22 +513,31 @@ def apadana():
 
 def jebel_barkal():
     g = bl.plot('sand')
-    butte = rock_hill(0.05, 0.3, g, 0.62, 0.8, seed=12, mat='sand', top='sandD', plateau=0.78)
-    rod((0.18, 0.2, butte), (0.2, 0.2, butte + 0.28), 0.045, M('sand', style='rock'), r1=0.025)
-    for k in range(3):
-        blob(0.2, 0.2, butte + 0.26 + 0.0 * k, 0.03, M('sand', style='rock'), seed=3, sub=1, squash=1.3)
-    # temple of Amun at the foot of the butte
+    # the flat-topped holy mountain in two bands of strata, with its pinnacle
+    low = rock_hill(0.0, 0.4, g, 0.5, 0.32, seed=12, mat='sandD', top=None, plateau=0.86)
+    top = rock_hill(0.0, 0.42, low - 0.02, 0.43, 0.26, seed=13, mat='sand', top='sandD', plateau=0.84)
+    rock = M('sand', rgb='#c9a56c', style='rock')
+    rod((0.3, 0.28, g), (0.32, 0.28, top + 0.12), 0.07, rock, r1=0.045)
+    blob(0.33, 0.27, top + 0.13, 0.055, rock, seed=3, sub=1, squash=1.2)
+    # the Temple of Amun: pylons, a colonnaded court, the sanctuary
+    stone = M('stone', rgb='#dcc493', style='blocks')
     for sx in (-1, 1):
-        box(sx * 0.2, -0.3, g, 0.16, 0.12, 0.34, M('stone', rgb='#d8c08c', style='blocks'), taper=0.85)
-        box(sx * 0.2, -0.3, g + 0.34, 0.17, 0.13, 0.025, M('sandD'))
-    box(0.0, -0.3, g + 0.2, 0.24, 0.1, 0.15, M('stone', rgb='#d8c08c', style='blocks'))
-    box(0.0, -0.355, g, 0.1, 0.01, 0.2, M('dark'))
-    # Nubian pyramids
-    for (x, y, s_) in [(-0.62, -0.1, 0.15), (-0.5, 0.15, 0.12), (0.62, -0.25, 0.16), (0.7, 0.05, 0.12)]:
-        pyr(x, y, g, s_, s_, s_ * 1.5, M('sand', rgb='#d8c08c', style='blocks'))
-    road(0, -0.8, 0, -0.38, g, 0.1, 'sand')
-    tree(0.55, -0.55, 1.0, 'palm', g)
-    tree(-0.5, -0.55, 1.0, 'palm', g)
+        box(sx * 0.16, -0.32, g, 0.2, 0.1, 0.3, stone, taper=0.82)
+        box(sx * 0.16, -0.32, g + 0.3, 0.21, 0.11, 0.02, M('sandD'))
+    box(0, -0.325, g, 0.1, 0.01, 0.16, M('dark'))
+    for k in range(5):
+        for sx in (-1, 1):
+            col(sx * 0.13, -0.18 + 0.075 * k, g, 0.02, 0.17, stone, n=10)
+    box(0, -0.03, g, 0.36, 0.38, 0.015, M('stone2'))
+    box(0, 0.12, g, 0.24, 0.16, 0.2, stone)
+    # steep Nubian pyramids with their little chapels
+    for (x, y, s_) in [(-0.62, -0.05, 0.17), (-0.5, -0.38, 0.14), (-0.74, 0.25, 0.12),
+                       (0.62, -0.2, 0.17), (0.7, 0.12, 0.13)]:
+        pyr(x, y, g, s_, s_, s_ * 2.3, M('stone', rgb='#c9a873', style='blocks'))
+        box(x, y - s_ * 0.62, g, s_ * 0.45, s_ * 0.25, s_ * 0.55, stone)
+    road(0, -0.85, 0, -0.38, g, 0.1, 'sand')
+    tree(0.36, -0.6, 1.0, 'palm', g)
+    tree(-0.3, -0.62, 1.0, 'palm', g)
 
 
 def etemenanki():

@@ -637,7 +637,8 @@ def render_shadow(path, samples=128):
     sun.angle = d(7)
     so = bpy.data.objects.new("shadow", sun)
     sc.collection.objects.link(so)
-    so.rotation_euler = Vector((0.6, -0.25, -0.76)).to_track_quat("-Z", "Y").to_euler()
+    # (steep enough that a tall figure's shadow stays inside the frame)
+    so.rotation_euler = Vector((0.5, -0.2, -1.0)).to_track_quat("-Z", "Y").to_euler()
     sc.cycles.samples = samples
     sc.cycles.use_denoising = False
     render_to(path)

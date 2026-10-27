@@ -15,22 +15,35 @@ def C(o, part, default):
 
 # ------------------------------------------------------------------ heads
 def head(o, hz=1.58):
+    """A figurine head facing +X: skull and jaw, nose, ears, eyes with whites,
+    brows, a neck, and hair framing the face.  The skull keeps radius 0.2 about
+    (0.02, 0, hz) so every helmet still fits."""
     s = o.get("skin", "skin")
-    sph((0.02, 0, hz), 0.2, s, scale=(0.95, 0.92, 1.0), seg=10, rings=7, name="head")
-    for sy in (-1, 1):
-        sph((0.178, sy * 0.075, hz - 0.01), 0.034, "black", seg=6, rings=4, name="eye")
-    if o.get("beard"):
-        sph((0.11, 0, hz - 0.12), 0.12, o["beard"], scale=(0.8, 0.9, 0.9), name="beard")
     hair = o.get("hair", "hair_brown")
     style = o.get("hairstyle", "short")
-    if hair and style == "short":
-        sph((-0.07, 0, hz + 0.07), 0.2, hair, scale=(0.95, 0.97, 0.85), name="hair")
-    elif hair and style == "long":
-        sph((-0.08, 0, hz + 0.06), 0.21, hair, scale=(0.95, 0.99, 0.88), name="hair")
-        box((-0.17, 0, hz - 0.15), (0.12, 0.3, 0.4), hair, name="hairback")
+    limb((0.0, 0, 1.36), (0.02, 0, hz - 0.1), 0.085, s, r1=0.08, seg=10, name="neck")
+    sph((0.02, 0, hz + 0.01), 0.2, s, scale=(0.95, 0.9, 1.0), seg=16, rings=10, name="head")
+    sph((0.07, 0, hz - 0.08), 0.15, s, scale=(1.0, 0.95, 0.85), seg=14, rings=8, name="jaw")
+    sph((0.205, 0, hz - 0.02), 0.042, s, scale=(1.25, 0.8, 1.2), seg=8, rings=6, name="nose")
+    for sy in (-1, 1):
+        sph((0.0, sy * 0.178, hz - 0.01), 0.045, s, scale=(0.6, 0.45, 1.0), seg=8, rings=5, name="ear")
+        sph((0.168, sy * 0.072, hz + 0.035), 0.036, "white", scale=(0.55, 1.0, 1.05), seg=8, rings=5, name="eyewhite")
+        sph((0.186, sy * 0.074, hz + 0.033), 0.022, "black", scale=(0.6, 1.0, 1.1), seg=6, rings=4, name="eye")
+        if hair:
+            box((0.17, sy * 0.075, hz + 0.085), (0.03, 0.075, 0.02), hair, rot=(sy * 8, 0, 0), bevel=0.008, name="brow")
+    if o.get("beard"):
+        sph((0.12, 0, hz - 0.13), 0.12, o["beard"], scale=(0.75, 1.0, 0.85), seg=10, rings=6, name="beard")
+        box((0.2, 0, hz - 0.055), (0.03, 0.12, 0.025), o["beard"], bevel=0.01, name="moustache")
+    if hair and style in ("short", "long", "bun"):
+        # A cap over the crown and back, cut clear of the face, with a fringe.
+        sph((-0.02, 0, hz + 0.06), 0.212, hair, scale=(0.95, 0.96, 0.9), seg=14, rings=8, name="hair")
+        sph((0.1, 0, hz + 0.13), 0.12, hair, scale=(0.8, 1.3, 0.55), seg=10, rings=6, name="fringe")
+        for sy in (-1, 1):
+            sph((0.02, sy * 0.15, hz + 0.0), 0.08, hair, scale=(0.9, 0.5, 1.3), seg=8, rings=5, name="sideburn")
+    if hair and style == "long":
+        box((-0.15, 0, hz - 0.17), (0.14, 0.32, 0.42), hair, bevel=0.06, name="hairback")
     elif hair and style == "bun":
-        sph((-0.07, 0, hz + 0.07), 0.2, hair, scale=(0.95, 0.97, 0.85), name="hair")
-        sph((-0.14, 0, hz + 0.22), 0.09, hair, name="bun")
+        sph((-0.15, 0, hz + 0.2), 0.09, hair, name="bun")
     helmet(o, o.get("helmet"), hz)
 
 

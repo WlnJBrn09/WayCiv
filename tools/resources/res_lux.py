@@ -92,13 +92,19 @@ def diamonds(b):
 
 @model("resource_dyes")
 def dyes(b):
-    cloth = mat("dyecloth", c("#d8c8a0"), 1.0)
-    b.box(cloth, (0, 0, 0.005), (1.0, 0.7, 0.01), yaw=0.1)
-    for (x, y, col) in [(-0.3, 0.1, "#c8283a"), (0.0, -0.05, "#2a4aa8"), (0.3, 0.1, "#e8b820"), (0.0, 0.25, "#7a2a8a")]:
-        pot(b, (x, y, 0), 1.1, "#b0583a", col)
-        heap(b, (x + 0.02, y - 0.17, 0.0), 0.08, 0.1, col)
-    pl = mat("indigo", c("#3a7a3a"), 0.6)
-    b.tube(pl, [(0.4, -0.25, 0), (0.42, -0.25, 0.2), (0.38, -0.22, 0.3)], 0.012, 0.004, seg=4)
+    """Dye vats of red, indigo and saffron, and freshly dyed cloth drying on a line."""
+    wd = wood_mat("#7a5232", "#4e331d")
+    for (x, y, col) in [(-0.3, -0.12, "#c8283a"), (0.02, -0.26, "#2a46b0"), (0.32, -0.1, "#f0b81c")]:
+        b.cyl(wd, (x, y, 0), (x, y, 0.16), 0.13, 0.14, seg=16)
+        b.ring(wd, (x, y, 0.16), 0.14, 0.02, 0.02, seg=24)
+        b.blob(mat("dye" + col, c(col), 0.15, coat=0.6), (x, y, 0.15), (0.125, 0.125, 0.012), seg=20)
+    for x in (-0.42, 0.42):
+        b.cyl(wd, (x, 0.22, 0), (x, 0.22, 0.5), 0.018, 0.016, seg=6)
+    b.cyl(mat("line", c("#d8c8a0"), 0.9), (-0.42, 0.22, 0.47), (0.42, 0.22, 0.47), 0.006, 0.006, seg=4)
+    for i, col in enumerate(["#c8283a", "#2a46b0", "#f0b81c", "#7a2a8a", "#e06a20"]):
+        x = -0.32 + i * 0.16
+        b.box(mat("cloth" + col, c(col), 0.9, col2=c(col), scale=30, bump=0.2), (x, 0.22, 0.34), (0.13, 0.01, 0.26),
+              yaw=0.08 * (i % 2 - 0.5))
     return {}
 
 
@@ -191,14 +197,21 @@ def marble(b):
 
 @model("resource_mercury")
 def mercury(b):
-    qm = mat("quick", c("#d8dce0"), 0.04, metal=1.0)
-    b.blob(qm, (0, 0, 0.0), (0.45, 0.35, 0.04), seg=18)
-    for (x, y, r) in [(0.12, 0.05, 0.07), (-0.15, 0.1, 0.05), (0.3, -0.25, 0.05), (-0.3, -0.2, 0.04), (0.25, 0.28, 0.04)]:
-        b.blob(qm, (x, y, r * 0.8), (r, r, r), seg=10)
-    cm = mat("cinnabar", c("#b0201c"), 0.4, col2=c("#701410"), scale=6, bump=0.4)
-    b.rock(cm, (-0.3, 0.12, 0.1), (0.17, 0.15, 0.14), 1)
-    b.rock(cm, (0.35, 0.18, 0.08), (0.12, 0.1, 0.1), 2)
-    b.rock(cm, (-0.1, -0.35, 0.07), (0.11, 0.1, 0.08), 3)
+    """Red cinnabar ore, a glass flask and a bright pool of quicksilver."""
+    cm = mat("cinnabar", c("#c0261e"), 0.45, col2=c("#701410"), scale=6, bump=0.5)
+    rm = rock_mat("#8a7a6a", "#5a4c40")
+    b.rock(rm, (-0.15, 0.2, 0.12), (0.34, 0.26, 0.2), 1)
+    b.rock(cm, (-0.28, 0.12, 0.16), (0.2, 0.17, 0.18), 4)
+    b.rock(cm, (0.05, 0.28, 0.13), (0.16, 0.13, 0.15), 5)
+    b.rock(cm, (0.35, 0.12, 0.08), (0.13, 0.11, 0.1), 2)
+    qm = mat("quick", c("#e4e8ec"), 0.03, metal=1.0)
+    b.blob(qm, (0.05, -0.2, 0.0), (0.26, 0.17, 0.025), seg=20)
+    for (x, y, r) in [(0.1, -0.17, 0.045), (-0.04, -0.24, 0.035), (0.28, -0.26, 0.03), (-0.18, -0.12, 0.025)]:
+        b.blob(qm, (x, y, r * 0.7), (r, r, r * 0.8), seg=10)
+    gl = mat("flask", c("#d8ecf4"), 0.04, coat=1.0, transmission=0.85, ior=1.45)
+    b.blob(gl, (0.36, -0.12, 0.09), (0.09, 0.09, 0.09), seg=14)
+    b.cyl(gl, (0.36, -0.12, 0.16), (0.36, -0.12, 0.27), 0.03, 0.03, seg=10)
+    b.blob(qm, (0.36, -0.12, 0.05), (0.07, 0.07, 0.04), seg=12)
     return {}
 
 
@@ -233,19 +246,20 @@ def salt(b):
 
 @model("resource_silk")
 def silk(b):
+    """A mulberry tree with cocoons, and bolts of shining silk in three colours."""
     wd = wood_mat("#6a4a30")
     lm = mat("mulb", c("#7ab040"), 0.55, col2=c("#5a9a30"), scale=10, sss=0.3)
     cm = mat("cocoon", c("#fbf8ee"), 0.9, col2=c("#e8e2d0"), scale=40, bump=0.5)
-    b.tube(wd, [(-0.15, 0.1, 0), (-0.12, 0.1, 0.25), (-0.15, 0.1, 0.45)], 0.04, 0.025, seg=7)
-    b.blob(lm, (-0.15, 0.1, 0.6), (0.28, 0.24, 0.18), seg=10)
-    b.blob(lm, (0.0, 0.1, 0.5), (0.16, 0.14, 0.1), seg=8)
-    b.blob(lm, (-0.3, 0.08, 0.5), (0.14, 0.12, 0.1), seg=8)
-    for (x, y, z) in [(-0.05, 0.0, 0.44), (-0.25, 0.0, 0.42), (-0.15, -0.05, 0.4)]:
+    b.tube(wd, [(-0.2, 0.18, 0), (-0.18, 0.18, 0.25), (-0.2, 0.18, 0.45)], 0.04, 0.025, seg=7)
+    b.blob(lm, (-0.2, 0.18, 0.6), (0.28, 0.24, 0.18), seg=10)
+    b.blob(lm, (-0.05, 0.18, 0.5), (0.16, 0.14, 0.1), seg=8)
+    b.blob(lm, (-0.35, 0.16, 0.5), (0.14, 0.12, 0.1), seg=8)
+    for (x, y, z) in [(-0.1, 0.06, 0.44), (-0.3, 0.06, 0.42), (-0.2, 0.02, 0.4)]:
         b.blob(cm, (x, y, z), (0.04, 0.04, 0.06), seg=8, tilt=0.3)
-    for (x, y, yaw) in [(0.2, -0.2, 0.3), (0.3, -0.12, 1.2), (0.12, -0.3, 2.0), (0.35, -0.28, 0.8)]:
-        b.blob(cm, (x, y, 0.045), (0.055, 0.045, 0.045), yaw, seg=8)
-    rd = mat("silkred", c("#b02838"), 0.3, col2=c("#8a1c2a"), scale=40, coat=0.4)
-    b.cyl(rd, (-0.35, -0.25, 0.08), (-0.1, -0.3, 0.08), 0.08, 0.08, seg=12)
+    for i, (col, col2) in enumerate([("#c8283a", "#e85a6a"), ("#e0b030", "#fff0a0"), ("#2a8a8a", "#6ad0c8")]):
+        sm = mat("silk" + col, c(col), 0.2, col2=c(col2), scale=3, coat=0.8, wave=True)
+        y = -0.12 - 0.11 * i
+        b.cyl(sm, (0.0 + 0.04 * i, y, 0.075), (0.42 + 0.04 * i, y - 0.04, 0.075), 0.07, 0.07, seg=16)
     return {}
 
 
@@ -297,16 +311,21 @@ def sugar(b):
 
 @model("resource_tea")
 def tea(b):
-    gm = mat("teag", c("#3a7a2e"), 0.55, col2=c("#5a9a38"), scale=22, bump=0.5)
-    tip = mat("teatip", c("#9ac850"), 0.5)
-    for k, y in enumerate([-0.3, -0.05, 0.2]):
-        for i in range(4):
-            x = -0.3 + i * 0.2
-            b.blob(gm, (x, y + 0.04 * k - 0.04, 0.09), (0.12, 0.1, 0.09), seg=8)
-            b.blob(tip, (x, y + 0.04 * k - 0.04, 0.16), (0.07, 0.06, 0.03), seg=6)
-    cm = mat("teacup", c("#f2eee4"), 0.2, coat=0.8)
-    b.cyl(cm, (0.35, 0.38, 0.0), (0.35, 0.38, 0.08), 0.04, 0.07, seg=12)
-    b.disc(mat("teaf", c("#a85a20"), 0.2), (0.35, 0.38, 0.065), 0.062, 0.01, seg=12)
+    """Tea bushes clipped into rounded hedges along a terraced slope, a picker's basket."""
+    soft_ground(b, "#6a5232", "#4e3a22", 0.6, 0.8, z=-0.01, scale=8)
+    earth = mat("teaterr", c("#7a5a38"), 0.95, col2=c("#5a4128"), scale=8, bump=0.3)
+    gm = mat("teag", c("#2f7a2a"), 0.55, col2=c("#58a03a"), scale=26, bump=0.6, sss=0.2)
+    tip = mat("teatip", c("#a8d858"), 0.5, col2=c("#8ac040"), scale=30)
+    for k, (y, z) in enumerate([(0.3, 0.12), (0.05, 0.06), (-0.2, 0.0)]):
+        b.box(earth, (0.0, y, z / 2), (0.95 - 0.1 * k, 0.24, z + 0.02))
+        for i in range(2):
+            yy = y - 0.05 + i * 0.1
+            b.blob(gm, (0.0, yy, z + 0.09), (0.42 - 0.05 * k, 0.06, 0.08), seg=16)
+            for j in range(7):
+                b.blob(tip, (-0.33 + j * 0.11 + 0.03 * i, yy, z + 0.16), (0.04, 0.03, 0.015), seg=6)
+    wk = mat("basket", c("#b88a4a"), 0.8, col2=c("#8a6030"), scale=40, bump=0.4)
+    b.cyl(wk, (0.32, -0.38, 0), (0.32, -0.38, 0.12), 0.08, 0.1, seg=14)
+    b.blob(tip, (0.32, -0.38, 0.12), (0.085, 0.085, 0.03), seg=10)
     return {}
 
 
@@ -328,30 +347,42 @@ def tobacco(b):
 
 @model("resource_truffles")
 def truffles(b):
-    tree(b, (-0.12, 0.12, 0), 0.8, leaf="#6a8a2a", trunk="#4a3220", s=2.0)
+    """An oak with a pig snuffling at its roots and a basket of black truffles."""
+    tree(b, (-0.15, 0.15, 0), 0.8, leaf="#4f7a28", trunk="#4a3220", s=2.0)
+    quad(b, 0.2, -0.12, yaw=2.6, s=0.9, kind="cow", body="#e8a8a0", accent="#e8a8a0", dark="#b07070")
     tm = mat("truffle", c("#2a2018"), 0.8, col2=c("#4a3a2a"), scale=40, bump=1.0)
-    for i, (x, y, r) in enumerate([(0.2, -0.2, 0.08), (0.34, -0.1, 0.06), (0.12, -0.32, 0.05), (0.3, -0.3, 0.07), (-0.05, -0.3, 0.05)]):
-        b.rock(tm, (x, y, r * 0.5), (r, r * 0.9, r * 0.8), 30 + i, rough=0.2)
+    wk = mat("basket", c("#b88a4a"), 0.8, col2=c("#8a6030"), scale=40, bump=0.4)
+    b.cyl(wk, (-0.25, -0.3, 0), (-0.25, -0.3, 0.09), 0.1, 0.12, seg=14)
+    for i, (x, y) in enumerate([(-0.27, -0.29), (-0.21, -0.32), (-0.26, -0.35), (-0.22, -0.26)]):
+        b.rock(tm, (x, y, 0.1), (0.035, 0.035, 0.03), 30 + i, rough=0.25)
+    for i, (x, y, r) in enumerate([(0.0, -0.35, 0.04), (0.08, -0.4, 0.035)]):
+        b.rock(tm, (x, y, r * 0.5), (r, r * 0.9, r * 0.8), 40 + i, rough=0.2)
     gm = grass_mat("#5a7a2a", "#3d5a20")
-    for p in [(0.0, -0.1), (0.35, 0.1), (-0.3, -0.2)]:
+    for p in [(0.38, 0.12), (-0.42, -0.1), (0.05, 0.3)]:
         b.tuft(gm, (p[0], p[1], 0), 0.12, 5)
     return {}
 
 
 @model("resource_whales")
 def whales(b):
+    """A humpback breaking the surface: a long dark back, a raised fluke, a spout."""
     water_rings(b, 0.7, 2)
-    wm = mat("whale", c("#4a6a8a"), 0.35, col2=c("#8aa6bc"), scale=6, coat=0.3)
+    wm = mat("whale", c("#34495e"), 0.35, col2=c("#5a7088"), scale=6, coat=0.3)
     wb = mat("whalebelly", c("#d8e0e8"), 0.4)
-    b.blob(wm, (0.0, 0.0, 0.05), (0.55, 0.22, 0.18), 0.3, seg=18)
-    b.blob(wb, (0.05, 0.02, 0.0), (0.45, 0.2, 0.1), 0.3, seg=14)
-    b.tube(wm, [(-0.45, -0.14, 0.07), (-0.6, -0.2, 0.18), (-0.66, -0.2, 0.3)], 0.1, 0.03, seg=8)
-    b.blob(wm, (-0.66, -0.2, 0.32), (0.07, 0.15, 0.03), 0.4 + 0.3, seg=10)
-    b.blob(wm, (-0.66, -0.2, 0.32), (0.15, 0.07, 0.03), 0.4 + 0.3, seg=10)
-    b.blob(wm, (0.2, 0.18, 0.05), (0.14, 0.05, 0.03), 0.3 + 0.5, seg=8)
-    em = mat("weye", c("#101018"), 0.2)
-    b.blob(em, (0.36, 0.1, 0.14), (0.02, 0.02, 0.02), seg=6)
-    smoke(b, (0.25, 0.0, 0.22), 4, 0.8, "#e8f4ff", 0.6)
+    # the long back breaking the surface, the head a little higher
+    b.blob(wm, (0.05, 0.0, 0.03), (0.42, 0.15, 0.1), -0.15, seg=20)
+    b.blob(wm, (0.32, 0.04, 0.05), (0.16, 0.13, 0.09), -0.15, seg=16)
+    b.blob(wb, (0.2, -0.06, 0.02), (0.22, 0.06, 0.03), -0.15, seg=12)
+    b.blob(wm, (-0.12, 0.02, 0.12), (0.05, 0.015, 0.05), -0.15, seg=8)  # the little dorsal fin
+    # the fluke, lifted clear behind
+    b.tube(wm, [(-0.33, -0.08, 0.04), (-0.42, -0.12, 0.14), (-0.46, -0.14, 0.26)], 0.05, 0.03, seg=8)
+    for sgn in (-1, 1):
+        b.blob(wm, (-0.47, -0.14 + sgn * 0.1, 0.3), (0.06, 0.11, 0.02), sgn * 0.5, seg=10, tilt=sgn * 0.3)
+        b.blob(wb, (-0.465, -0.14 + sgn * 0.1, 0.295), (0.05, 0.095, 0.015), sgn * 0.5, seg=10, tilt=sgn * 0.3)
+    foam = mat("splash", c("#f4faff"), 0.5, alpha=0.85)
+    for (x, y, r) in [(0.42, 0.05, 0.08), (-0.33, -0.08, 0.07), (0.1, 0.0, 0.06)]:
+        b.blob(foam, (x, y, 0.0), (r * 1.6, r, 0.02), seg=12)
+    smoke(b, (0.45, 0.08, 0.2), 4, 0.8, "#e8f4ff", 0.6)
     return {"fit": False}
 
 
@@ -378,29 +409,51 @@ def wine(b):
 
 @model("resource_jeans")
 def jeans(b):
+    """A folded stack of denim jeans on a crate and a bolt of indigo cloth."""
     dn = mat("denim", c("#2a4a86"), 0.95, col2=c("#1e3a6e"), scale=60, bump=0.4)
-    dn2 = mat("denim2", c("#3a5ea0"), 0.95, col2=c("#2a4a86"), scale=60, bump=0.4)
-    for i in range(4):
-        b.box(dn if i % 2 else dn2, (0, 0, 0.04 + 0.075 * i), (0.5, 0.34, 0.07), yaw=0.1 * (i % 2 - 0.5))
+    dn2 = mat("denim2", c("#4a6eb0"), 0.95, col2=c("#3a5a96"), scale=60, bump=0.4)
     st = mat("stitch", c("#e0a838"), 0.6)
-    b.box(st, (0.0, 0.0, 0.31), (0.12, 0.05, 0.01))
-    b.cyl(dn, (-0.3, -0.35, 0.09), (0.3, -0.35, 0.09), 0.09, 0.09, seg=12)
+    crate(b, (-0.12, 0.12, 0), 1.6, 0.15)
+    for i in range(4):
+        z = 0.27 + 0.055 * i
+        b.box(dn if i % 2 else dn2, (-0.12, 0.12, z), (0.42, 0.28, 0.05), yaw=0.15 + 0.06 * (i % 2 - 0.5))
+        b.box(st, (-0.12 - 0.2, 0.12 + 0.03, z + 0.002), (0.012, 0.22, 0.046), yaw=0.15)
+    # one pair laid out flat: waistband, two legs, back pockets
+    lay = -0.5
+    ca, sa = math.cos(lay), math.sin(lay)
+    def pt(lx, ly):
+        return (0.22 + lx * ca - ly * sa, -0.22 + lx * sa + ly * ca)
+    x, y = pt(0.0, 0.0)
+    b.box(dn2, (x, y, 0.015), (0.26, 0.2, 0.03), yaw=lay)
+    for sgn in (-1, 1):
+        x, y = pt(sgn * 0.065, -0.25)
+        b.box(dn2, (x, y, 0.012), (0.11, 0.34, 0.024), yaw=lay + sgn * 0.06)
+        x, y = pt(sgn * 0.06, 0.02)
+        b.box(dn, (x, y, 0.032), (0.08, 0.08, 0.006), yaw=lay)
+    x, y = pt(0.0, 0.1)
+    b.box(st, (x, y, 0.032), (0.26, 0.012, 0.006), yaw=lay)
+    b.cyl(dn, (-0.42, -0.25, 0.07), (-0.1, -0.38, 0.07), 0.07, 0.07, seg=14)
     return {}
 
 
 @model("resource_perfume")
 def perfume(b):
-    gl = mat("glass", c("#f0b0c8"), 0.05, coat=1.0, transmission=0.6, ior=1.45)
-    gl2 = mat("glass2", c("#a8d8f0"), 0.05, coat=1.0, transmission=0.6, ior=1.45)
-    gd = mat("goldcap", c("#d8a838"), 0.3, metal=1.0)
-    for (x, y, g, s) in [(-0.12, 0.05, gl, 1.3), (0.2, -0.1, gl2, 1.0)]:
-        b.box(g, (x, y, 0.14 * s), (0.2 * s, 0.14 * s, 0.24 * s))
-        b.cyl(gd, (x, y, 0.26 * s), (x, y, 0.34 * s), 0.05 * s, 0.05 * s, seg=10)
-        b.blob(gd, (x, y, 0.36 * s), (0.05 * s, 0.05 * s, 0.03 * s), seg=8)
-    fm = mat("petal", c("#e04a7a"), 0.5)
-    for k in range(6):
-        a = k * 1.05
-        b.blob(fm, (0.3 + math.cos(a) * 0.05, 0.28 + math.sin(a) * 0.05, 0.03), (0.04, 0.025, 0.012), a, seg=6)
+    """Cut-glass perfume bottles on a little tray beside a rose bush."""
+    gl = mat("glass", c("#f0a8c8"), 0.03, coat=1.0, transmission=0.7, ior=1.45)
+    gl2 = mat("glass2", c("#a8d8f0"), 0.03, coat=1.0, transmission=0.7, ior=1.45)
+    gl3 = mat("glass3", c("#f4d890"), 0.03, coat=1.0, transmission=0.7, ior=1.45)
+    gd = mat("goldcap", c("#d8a838"), 0.25, metal=1.0)
+    wd = wood_mat("#6a3a22", "#4a2614")
+    b.cyl(wd, (0.05, -0.05, 0), (0.05, -0.05, 0.04), 0.34, 0.34, seg=24)
+    b.ring(gd, (0.05, -0.05, 0.04), 0.34, 0.02, 0.01, seg=32)
+    for (x, y, g, s) in [(-0.08, 0.02, gl, 1.25), (0.16, -0.08, gl2, 1.0), (0.0, -0.22, gl3, 0.85)]:
+        b.blob(g, (x, y, 0.04 + 0.1 * s), (0.1 * s, 0.1 * s, 0.1 * s), seg=16)
+        b.cyl(g, (x, y, 0.04 + 0.18 * s), (x, y, 0.04 + 0.24 * s), 0.025 * s, 0.025 * s, seg=10)
+        b.blob(gd, (x, y, 0.04 + 0.27 * s), (0.045 * s, 0.045 * s, 0.045 * s), seg=10)
+    bush(b, (-0.36, 0.25, 0), 0.16, "#3f7a2a", "#2f6020")
+    fm = mat("petal", c("#e03a6a"), 0.5, sss=0.2)
+    for (x, y, z) in [(-0.4, 0.2, 0.2), (-0.3, 0.3, 0.22), (-0.42, 0.33, 0.16), (-0.28, 0.18, 0.15)]:
+        b.blob(fm, (x, y, z), (0.04, 0.04, 0.03), seg=8)
     return {}
 
 

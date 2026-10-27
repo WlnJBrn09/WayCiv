@@ -87,29 +87,35 @@ def aluminum(b):
 
 @model("resource_oil")
 def oil(b):
-    om = mat("oilpool", c("#101014"), 0.04, coat=1.0, metal=0.3)
-    rm = rock_mat("#7a6a58", "#4a3e32")
-    b.blob(om, (0, 0, 0.0), (0.48, 0.38, 0.04), 0.4, seg=20)
-    b.blob(om, (0.38, 0.1, 0.0), (0.18, 0.14, 0.035), 0.0, seg=14)
-    b.blob(om, (-0.22, -0.28, 0.0), (0.15, 0.12, 0.03), 0.0, seg=12)
-    for (x, y, r) in [(-0.1, 0.05, 0.05), (0.15, -0.08, 0.04), (0.05, 0.15, 0.035)]:
+    """Black crude seeping up between rocks, with a sheen, and a few filled barrels."""
+    om = mat("oilpool", c("#0c0c10"), 0.03, coat=1.0, metal=0.4)
+    rm = rock_mat("#8a7a62", "#5a4c3a")
+    soft_ground(b, "#6a5a42", "#4e4230", 0.55, 0.8, z=-0.01, scale=8)
+    b.blob(om, (0.0, -0.05, 0.0), (0.32, 0.24, 0.03), 0.4, seg=20)
+    b.blob(om, (0.28, 0.08, 0.0), (0.12, 0.1, 0.025), 0.0, seg=14)
+    for (x, y, r) in [(-0.05, -0.02, 0.05), (0.1, -0.1, 0.035)]:
         b.blob(om, (x, y, r * 0.5), (r, r, r), seg=10)
-    b.rock(rm, (-0.42, 0.18, 0.08), (0.17, 0.15, 0.11), 1)
-    b.rock(rm, (0.12, 0.38, 0.06), (0.14, 0.12, 0.09), 2)
-    b.rock(rm, (0.3, -0.35, 0.06), (0.12, 0.1, 0.08), 3)
+    b.rock(rm, (-0.35, 0.15, 0.1), (0.2, 0.17, 0.14), 1)
+    b.rock(rm, (0.1, 0.3, 0.08), (0.16, 0.13, 0.11), 2)
+    b.rock(rm, (-0.3, -0.25, 0.06), (0.12, 0.1, 0.08), 3)
+    for (x, y, s) in [(0.3, -0.28, 1.1), (0.45, -0.12, 1.0), (0.38, -0.4, 0.9)]:
+        barrel(b, (x, y, 0), s, "#1f3a6a")
     return {}
 
 
 @model("resource_uranium")
 def uranium(b):
-    rm = rock_mat("#58605a", "#363c38")
-    gm = mat("uran", c("#7aff3a"), 0.15, emit=3.0, emit_col=c("#5aff20"), coat=1.0)
-    gl = mat("uglow", c("#8aff5a"), 0.2, emit=0.25, alpha=0.12)
-    b.rock(rm, (-0.05, 0.05, 0.12), (0.38, 0.3, 0.22), 1)
-    b.rock(rm, (0.3, -0.18, 0.08), (0.2, 0.17, 0.13), 2)
-    for (x, y, h, tx, ty) in [(-0.12, 0.05, 0.38, 0.2, 0.1), (0.08, -0.03, 0.3, -0.2, 0.15), (0.3, -0.18, 0.24, 0.1, -0.2), (-0.3, -0.05, 0.22, 0.35, -0.1)]:
-        b.crystal(gm, (x, y, 0.1), h, 0.06, (tx, ty), sides=5, tip=0.4)
-    b.blob(gl, (0.0, 0.0, 0.22), (0.5, 0.4, 0.3), seg=14)
+    """Dark pitchblende with glowing yellow-green seams, and drums of ore."""
+    rm = rock_mat("#4e5550", "#2e3430")
+    gm = mat("uran", c("#c8ff3a"), 0.15, emit=4.0, emit_col=c("#a0ff20"), coat=1.0)
+    b.rock(rm, (-0.08, 0.1, 0.13), (0.38, 0.3, 0.24), 1)
+    b.rock(rm, (0.3, 0.2, 0.08), (0.18, 0.15, 0.13), 2)
+    for (x, y, h, tx, ty) in [(-0.15, 0.0, 0.3, 0.15, -0.1), (0.05, -0.05, 0.24, -0.15, -0.1), (-0.3, 0.05, 0.2, -0.2, -0.05),
+                              (0.28, 0.12, 0.18, 0.1, -0.15)]:
+        b.crystal(gm, (x, y, 0.12), h, 0.05, (tx, ty), sides=5, tip=0.4)
+    for (x, y) in [(0.2, -0.3), (0.38, -0.18)]:
+        barrel(b, (x, y, 0), 1.1, "#e0c020")
+        b.disc(mat("trefoil", c("#1a1a1a"), 0.5), (x, y, 0.29), 0.035, 0.005, seg=3)
     return {}
 
 
