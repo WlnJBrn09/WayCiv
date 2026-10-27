@@ -404,7 +404,7 @@ name = "Starbase, LA"
 cost = 2150
 tech = "TECH_ROBOTICS"
 yields = { production = 6, science = 6 }
-on = ["FEATURE_MARSH", "FEATURE_FOREST", "FEATURE_TAIGA", "FEATURE_JUNGLE"]
+on = ["FEATURE_MARSH", "FEATURE_FOREST", "FEATURE_JUNGLE"]
 ocean = true
 spaceport = true
 space_production = 100
