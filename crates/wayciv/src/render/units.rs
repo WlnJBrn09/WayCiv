@@ -263,6 +263,8 @@ pub struct UnitFx {
     pub scale: f32,
     /// Pixels the unit hovers above the ground (hop, walking bob).
     pub lift: f32,
+    /// Lean in radians about the feet, clockwise (walking).
+    pub tilt: f32,
 }
 
 impl UnitFx {
@@ -272,6 +274,7 @@ impl UnitFx {
         flash: 0.0,
         scale: 1.0,
         lift: 0.0,
+        tilt: 0.0,
     };
 }
 
@@ -295,16 +298,26 @@ fn draw_sprite(
     spent: bool,
     stretch: f32,
     flash: f32,
+    tilt: f32,
 ) {
     let min = ground - vec2(px * 0.5, px * sprite.anchor * stretch);
     let rect = Rect::from_min_size(min, vec2(px, px * stretch));
     let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
-    painter.image(sprite.beauty.id(), rect, uv, dim(Color32::WHITE, spent));
+    // A quad turned about the feet, so a walking figure leans.
+    let image = |texture: egui::TextureId, tint: Color32| {
+        let mut mesh = egui::Mesh::with_texture(texture);
+        mesh.add_rect_with_uv(rect, uv, tint);
+        if tilt != 0.0 {
+            mesh.rotate(egui::emath::Rot2::from_angle(tilt), ground);
+        }
+        painter.add(mesh);
+    };
+    image(sprite.beauty.id(), dim(Color32::WHITE, spent));
     if let Some(mask) = &sprite.mask {
-        painter.image(mask.id(), rect, uv, dim(team, spent));
+        image(mask.id(), dim(team, spent));
     }
     if flash > 0.0 {
-        painter.image(sprite.beauty.id(), rect, uv, red_glow(flash));
+        image(sprite.beauty.id(), red_glow(flash));
     }
 }
 
@@ -434,7 +447,7 @@ pub fn draw_unit(
         }
         let high = (1.0 - lift / (radius * 3.0)).clamp(0.6, 1.0);
         ground_shadow(painter, ground, rx * 0.8 * high, if spent { 80 } else { 110 });
-        draw_sprite(s, painter, hover, px * fx.scale, primary, spent, stretch, fx.flash);
+        draw_sprite(s, painter, hover, px * fx.scale, primary, spent, stretch, fx.flash, fx.tilt);
         true
     } else {
         // No model: Codex icon on a disc, else the class symbol.
@@ -702,7 +715,7 @@ pub fn draw_aircraft(
         // The plane hovers above a soft shadow.
         ground_shadow(painter, at + vec2(r * 0.2, r * 1.0), r * 0.75, 70);
         let px = r * 2.0 * (0.62 + 0.2 * s.ortho);
-        draw_sprite(s, painter, at + vec2(0.0, px * (s.anchor - 0.5)), px, primary, spent, 1.0, 0.0);
+        draw_sprite(s, painter, at + vec2(0.0, px * (s.anchor - 0.5)), px, primary, spent, 1.0, 0.0, 0.0);
         draw_badge(painter, Class::Air, at + vec2(-r * 0.95, -r * 0.8), (r * 0.62).max(5.0), primary, secondary, spent);
         hp_bar(u, painter, at + vec2(0.0, -r * 0.55), r * 0.9, game.is_military(u));
     } else {

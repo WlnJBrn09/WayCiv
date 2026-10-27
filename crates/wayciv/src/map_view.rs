@@ -163,6 +163,15 @@ fn slots(game: &Game, units: &[&Unit]) -> Vec<Slot> {
         .collect()
 }
 
+/// Where `unit` stands on `tile` among the units there (as if it were there).
+fn walking_slot(game: &Game, by_tile: &HashMap<Pos, Vec<&Unit>>, unit: &Unit, tile: Pos) -> Slot {
+    let mut here: Vec<&Unit> = by_tile
+        .get(&tile)
+        .map_or(Vec::new(), |v| v.iter().copied().filter(|u| u.id != unit.id).collect());
+    here.push(unit);
+    slots(game, &here)[here.len() - 1]
+}
+
 /// Draws the whole map; returns whether anything ambient is on screen (so
 /// the caller keeps repainting at a low rate).
 fn draw(
@@ -491,40 +500,42 @@ fn draw(
             }
             None => Cow::Borrowed(unit),
         };
-        let here = by_tile.get(&pose.tile).map_or(&[][..], |v| v.as_slice());
-        let slot = match here.iter().position(|u| u.id == id) {
-            Some(i) => slots(game, here)[i],
-            None if game.is_military(&unit) => Slot {
-                off: vec2(0.0, -0.05),
-                radius: 0.42,
-                air: false,
-            },
-            None => Slot {
-                off: vec2(-0.45, 0.4),
-                radius: 0.3,
-                air: false,
-            },
-        };
+        let slot = walking_slot(game, &by_tile, &unit, pose.tile);
         let naval = game.unit_type(&unit).domain == "DOMAIN_SEA";
-        // A walking unit bobs with each step (ships ride the swell instead).
-        let step = match pose.stride {
-            Some(st) if !naval => 0.06 * (st * std::f32::consts::PI * 1.5).sin().abs(),
-            _ => 0.0,
-        };
+        let (mut off, mut radius) = (slot.off, slot.radius);
+        let (mut lift, mut tilt) = (pose.lift, 0.0);
+        if let Some(walk) = pose.walk {
+            // Glide from the unit's place on the start tile to its place on
+            // the end tile, so it never jumps when its slot changes.
+            let start = walking_slot(game, &by_tile, &unit, walk.from);
+            off = start.off + (off - start.off) * walk.blend;
+            radius = start.radius + (radius - start.radius) * walk.blend;
+            let step = walk.stride * std::f32::consts::TAU;
+            if naval {
+                // Ships roll gently instead of stepping.
+                tilt = 0.03 * (step * 0.5).sin() * walk.pace;
+            } else {
+                // Two steps a tile: a small bob, a lean into the walk, and
+                // a sway from foot to foot.
+                lift += 0.025 * (step).sin().abs() * walk.pace;
+                tilt = (0.07 * walk.heading.x + 0.045 * step.sin()) * walk.pace;
+            }
+        }
         let fx = UnitFx {
             time: if ambient { now } else { 0.0 },
             alpha: pose.alpha,
             flash: pose.flash,
             scale: pose.scale,
-            lift: (pose.lift + step) * z,
+            lift: lift * z,
+            tilt,
         };
         for c in screens(s, rect, pose.tile) {
-            let at = c + (slot.off + pose.offset) * z;
+            let at = c + (off + pose.offset) * z;
             moving.push((
                 at.y,
                 unit.clone(),
                 at,
-                z * slot.radius,
+                z * radius,
                 fx,
                 s.selected_unit == Some(id),
             ));

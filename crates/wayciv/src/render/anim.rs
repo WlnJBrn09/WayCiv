@@ -79,9 +79,9 @@ pub fn delta(width: f32, a: Pos, b: Pos) -> Vec2 {
 const BATCH_CAP: f64 = 2.4;
 /// But never faster than this fraction of normal speed.
 const MIN_SPEED: f64 = 0.4;
-const PATH_BASE: f64 = 0.12;
-const PATH_PER_STEP: f64 = 0.12;
-const PATH_MAX: f64 = 0.9;
+const PATH_BASE: f64 = 0.1;
+const PATH_PER_STEP: f64 = 0.3;
+const PATH_MAX: f64 = 1.3;
 const LUNGE: f64 = 0.36;
 /// The lunge connects this far in.
 const LUNGE_HIT: f64 = 0.15;
@@ -101,8 +101,10 @@ pub const FOG: f64 = 0.4;
 #[derive(Clone, Debug)]
 pub enum Move {
     Idle { at: Pos },
-    /// Walks the polyline `pts` (world coordinates, ending at tile `to`).
+    /// Walks the polyline `pts` (world coordinates) from tile `from` to
+    /// tile `to`.
     Path {
+        from: Pos,
         to: Pos,
         pts: Vec<Vec2>,
         fade_in: bool,
@@ -160,8 +162,23 @@ pub struct Pose {
     pub scale: f32,
     /// Hit points to show instead of the unit's real ones.
     pub hp: Option<i32>,
-    /// Tiles walked so far in this stretch (drives the step bob), if walking.
-    pub stride: Option<f32>,
+    /// Set while walking.
+    pub walk: Option<Walk>,
+}
+
+/// How a walk is going, for the gait and for gliding between the unit's
+/// places on its start and end tiles.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Walk {
+    pub from: Pos,
+    /// 0 at the start tile, 1 at the end tile.
+    pub blend: f32,
+    /// Tiles walked so far.
+    pub stride: f32,
+    /// Direction of travel (world units, unit length).
+    pub heading: Vec2,
+    /// 0 when standing, 1 at full pace.
+    pub pace: f32,
 }
 
 impl Pose {
@@ -174,7 +191,7 @@ impl Pose {
             flash: 0.0,
             scale: 1.0,
             hp: None,
-            stride: None,
+            walk: None,
         }
     }
 }
@@ -229,27 +246,26 @@ fn seg_pose(seg: &Seg, u: f32) -> Pose {
     match &seg.what {
         Move::Idle { at } => Pose::at(*at),
         Move::Path {
+            from,
             to,
             pts,
             fade_in,
             fade_out,
         } => {
             let mut pose = Pose::at(*to);
+            let pts = rounded(pts);
             let total: f32 = pts.windows(2).map(|w| (w[1] - w[0]).length()).sum();
-            let mut left = trapezoid(u, 0.14) * total;
-            let walked = left;
-            let mut at = pts[0];
-            for w in pts.windows(2) {
-                let len = (w[1] - w[0]).length();
-                if left <= len || len <= 0.0 {
-                    at = w[0] + (w[1] - w[0]) * if len > 0.0 { left / len } else { 0.0 };
-                    break;
-                }
-                left -= len;
-                at = w[1];
-            }
+            let ramp = 0.18;
+            let walked = trapezoid(u, ramp) * total;
+            let (at, heading) = along(&pts, walked);
             pose.offset = at - pts[pts.len() - 1];
-            pose.stride = Some(walked / SQRT3);
+            pose.walk = Some(Walk {
+                from: *from,
+                blend: smooth(walked / total.max(1e-6)),
+                stride: walked / SQRT3,
+                heading,
+                pace: smooth(u / ramp).min(smooth((1.0 - u) / ramp)),
+            });
             if *fade_in {
                 pose.alpha = smooth(u / 0.35);
             }
@@ -303,6 +319,47 @@ fn seg_pose(seg: &Seg, u: f32) -> Pose {
             ..Pose::at(*at)
         },
     }
+}
+
+/// A path with its corners rounded off (two passes of Chaikin's corner
+/// cutting), keeping both ends, so turns are curves instead of kinks.
+fn rounded(pts: &[Vec2]) -> Vec<Vec2> {
+    let mut pts = pts.to_vec();
+    for _ in 0..2 {
+        if pts.len() < 3 {
+            break;
+        }
+        let mut out = vec![pts[0]];
+        for w in pts.windows(2) {
+            out.push(w[0] + (w[1] - w[0]) * 0.25);
+            out.push(w[0] + (w[1] - w[0]) * 0.75);
+        }
+        out.push(pts[pts.len() - 1]);
+        // The cuts next to the ends would leave a tiny first and last step.
+        out.remove(1);
+        out.remove(out.len() - 2);
+        pts = out;
+    }
+    pts
+}
+
+/// The point `dist` along the polyline `pts`, and the direction there.
+fn along(pts: &[Vec2], dist: f32) -> (Vec2, Vec2) {
+    let mut left = dist;
+    let mut heading = Vec2::ZERO;
+    for w in pts.windows(2) {
+        let d = w[1] - w[0];
+        let len = d.length();
+        if len <= 0.0 {
+            continue;
+        }
+        heading = d / len;
+        if left <= len {
+            return (w[0] + heading * left, heading);
+        }
+        left -= len;
+    }
+    (pts[pts.len() - 1], heading)
 }
 
 // ---- Effects --------------------------------------------------------------------
@@ -757,6 +814,7 @@ impl<'a> Batch<'a> {
                 self.rest.insert(unit, from);
                 let begin = world(from);
                 let path = Move::Path {
+                    from,
                     to,
                     pts: vec![begin, begin + dw],
                     fade_in: !vis_from,
@@ -1067,6 +1125,28 @@ mod tests {
     }
 
     #[test]
+    fn corners_are_rounded_and_the_ends_kept() {
+        let pts = [vec2(0.0, 0.0), vec2(1.0, 0.0), vec2(1.0, 1.0)];
+        let r = rounded(&pts);
+        assert_eq!(r[0], pts[0]);
+        assert_eq!(*r.last().unwrap(), pts[2]);
+        // The corner itself is cut off.
+        assert!(r.iter().all(|p| (*p - pts[1]).length() > 0.1), "{r:?}");
+        // A straight walk stays straight.
+        assert_eq!(rounded(&pts[..2]), pts[..2].to_vec());
+        // Walking along it moves smoothly: no step longer than a sliver.
+        let total: f32 = r.windows(2).map(|w| (w[1] - w[0]).length()).sum();
+        let mut last = along(&r, 0.0).0;
+        for i in 1..=100 {
+            let (p, h) = along(&r, total * i as f32 / 100.0);
+            assert!((p - last).length() < total / 50.0);
+            assert!((h.length() - 1.0).abs() < 1e-4);
+            last = p;
+        }
+        assert!((last - pts[2]).length() < 1e-4);
+    }
+
+    #[test]
     fn deltas_wrap_east_west() {
         let width = SQRT3 * 20.0;
         let d = delta(width, Pos::new(19, 4), Pos::new(0, 4));
@@ -1081,6 +1161,7 @@ mod tests {
                 start: 1.0,
                 dur: 0.5,
                 what: Move::Path {
+                    from: Pos::new(4, 5),
                     to: Pos::new(5, 5),
                     pts: vec![vec2(from, 0.0), vec2(to, 0.0)],
                     fade_in: false,
