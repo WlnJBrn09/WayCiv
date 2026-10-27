@@ -325,6 +325,24 @@ impl Game {
         {
             return Some(item.clone());
         }
+        // A Starbase when the empire has nowhere to launch from: it works as
+        // a Spaceport and builds space projects faster.
+        let launch_site = self.player_cities(owner).any(|c| {
+            c.buildings.iter().any(|&b| content.buildings[b].spaceport)
+                || c.districts
+                    .iter()
+                    .any(|d| content.districts[d.district].id == crate::rules::SPACEPORT)
+        });
+        if !launch_site
+            && let Some((w, site)) = available.iter().find_map(|p| match p {
+                Production::Wonder(w, _) if content.buildings[*w].spaceport => {
+                    self.wonder_sites(city, *w).first().map(|&site| (*w, site))
+                }
+                _ => None,
+            })
+        {
+            return Some(Production::Wonder(w, site));
+        }
         // A district on its best site.
         let districts: Vec<usize> = available
             .iter()

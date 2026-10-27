@@ -383,6 +383,19 @@ pub struct Building {
     /// Empire-wide effects while the owner has it (mostly wonders).
     #[serde(default)]
     pub effects: Vec<Effect>,
+    /// A wonder's tile must have one of these terrains or features (any
+    /// tile when empty).
+    #[serde(default)]
+    pub on: Vec<String>,
+    /// A wonder's tile must touch the ocean (not a lake).
+    #[serde(default)]
+    pub ocean: bool,
+    /// The city can launch space projects as if it had a Spaceport.
+    #[serde(default)]
+    pub spaceport: bool,
+    /// Percent Production toward space projects in this city.
+    #[serde(default)]
+    pub space_production: i32,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -956,6 +969,19 @@ impl Content {
         }
         for b in &mut self.buildings {
             b.description = describe_all(&b.description, &b.effects, &name);
+            if b.spaceport {
+                b.description.push_str("\nWorks as a Spaceport: its city can launch space projects.");
+            }
+            if b.space_production != 0 {
+                b.description.push_str(&format!(
+                    "\n+{}% Production toward space projects in its city.",
+                    b.space_production
+                ));
+            }
+            if let Some(place) = placement(&b.on, b.ocean, &name) {
+                b.description.push('\n');
+                b.description.push_str(&place);
+            }
         }
         for t in self
             .leaders
@@ -1105,7 +1131,7 @@ impl Content {
             ] {
                 check(&b.id, &opt(r));
             }
-            for r in &b.prereq_buildings {
+            for r in b.prereq_buildings.iter().chain(&b.on) {
                 check(&b.id, r);
             }
             for (c, _) in &b.great_person_points {
@@ -1241,3 +1267,20 @@ pub const KNOWN_TRIGGERS: [&str; 26] = [
     "have_x_policy_slots",
     "have_x_great_people",
 ];
+
+/// Where a wonder may be built, e.g. "Must be built on Plains or Desert next
+/// to the ocean."
+fn placement(on: &[String], ocean: bool, name: &dyn Fn(&str) -> String) -> Option<String> {
+    let names: Vec<String> = on.iter().map(|id| name(id)).collect();
+    let terrain = match names.as_slice() {
+        [] => None,
+        [one] => Some(one.clone()),
+        [rest @ .., last] => Some(format!("{} or {last}", rest.join(", "))),
+    };
+    match (terrain, ocean) {
+        (None, false) => None,
+        (None, true) => Some("Must be built next to the ocean.".into()),
+        (Some(t), false) => Some(format!("Must be built on {t}.")),
+        (Some(t), true) => Some(format!("Must be built on {t} next to the ocean.")),
+    }
+}

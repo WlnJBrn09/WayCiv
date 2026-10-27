@@ -147,3 +147,85 @@ fn leaders_speak_their_own_lines() {
         assert!(c.city_names.len() >= 10, "{} needs more city names", c.id);
     }
 }
+
+#[test]
+fn starbases_need_their_terrain_and_the_ocean() {
+    let mut g = game_with(GameLength::Turns500);
+    let me = g.human();
+    let settler = g
+        .player_units(me)
+        .find(|u| g.unit_type(u).found_city)
+        .unwrap()
+        .id;
+    g.found_city(settler).unwrap();
+    let city = g.player_cities(me).next().unwrap().id;
+    let center = g.cities[&city].pos;
+    let grid = g.map.grid;
+    let id = |g: &Game, id: &str| g.rules.idx(id).unwrap();
+    let (tx, la) = (id(&g, "BUILDING_STARBASE_TX"), id(&g, "BUILDING_STARBASE_LA"));
+    let (grass, plains, coast) = (
+        id(&g, "TERRAIN_GRASS"),
+        id(&g, "TERRAIN_PLAINS"),
+        id(&g, "TERRAIN_COAST"),
+    );
+
+    // An inland plains tile in the city, on bare grassland.
+    let site = grid.neighbors(center).next().unwrap();
+    for p in grid.within(site, 4) {
+        let tile = g.map.tile_mut(p);
+        tile.terrain = grass;
+        tile.feature = None;
+        tile.resource = None;
+        tile.improvement = None;
+    }
+    g.map.tile_mut(site).terrain = plains;
+    assert!(!g.wonder_sites(city, tx).contains(&site), "inland");
+
+    // A one-tile lake is not the ocean.
+    let shore = grid.neighbors(site).find(|&p| p != center).unwrap();
+    g.map.tile_mut(shore).terrain = coast;
+    assert!(!g.wonder_sites(city, tx).contains(&site), "lake");
+
+    // Widen it into a sea.
+    for p in grid.within(shore, 3) {
+        if p != site && p != center {
+            g.map.tile_mut(p).terrain = coast;
+        }
+    }
+    assert!(g.wonder_sites(city, tx).contains(&site), "plains by the sea");
+    assert!(!g.wonder_sites(city, la).contains(&site), "LA needs marsh or woods");
+
+    let marsh = id(&g, "FEATURE_MARSH");
+    let tile = g.map.tile_mut(site);
+    tile.terrain = grass;
+    tile.feature = Some(marsh);
+    assert!(g.wonder_sites(city, la).contains(&site), "marsh by the sea");
+    assert!(!g.wonder_sites(city, tx).contains(&site), "TX needs plains or desert");
+}
+
+#[test]
+fn a_starbase_launches_space_projects_twice_as_fast() {
+    let mut g = game_with(GameLength::Turns500);
+    let me = g.human();
+    let settler = g
+        .player_units(me)
+        .find(|u| g.unit_type(u).found_city)
+        .unwrap()
+        .id;
+    g.found_city(settler).unwrap();
+    let city = g.player_cities(me).next().unwrap().id;
+    for t in g.players[me].techs.iter_mut() {
+        *t = true;
+    }
+    let satellite = Production::Project(g.rules.idx("PROJECT_LAUNCH_EARTH_SATELLITE").unwrap());
+    assert!(!g.can_produce(city, &satellite), "no Spaceport yet");
+    let before = g.production_toward(city, &satellite);
+
+    let starbase = g.rules.idx("BUILDING_STARBASE_TX").unwrap();
+    g.cities.get_mut(&city).unwrap().buildings.push(starbase);
+    assert!(g.can_produce(city, &satellite), "the Starbase is a Spaceport");
+    assert!(g.available_production(city).contains(&satellite));
+    let after = g.production_toward(city, &satellite);
+    assert!(before > 0.0);
+    assert!((after - 2.0 * before).abs() < 1e-3, "{before} -> {after}");
+}

@@ -3,7 +3,7 @@
 use crate::events::{Built, Event};
 use crate::hex::Pos;
 use crate::map::{CityId, PlayerId};
-use crate::rules::{CULTURE, FAITH, FOOD, GOLD, PRODUCTION, SCIENCE};
+use crate::rules::{CULTURE, FAITH, FOOD, GOLD, PRODUCTION, SCIENCE, SPACEPORT};
 use crate::state::{City, CityDistrict, Game, Production};
 use std::collections::HashMap;
 
@@ -513,6 +513,11 @@ impl Game {
             Production::Building(_) => bonuses.building_production,
             Production::Wonder(_, _) => bonuses.wonder_production,
             Production::District(_, _) => bonuses.district_production,
+            Production::Project(i) if content.projects[*i].space_race => c
+                .buildings
+                .iter()
+                .map(|&b| content.buildings[b].space_production as f32)
+                .sum(),
             Production::Project(_) => 0.0,
         };
         base * (1.0 + percent / 100.0)
@@ -591,7 +596,11 @@ impl Game {
             } else {
                 Production::Building(i)
             };
-            if self.can_produce_ignoring_site(city, &item) {
+            // Wonders with placement rules are offered only where they fit.
+            let unrestricted = content.buildings[i].on.is_empty() && !content.buildings[i].ocean;
+            if self.can_produce_ignoring_site(city, &item)
+                && (!wonder || unrestricted || !self.wonder_sites(city, i).is_empty())
+            {
                 items.push(item);
             }
         }
@@ -833,8 +842,13 @@ impl Game {
                 if !project.space_race || p.space_projects.contains(i) || p.is_city_state() {
                     return false;
                 }
+                // Wonders such as the Starbases stand in for a Spaceport.
+                let launch_site = |d: &str| {
+                    d == SPACEPORT && c.buildings.iter().any(|&b| content.buildings[b].spaceport)
+                };
                 if let Some(district) = &project.prereq_district
                     && !self.city_has_district_type(c, district)
+                    && !launch_site(district)
                 {
                     return false;
                 }
@@ -880,8 +894,12 @@ impl Game {
             .collect()
     }
 
-    pub fn wonder_sites(&self, city: CityId, _wonder: usize) -> Vec<Pos> {
+    /// Tiles where `city` may place `wonder`, following its `on` and `ocean`
+    /// rules.
+    pub fn wonder_sites(&self, city: CityId, wonder: usize) -> Vec<Pos> {
         let rules = &self.rules;
+        let content = &rules.content;
+        let w = &content.buildings[wonder];
         let c = &self.cities[&city];
         self.city_tiles(city)
             .into_iter()
@@ -889,6 +907,13 @@ impl Game {
                 p != c.pos && self.map.is_land(rules, p) && !self.map.is_impassable(rules, p)
             })
             .filter(|&p| self.map.tile(p).district.is_none() && self.map.tile(p).wonder.is_none())
+            .filter(|&p| {
+                let tile = self.map.tile(p);
+                w.on.is_empty()
+                    || w.on.contains(&content.terrains[tile.terrain].id)
+                    || tile.feature.is_some_and(|f| w.on.contains(&content.features[f].id))
+            })
+            .filter(|&p| !w.ocean || self.map.touches_ocean(rules, p))
             .collect()
     }
 
@@ -1008,7 +1033,17 @@ impl Game {
             }
             Production::Wonder(i, at) => {
                 self.cities.get_mut(&city).unwrap().buildings.push(*i);
-                self.map.tile_mut(*at).wonder = Some(*i);
+                // The wonder clears the woods or marsh it stands on, as
+                // districts do.
+                let tile = self.map.tile_mut(*at);
+                tile.wonder = Some(*i);
+                tile.improvement = None;
+                if tile
+                    .feature
+                    .is_some_and(|f| !content.features[f].natural_wonder)
+                {
+                    tile.feature = None;
+                }
                 self.world_wonders.push(*i);
                 self.players[owner].great_works += 1;
                 let wonder = content.buildings[*i].name.clone();

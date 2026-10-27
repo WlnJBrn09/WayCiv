@@ -5,7 +5,7 @@ import bl
 import bmesh
 from bl import _b, _face, _stack
 from districts import lawn
-from mathutils import Vector
+from mathutils import Matrix, Vector
 from ships import dhow
 from town import *  # noqa: F401,F403
 from wonders_ancient import around
@@ -286,8 +286,118 @@ def generic():
         cone(x, y, g + 0.3, 0.05, 0.08, M('gold'), n=4)
 
 
+def _lying(x, y, z, prof, mat, rot=0.0, n=20):
+    """A lathed body lying on its side along `rot` degrees (profile z runs along its length)."""
+    m = Matrix.Translation((x, y, z)) @ Matrix.Rotation(math.radians(rot), 4, 'Z') @ \
+        Matrix.Rotation(math.radians(90), 4, 'Y')
+    bl._stack.append(bl._stack[-1] @ m)  # bl.reset() rebinds the stack, so go through the module
+    try:
+        lathe(0, 0, 0, prof, mat, n=n)
+    finally:
+        bl._stack.pop()
+
+
+def _starship(x, y, z, booster=True):
+    """A stainless-steel Starship, standing on its Super Heavy booster when `booster`."""
+    hull = M('steel', rgb='#d3d8de', rough=0.22, metal=0.9)
+    tiles = M('dark', rgb='#26282d', rough=0.6)
+    r = 0.068
+    if booster:
+        cyl(x, y, z, r, 0.66, hull, n=24)
+        for k in range(4):  # grid fins near the top of the booster
+            a = math.radians(45 + 90 * k)
+            box(x + math.cos(a) * (r + 0.02), y + math.sin(a) * (r + 0.02), z + 0.6, 0.035, 0.035, 0.04, M('iron'), rot=45 + 90 * k)
+        cyl(x, y, z + 0.66, r * 1.02, 0.015, M('concreteD'), n=24)
+        z += 0.675
+    cyl(x, y, z, r, 0.4, hull, n=24)
+    # the heat shield wraps the windward (front) half of the ship
+    lathe(x, y - 0.002, z + 0.02, [(r * 1.01, 0.0), (r * 1.01, 0.36)], tiles, n=24, cap0=False, cap1=False)
+    lathe(x, y, z + 0.4, [(r, 0.0), (r * 0.92, 0.08), (r * 0.7, 0.15), (r * 0.38, 0.2), (0.0, 0.23)], hull, n=24)
+    for sx in (-1, 1):  # forward and aft flaps
+        box(x + sx * (r + 0.012), y, z + 0.04, 0.022, 0.012, 0.11, tiles)
+        box(x + sx * (r + 0.01), y, z + 0.47, 0.018, 0.01, 0.07, tiles)
+
+
+def _lattice_tower(x, y, z, w, h, mat, levels=9):
+    """A square truss tower with X bracing."""
+    step = h / levels
+    for i in range(levels + 1):
+        zz = z + i * step
+        for k in range(4):
+            a = [(-w, -w), (w, -w), (w, w), (-w, w)][k]
+            b = [(-w, -w), (w, -w), (w, w), (-w, w)][(k + 1) % 4]
+            rod((x + a[0], y + a[1], zz), (x + b[0], y + b[1], zz), 0.005, mat, n=4)
+            if i < levels:
+                rod((x + a[0], y + a[1], zz), (x + a[0], y + a[1], zz + step), 0.009, mat, n=5)
+                rod((x + a[0], y + a[1], zz), (x + b[0], y + b[1], zz + step), 0.004, mat, n=4)
+
+
+def starbase_tx():
+    g = bl.plot('concrete')
+    # the orbital launch mount: a ring table on six legs over a flame trench
+    mount = M('concrete', rgb='#c9c8c2')
+    box(0.0, 0.05, g, 0.42, 0.42, 0.02, M('concreteD'))
+    for k in range(6):
+        a = math.radians(60 * k + 30)
+        box(0.14 * math.cos(a), 0.05 + 0.14 * math.sin(a), g, 0.05, 0.05, 0.2, mount)
+    lathe(0.0, 0.05, g + 0.2, [(0.17, 0.0), (0.17, 0.05), (0.09, 0.05), (0.09, 0.0)], M('steel'), n=28)
+    _starship(0.0, 0.05, g + 0.25)
+    # the catch tower and its chopsticks
+    iron = M('iron', rgb='#4b4f57', rough=0.5, metal=0.6)
+    _lattice_tower(0.3, 0.2, g, 0.07, 1.25, iron, levels=10)
+    for sy in (-1, 1):
+        box(0.17, 0.2 + sy * 0.09, g + 0.98, 0.34, 0.03, 0.04, M('steel', rgb='#8f969f'), rot=sy * 12)
+    box(0.3, 0.2, g + 1.25, 0.18, 0.18, 0.04, iron)
+    cyl(0.3, 0.2, g + 1.29, 0.006, 0.12, M('steel'), n=6)
+    # propellant tank farm
+    for k, (tx, ty) in enumerate([(-0.48, 0.38), (-0.36, 0.5), (-0.6, 0.18), (-0.24, 0.62)]):
+        cyl(tx, ty, g, 0.07, 0.3 - 0.04 * (k % 2), M('white', rgb='#eef0f2', rough=0.35), n=18)
+        dome(tx, ty, g + 0.3 - 0.04 * (k % 2), 0.07, M('white', rgb='#eef0f2', rough=0.35), h=0.035, n=18)
+    for (tx, ty) in [(-0.62, -0.18), (-0.5, -0.3)]:
+        _lying(tx, ty, g + 0.05, [(0.0, -0.18), (0.045, -0.16), (0.045, 0.16), (0.0, 0.18)], M('white'), rot=30, n=14)
+    # a low hangar, a second ship waiting on a stand, scrub and palms by the shore
+    box(0.58, -0.25, g, 0.32, 0.26, 0.16, M('concreteD'))
+    box(0.58, -0.25, g + 0.16, 0.34, 0.28, 0.02, M('steel', rgb='#a9b0b8'))
+    for (x, y) in [(-0.2, -0.5), (0.25, -0.55), (0.72, 0.25), (-0.75, -0.48)]:
+        tree(x, y, 0.75, 'bush', g)
+    for (x, y) in [(0.62, 0.5), (-0.05, 0.72)]:
+        tree(x, y, 0.85, 'palm', g)
+
+
+def starbase_la():
+    g = bl.plot('concreteD')
+    # a bayou inlet at the front, with a barge carrying a finished booster
+    _face(M('water', rgb='#4d7f6e', rough=0.1),
+          [(0.55 * math.cos(a), -0.56 + 0.17 * math.sin(a), g + 0.004) for a in
+           (2 * math.pi * k / 32 for k in range(32))])
+    box(-0.05, -0.56, g + 0.004, 0.62, 0.16, 0.04, M('dark', rgb='#3a3d44'))
+    _lying(-0.05, -0.56, g + 0.105, [(0.0, -0.28), (0.06, -0.27), (0.06, 0.27), (0.0, 0.28)],
+           M('steel', rgb='#d3d8de', rough=0.22, metal=0.9))
+    # the mega bays: two tall high bays where ships are stacked
+    for (bx, by, h) in [(-0.3, 0.32, 0.95), (0.08, 0.36, 0.8)]:
+        box(bx, by, g, 0.26, 0.24, h, M('white', rgb='#eceeef', rough=0.5))
+        box(bx, by - 0.121, g + 0.05, 0.16, 0.004, h - 0.12, M('glassD'))
+        box(bx, by, g + h, 0.27, 0.25, 0.02, M('concreteD'))
+    # the long factory hall
+    box(0.48, 0.12, g, 0.36, 0.5, 0.22, M('white', rgb='#e3e6e8', rough=0.5))
+    box(0.48, 0.12, g + 0.22, 0.38, 0.52, 0.02, M('steel', rgb='#a9b0b8'))
+    for k in range(4):
+        box(0.48, -0.131, g + 0.04 + k * 0.045, 0.3, 0.004, 0.02, M('glass'))
+    # a ship rolling out on its transporter
+    box(0.0, -0.18, g, 0.46, 0.14, 0.04, M('yellow', rgb='#d9a42a'))
+    _lying(0.0, -0.18, g + 0.1, [(0.0, -0.22), (0.055, -0.2), (0.06, 0.12), (0.04, 0.18), (0.0, 0.22)],
+           M('steel', rgb='#d3d8de', rough=0.22, metal=0.9))
+    _starship(-0.62, 0.05, g, booster=False)
+    # cypress and woods around the works
+    for (x, y) in [(-0.78, -0.28), (0.76, -0.38), (0.82, 0.48), (-0.62, 0.6), (0.4, 0.68), (-0.85, 0.3)]:
+        tree(x, y, 0.95, 'pine', g)
+    for (x, y) in [(-0.68, -0.6), (0.66, -0.6), (0.7, -0.2)]:
+        tree(x, y, 0.8, 'round', g)
+
+
 WONDERS = {
     'eiffel_tower': eiffel_tower, 'ruhr_valley': ruhr_valley, 'broadway': broadway, 'cristo_redentor': cristo_redentor,
     'estadio_do_maracana': maracana, 'sydney_opera_house': sydney_opera_house, 'biosphere': biosphere, 'generic': generic,
+    'starbase_tx': starbase_tx, 'starbase_la': starbase_la,
 }
 SPRITES = {f'wonder_{k}': (v, False) for k, v in WONDERS.items()}

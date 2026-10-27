@@ -381,3 +381,35 @@ tech = "TECH_SYNTHETIC_MATERIALS"
 yields = { science = 8 }
 description = "Buckminster Fuller's geodesic dome in Montreal."
 effects = [{ kind = "city_percent", yield = "science", percent = 5 }]
+
+[[wonder]]
+id = "BUILDING_STARBASE_TX"
+name = "Starbase, TX"
+cost = 1950
+tech = "TECH_SATELLITES"
+yields = { science = 6, culture = 6 }
+on = ["TERRAIN_PLAINS", "TERRAIN_PLAINS_HILLS", "TERRAIN_DESERT", "TERRAIN_DESERT_HILLS"]
+ocean = true
+spaceport = true
+space_production = 100
+description = "A launch tower by the sea where stainless-steel rockets are stacked and flown."
+effects = [
+  { kind = "city_percent", yield = "science", percent = 10 },
+  { kind = "city_percent", yield = "culture", percent = 10 },
+]
+
+[[wonder]]
+id = "BUILDING_STARBASE_LA"
+name = "Starbase, LA"
+cost = 2150
+tech = "TECH_ROBOTICS"
+yields = { production = 6, science = 6 }
+on = ["FEATURE_MARSH", "FEATURE_FOREST", "FEATURE_TAIGA", "FEATURE_JUNGLE"]
+ocean = true
+spaceport = true
+space_production = 100
+description = "A rocket works on the bayou, rolling finished ships out to the water."
+effects = [
+  { kind = "city_percent", yield = "production", percent = 10 },
+  { kind = "city_percent", yield = "science", percent = 10 },
+]

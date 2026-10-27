@@ -94,6 +94,30 @@ impl Map {
         self.is_land(rules, pos) && self.grid.neighbors(pos).any(|n| self.is_water(rules, n))
     }
 
+    /// Land next to the ocean: a body of water of at least `LAKE_MAX + 1`
+    /// tiles (smaller ones are lakes).
+    pub fn touches_ocean(&self, rules: &Rules, pos: Pos) -> bool {
+        const LAKE_MAX: usize = 9;
+        self.is_land(rules, pos)
+            && self.grid.neighbors(pos).any(|start| {
+                if !self.is_water(rules, start) {
+                    return false;
+                }
+                // Flood the water body, stopping once it is too big for a lake.
+                let mut seen = vec![start];
+                let mut next = 0;
+                while next < seen.len() && seen.len() <= LAKE_MAX {
+                    for n in self.grid.neighbors(seen[next]) {
+                        if self.is_water(rules, n) && !seen.contains(&n) {
+                            seen.push(n);
+                        }
+                    }
+                    next += 1;
+                }
+                seen.len() > LAKE_MAX
+            })
+    }
+
     /// Mountains and impassable features (most natural wonders).
     pub fn is_impassable(&self, rules: &Rules, pos: Pos) -> bool {
         let tile = self.tile(pos);

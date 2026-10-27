@@ -5,3 +5,4 @@
 # Generated from your Civ VI install (contains the game's text); rebuild with
 #   cargo run --release -p wayciv-core --example icon_list > tools/icons/icons.tsv
 /tools/icons/icons.tsv
+__pycache__/

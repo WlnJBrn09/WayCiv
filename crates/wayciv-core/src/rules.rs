@@ -19,6 +19,7 @@ pub const YIELD_NAMES: [&str; 6] = ["Food", "Production", "Gold", "Science", "Cu
 
 /// America's leader in WayCiv.
 pub const REAGAN: &str = "LEADER_REAGAN";
+pub const SPACEPORT: &str = "DISTRICT_SPACEPORT";
 
 pub struct Rules {
     pub content: Content,
