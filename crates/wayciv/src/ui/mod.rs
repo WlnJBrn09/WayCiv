@@ -28,6 +28,7 @@ pub mod menus;
 pub mod minimap;
 pub mod notify;
 pub mod story;
+pub mod tactical;
 pub mod theme;
 pub mod topbar;
 pub mod trackers;

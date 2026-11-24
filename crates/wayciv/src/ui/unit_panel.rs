@@ -12,11 +12,23 @@ use egui::{Align2, Color32, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
 use wayciv_core::actions::{MIN_CITY_DISTANCE, UnitAction};
 use wayciv_core::turn::Blocker;
 
-/// Width of the text column next to the portrait: as wide as fits left of
-/// the minimap, up to 540.
-fn column_width(s: &Session, screen: Rect) -> f32 {
-    let right = screen.right() - super::turn::DIAMETER - MARGIN - 14.0 - super::minimap::outer_size(s).x - 12.0;
-    (right - (MARGIN + 24.0 + 124.0 + 10.0)).clamp(300.0, 540.0)
+/// Total width available left of the minimap (never overlaps it even on small windows).
+fn available_total(s: &Session, screen: Rect) -> f32 {
+    let right = screen.right()
+        - super::turn::DIAMETER
+        - MARGIN
+        - 14.0
+        - super::minimap::outer_size(s).x
+        - 16.0;
+    (right - MARGIN).max(240.0)
+}
+
+/// Portrait diameter and text column width that always stay clear of the minimap.
+fn layout_dims(s: &Session, screen: Rect) -> (f32, f32) {
+    let avail = available_total(s, screen);
+    let portrait = if avail < 460.0 { 76.0 } else { 110.0 };
+    let col = (avail - portrait - 26.0).clamp(220.0, 500.0);
+    (portrait, col)
 }
 
 pub fn show(s: &mut Session, ctx: &egui::Context) {
@@ -27,15 +39,16 @@ pub fn show(s: &mut Session, ctx: &egui::Context) {
         return;
     }
     let screen = ctx.content_rect();
-    let col = column_width(s, screen);
+    let (portrait, col) = layout_dims(s, screen);
+    let total_hint_w = (available_total(s, screen) - 24.0).clamp(220.0, 480.0);
     egui::Area::new(egui::Id::unique("unit_panel"))
         .anchor(Align2::LEFT_BOTTOM, vec2(MARGIN, -MARGIN))
         .order(egui::Order::Middle)
         .show(ctx, |ui| {
             if unit_selected {
-                theme::plate_ui(ui, 12, |ui| card(s, ui, col, screen));
+                theme::plate_ui(ui, 12, |ui| card(s, ui, portrait, col, screen));
             } else {
-                hint(s, ui, col + 124.0);
+                hint(s, ui, total_hint_w);
             }
         });
 }
@@ -177,7 +190,7 @@ fn unavailable(s: &Session, id: wayciv_core::UnitId, a: &UnitAction) -> Option<S
     }
 }
 
-fn card(s: &mut Session, ui: &mut Ui, col: f32, screen: Rect) {
+fn card(s: &mut Session, ui: &mut Ui, portrait: f32, col: f32, screen: Rect) {
     let Some(id) = s.selected_unit else { return };
     let Some(unit) = s.game.units.get(&id).cloned() else {
         return;
@@ -187,24 +200,27 @@ fn card(s: &mut Session, ui: &mut Ui, col: f32, screen: Rect) {
     let mine = unit.owner == s.me();
     let military = s.game.is_military(&unit);
     let mut deselect = false;
+    let r_outer = portrait * 0.45;
+    let r_disc = portrait * 0.40;
     ui.horizontal_top(|ui| {
         // Portrait: unit icon in a disc, ringed in the owner's color and HP.
-        let (rect, _) = ui.allocate_exact_size(vec2(124.0, 124.0), Sense::hover());
+        let (rect, _) = ui.allocate_exact_size(vec2(portrait, portrait), Sense::hover());
         let painter = ui.painter().clone();
         let c = rect.center();
-        theme::disc(&painter, c, 50.0, Color32::from_rgb(18, 32, 52), rgb(owner.primary));
-        painter.circle_stroke(c, 50.0, Stroke::new(5.0, rgb(owner.primary)));
-        painter.circle_stroke(c, 45.0, Stroke::new(1.5, rgb(owner.secondary)));
+        theme::disc(&painter, c, r_disc, Color32::from_rgb(18, 32, 52), rgb(owner.primary));
+        painter.circle_stroke(c, r_disc, Stroke::new(4.5, rgb(owner.primary)));
+        painter.circle_stroke(c, r_disc - 4.5, Stroke::new(1.5, rgb(owner.secondary)));
         if military {
             let frac = unit.hp as f32 / 100.0;
             let color = if frac > 0.6 { GOOD } else if frac > 0.3 { GOLD } else { BAD };
-            theme::ring(&painter, c, 56.0, frac, 5.0, color);
+            theme::ring(&painter, c, r_outer, frac, 4.5, color);
         } else {
-            painter.circle_stroke(c, 56.0, Stroke::new(2.0, palette::GOLD_DIM));
+            painter.circle_stroke(c, r_outer, Stroke::new(2.0, palette::GOLD_DIM));
         }
-        let icon_rect = Rect::from_center_size(c, vec2(78.0, 78.0));
+        let icon_d = portrait * 0.62;
+        let icon_rect = Rect::from_center_size(c, vec2(icon_d, icon_d));
         if !s.icons.paint(&painter, "unit", &ty.id, icon_rect) {
-            glyph::paint(&painter, if military { Glyph::Swords } else { Glyph::Boot }, c, 28.0, TEXT);
+            glyph::paint(&painter, if military { Glyph::Swords } else { Glyph::Boot }, c, portrait * 0.22, TEXT);
         }
 
         ui.vertical(|ui| {

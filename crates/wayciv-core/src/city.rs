@@ -220,24 +220,77 @@ impl Game {
         self.cities.get_mut(&city).unwrap().worked = worked;
     }
 
-    pub fn housing(&self, city: &City) -> i32 {
+    /// True when `pos` has fresh water (river or adjacent river/oasis).
+    pub fn is_fresh_water(&self, pos: Pos) -> bool {
         let rules = &self.rules;
-        let fresh_water = self.map.tile(city.pos).river
-            || self.map.grid.neighbors(city.pos).any(|n| {
+        self.map.tile(pos).river
+            || self.map.grid.neighbors(pos).any(|n| {
                 self.map.tile(n).river
                     || self
                         .map
                         .tile(n)
                         .feature
                         .is_some_and(|f| rules.content.features[f].id == "FEATURE_OASIS")
-            });
-        let water = if fresh_water {
+            })
+    }
+
+    /// Starting housing from water at `pos`: 5 fresh, 3 coastal, 2 dry.
+    pub fn settle_water_housing(&self, pos: Pos) -> i32 {
+        if self.is_fresh_water(pos) {
             5
-        } else if self.map.is_coastal_land(rules, city.pos) {
+        } else if self.map.is_coastal_land(&self.rules, pos) {
             3
         } else {
             2
-        };
+        }
+    }
+
+    /// Whether `player` could settle a city on `pos`; returns Ok(water_housing) or Err(reason).
+    pub fn can_settle_pos(&self, player: PlayerId, pos: Pos) -> Result<i32, &'static str> {
+        let rules = &self.rules;
+        if !self.map.is_land(rules, pos) || self.map.is_impassable(rules, pos) {
+            return Err("Impassable");
+        }
+        if self.map.tile(pos).owner.is_some_and(|o| o != player) {
+            return Err("Foreign territory");
+        }
+        if !self
+            .cities
+            .values()
+            .all(|c| self.map.grid.distance(c.pos, pos) >= crate::actions::MIN_CITY_DISTANCE)
+        {
+            return Err("Too close to another city");
+        }
+        Ok(self.settle_water_housing(pos))
+    }
+
+    /// Base defense bonus of a tile (hills, forest/jungle, cliffs).
+    pub fn tile_defense_bonus(&self, pos: Pos) -> i32 {
+        let tile = self.map.tile(pos);
+        let mut def = self.rules.content.terrains[tile.terrain].defense_modifier;
+        if let Some(f) = tile.feature {
+            def += self.rules.content.features[f].defense_modifier;
+        }
+        if tile.cliffs {
+            def += 3;
+        }
+        def
+    }
+
+    /// Base land movement cost of a tile (before roads/embarkation).
+    pub fn tile_base_move_cost(&self, pos: Pos) -> i32 {
+        let tile = self.map.tile(pos);
+        let terrain = &self.rules.content.terrains[tile.terrain];
+        let mut cost = terrain.movement_cost.max(1);
+        if let Some(f) = tile.feature {
+            cost += self.rules.content.features[f].movement_change.max(0);
+        }
+        cost
+    }
+
+    pub fn housing(&self, city: &City) -> i32 {
+        let rules = &self.rules;
+        let water = self.settle_water_housing(city.pos);
         let buildings: i32 = city
             .buildings
             .iter()
@@ -359,6 +412,87 @@ impl Game {
             }
             let required = adj.tiles_required.max(1);
             out[adj.yield_index] += (adj.amount * (count / required)) as f32;
+        }
+        out
+    }
+
+    /// Explains each non-zero adjacency bonus source for placing `district` at `pos`:
+    /// `(yield_index, amount, human_reason)`.
+    pub fn adjacency_breakdown(&self, district: usize, pos: Pos) -> Vec<(usize, i32, String)> {
+        let rules = &self.rules;
+        let d = &rules.content.districts[district];
+        let mut out = Vec::new();
+        for adj in &d.adjacencies {
+            let mut count = 0;
+            for n in self.map.grid.neighbors(pos) {
+                let tile = self.map.tile(n);
+                let terrain = &rules.content.terrains[tile.terrain].id;
+                let feature = tile.feature.map(|f| &rules.content.features[f]);
+                let hit = adj.adjacent_terrain.as_ref().is_some_and(|t| t == terrain)
+                    || adj
+                        .adjacent_feature
+                        .as_ref()
+                        .is_some_and(|f| feature.is_some_and(|x| &x.id == f))
+                    || adj.adjacent_district.as_ref().is_some_and(|ad| {
+                        tile.district
+                            .is_some_and(|x| &rules.content.districts[x].id == ad)
+                    })
+                    || (adj.other_district && tile.district.is_some())
+                    || (adj.adjacent_wonder && tile.wonder.is_some())
+                    || (adj.adjacent_natural_wonder && feature.is_some_and(|f| f.natural_wonder))
+                    || (adj.adjacent_resource && tile.resource.is_some());
+                if hit {
+                    count += 1;
+                }
+            }
+            if adj.adjacent_river && self.map.tile(pos).river {
+                count += 1;
+            }
+            let required = adj.tiles_required.max(1);
+            let bonus = adj.amount * (count / required);
+            if bonus > 0 {
+                let source = if adj.adjacent_river {
+                    "River".to_string()
+                } else if adj.adjacent_natural_wonder {
+                    format!("{count} Natural Wonder{}", if count == 1 { "" } else { "s" })
+                } else if adj.adjacent_wonder {
+                    format!("{count} Wonder{}", if count == 1 { "" } else { "s" })
+                } else if adj.adjacent_resource {
+                    format!("{count} Resource{}", if count == 1 { "" } else { "s" })
+                } else if adj.other_district {
+                    format!("{count} Adjacent District{}", if count == 1 { "" } else { "s" })
+                } else if let Some(ad) = &adj.adjacent_district {
+                    let name = rules
+                        .content
+                        .districts
+                        .iter()
+                        .find(|x| &x.id == ad)
+                        .map(|x| x.name.as_str())
+                        .unwrap_or("District");
+                    format!("{count} {name}")
+                } else if let Some(f) = &adj.adjacent_feature {
+                    let name = rules
+                        .content
+                        .features
+                        .iter()
+                        .find(|x| &x.id == f)
+                        .map(|x| x.name.as_str())
+                        .unwrap_or("Feature");
+                    format!("{count} {name}")
+                } else if let Some(t) = &adj.adjacent_terrain {
+                    let pretty = if t.ends_with("_MOUNTAIN") {
+                        "Mountain"
+                    } else if t == "TERRAIN_COAST" {
+                        "Coast"
+                    } else {
+                        "Terrain"
+                    };
+                    format!("{count} {pretty}{}", if count == 1 { "" } else { "s" })
+                } else {
+                    "Adjacency".to_string()
+                };
+                out.push((adj.yield_index, bonus, source));
+            }
         }
         out
     }

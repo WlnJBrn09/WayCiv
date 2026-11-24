@@ -30,6 +30,35 @@ pub struct CombatPreview {
     pub kind: AttackKind,
 }
 
+/// One labeled strength modifier in a combat breakdown.
+#[derive(Clone, Debug)]
+pub struct CombatMod {
+    pub label: String,
+    pub delta: i32,
+}
+
+/// Full breakdown of a predicted engagement for the HUD combat preview panel.
+#[derive(Clone, Debug)]
+pub struct CombatBreakdown {
+    pub preview: CombatPreview,
+    pub attacker_name: String,
+    pub attacker_owner: PlayerId,
+    pub attacker_unit_id: Option<String>,
+    pub attacker_hp: i32,
+    pub attacker_max_hp: i32,
+    pub attacker_mods: Vec<CombatMod>,
+    pub defender_name: String,
+    pub defender_owner: PlayerId,
+    pub defender_unit_id: Option<String>,
+    pub defender_hp: i32,
+    pub defender_max_hp: i32,
+    pub defender_wall_hp: i32,
+    pub defender_max_walls: i32,
+    pub defender_mods: Vec<CombatMod>,
+    pub is_city: bool,
+    pub is_civilian: bool,
+}
+
 fn damage(attack: i32, defense: i32, roll: u32) -> i32 {
     let base = 24.0 + roll as f64;
     let value = ((attack - defense) as f64 * POWER_SCALING).exp() * base + 0.5;
@@ -219,6 +248,260 @@ impl Game {
                 0
             },
             kind,
+        })
+    }
+
+    fn unit_strength_mods(
+        &self,
+        unit: &Unit,
+        attacking: bool,
+        kind: AttackKind,
+        versus: Option<&Unit>,
+        versus_city: bool,
+    ) -> Vec<CombatMod> {
+        let rules = &self.rules;
+        let ty = self.unit_type(unit);
+        let mut mods = Vec::new();
+        let embarked = ty.domain == "DOMAIN_LAND" && self.map.is_water(rules, unit.pos);
+        if embarked && !attacking {
+            mods.push(CombatMod {
+                label: "Embarked".into(),
+                delta: 10 + 5 * self.era_of(unit.owner) as i32 - ty.combat,
+            });
+            return mods;
+        }
+        let bonuses = self.bonuses(unit.owner);
+        let class_bonus = bonuses.combat_for(ty.promotion_class.as_deref());
+        if class_bonus != 0 {
+            mods.push(CombatMod {
+                label: "Empire & policy bonus".into(),
+                delta: class_bonus,
+            });
+        }
+        if unit.level > 0 {
+            mods.push(CombatMod {
+                label: format!("Veteran (Lv {})", unit.level),
+                delta: unit.level * 3,
+            });
+        }
+        if self.map.tile(unit.pos).owner == Some(unit.owner) && bonuses.combat_in_territory != 0 {
+            mods.push(CombatMod {
+                label: "Home territory".into(),
+                delta: bonuses.combat_in_territory,
+            });
+        }
+        let wound = (100 - unit.hp) / 10;
+        if wound > 0 {
+            mods.push(CombatMod {
+                label: "Wounded".into(),
+                delta: -wound,
+            });
+        }
+        if !attacking {
+            let tile = self.map.tile(unit.pos);
+            let tdef = rules.content.terrains[tile.terrain].defense_modifier;
+            if tdef != 0 {
+                mods.push(CombatMod {
+                    label: "Terrain (Hills)".into(),
+                    delta: tdef,
+                });
+            }
+            if let Some(f) = tile.feature {
+                let fdef = rules.content.features[f].defense_modifier;
+                if fdef != 0 {
+                    mods.push(CombatMod {
+                        label: rules.content.features[f].name.clone(),
+                        delta: fdef,
+                    });
+                }
+            }
+            if unit.fortified {
+                mods.push(CombatMod {
+                    label: "Fortified".into(),
+                    delta: 4,
+                });
+            }
+            if tile.cliffs {
+                mods.push(CombatMod {
+                    label: "Cliffs".into(),
+                    delta: 3,
+                });
+            }
+        }
+        if let Some(other) = versus {
+            let my_class = ty.promotion_class.as_deref().unwrap_or("");
+            let their_class = self
+                .unit_type(other)
+                .promotion_class
+                .as_deref()
+                .unwrap_or("");
+            if my_class == "PROMOTION_CLASS_ANTI_CAVALRY" && their_class.contains("CAVALRY") {
+                mods.push(CombatMod {
+                    label: "Anti-cavalry".into(),
+                    delta: 10,
+                });
+            }
+        }
+        if versus_city && kind == AttackKind::Ranged {
+            mods.push(CombatMod {
+                label: "Ranged vs City".into(),
+                delta: -17,
+            });
+        }
+        mods
+    }
+
+    /// Detailed combat breakdown for a unit attacking `target`.
+    pub fn combat_breakdown(&self, attacker: UnitId, target: Pos) -> Option<CombatBreakdown> {
+        let preview = self.preview(attacker, target)?;
+        let unit = self.units.get(&attacker)?;
+        let ty = self.unit_type(unit);
+        let kind = preview.kind;
+        if let Some(city) = self.city_at(target).filter(|c| c.owner != unit.owner) {
+            let mut def_mods = Vec::new();
+            let walls_count = city
+                .buildings
+                .iter()
+                .filter(|&&b| self.rules.content.buildings[b].outer_defense > 0)
+                .count() as i32;
+            if walls_count > 0 {
+                def_mods.push(CombatMod {
+                    label: "Fortifications".into(),
+                    delta: walls_count * 3,
+                });
+            }
+            if city.capital {
+                def_mods.push(CombatMod {
+                    label: "Capital".into(),
+                    delta: 3,
+                });
+            }
+            let garrison = self
+                .ground_units_at(city.pos)
+                .filter(|u| u.owner == city.owner && self.is_military(u))
+                .map(|u| self.unit_type(u).combat)
+                .max()
+                .unwrap_or(0);
+            if garrison >= 10 {
+                def_mods.push(CombatMod {
+                    label: "Garrison".into(),
+                    delta: garrison / 10,
+                });
+            }
+            let dmg = (200 - city.hp) / 20;
+            if dmg > 0 {
+                def_mods.push(CombatMod {
+                    label: "Damaged city".into(),
+                    delta: -dmg,
+                });
+            }
+            return Some(CombatBreakdown {
+                preview,
+                attacker_name: ty.name.clone(),
+                attacker_owner: unit.owner,
+                attacker_unit_id: Some(ty.id.clone()),
+                attacker_hp: unit.hp,
+                attacker_max_hp: 100,
+                attacker_mods: self.unit_strength_mods(unit, true, kind, None, true),
+                defender_name: city.name.clone(),
+                defender_owner: city.owner,
+                defender_unit_id: None,
+                defender_hp: city.hp,
+                defender_max_hp: 200,
+                defender_wall_hp: city.wall_hp,
+                defender_max_walls: self.max_walls(city.id),
+                defender_mods: def_mods,
+                is_city: true,
+                is_civilian: false,
+            });
+        }
+        let defender = self.defender_at(target, unit.owner)?;
+        let dty = self.unit_type(defender);
+        let is_civilian = !self.is_military(defender);
+        Some(CombatBreakdown {
+            preview,
+            attacker_name: ty.name.clone(),
+            attacker_owner: unit.owner,
+            attacker_unit_id: Some(ty.id.clone()),
+            attacker_hp: unit.hp,
+            attacker_max_hp: 100,
+            attacker_mods: self.unit_strength_mods(
+                unit,
+                true,
+                kind,
+                (!is_civilian).then_some(defender),
+                false,
+            ),
+            defender_name: dty.name.clone(),
+            defender_owner: defender.owner,
+            defender_unit_id: Some(dty.id.clone()),
+            defender_hp: if is_civilian { 1 } else { defender.hp },
+            defender_max_hp: if is_civilian { 1 } else { 100 },
+            defender_wall_hp: 0,
+            defender_max_walls: 0,
+            defender_mods: if is_civilian {
+                vec![CombatMod {
+                    label: "Unarmed civilian".into(),
+                    delta: 0,
+                }]
+            } else {
+                self.unit_strength_mods(defender, false, kind, Some(unit), false)
+            },
+            is_city: false,
+            is_civilian,
+        })
+    }
+
+    /// Detailed combat breakdown for a city bombarding `target`.
+    pub fn city_combat_breakdown(&self, city: CityId, target: Pos) -> Option<CombatBreakdown> {
+        if !self.city_can_attack(city, target) {
+            return None;
+        }
+        let c = self.cities.get(&city)?;
+        let defender = self.defender_at(target, c.owner)?;
+        let dty = self.unit_type(defender);
+        let is_civilian = !self.is_military(defender);
+        let attack = self.city_strength(city);
+        let defense = if is_civilian {
+            0
+        } else {
+            self.unit_strength(defender, false, AttackKind::Ranged, None, false)
+        };
+        let dealt = if is_civilian { 100 } else { damage(attack, defense, 6) };
+        Some(CombatBreakdown {
+            preview: CombatPreview {
+                attack,
+                defense,
+                damage_to_defender: dealt,
+                damage_to_attacker: 0,
+                kind: AttackKind::Ranged,
+            },
+            attacker_name: c.name.clone(),
+            attacker_owner: c.owner,
+            attacker_unit_id: None,
+            attacker_hp: c.hp,
+            attacker_max_hp: 200,
+            attacker_mods: vec![CombatMod {
+                label: "City defenses".into(),
+                delta: 0,
+            }],
+            defender_name: dty.name.clone(),
+            defender_owner: defender.owner,
+            defender_unit_id: Some(dty.id.clone()),
+            defender_hp: if is_civilian { 1 } else { defender.hp },
+            defender_max_hp: if is_civilian { 1 } else { 100 },
+            defender_wall_hp: 0,
+            defender_max_walls: 0,
+            defender_mods: if is_civilian {
+                vec![CombatMod {
+                    label: "Unarmed civilian".into(),
+                    delta: 0,
+                }]
+            } else {
+                self.unit_strength_mods(defender, false, AttackKind::Ranged, None, false)
+            },
+            is_city: false,
+            is_civilian,
         })
     }
 

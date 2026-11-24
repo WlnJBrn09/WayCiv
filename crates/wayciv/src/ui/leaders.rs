@@ -121,7 +121,8 @@ pub fn ribbon(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) {
         more = list.len() - shown;
     }
     let slots = shown + usize::from(more > 0);
-    let size = vec2(plate_w(slots, d), d + 20.0);
+    let stats_h = if d >= 44.0 { 26.0 } else { 0.0 };
+    let size = vec2(plate_w(slots, d), d + 18.0 + stats_h);
     egui::Area::new(egui::Id::unique("leader_ribbon"))
         .fixed_pos(pos2(right_edge - size.x, TOP_BAR + MARGIN))
         .order(egui::Order::Middle)
@@ -130,8 +131,9 @@ pub fn ribbon(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) {
             let painter = ui.painter().clone();
             theme::plate(&painter, rect, 14.0);
             let mut x = rect.left() + gap + 3.0 + d / 2.0;
+            let portrait_y = rect.top() + 9.0 + d / 2.0;
             if more > 0 {
-                let c = pos2(x, rect.center().y);
+                let c = pos2(x, portrait_y);
                 let hit = Rect::from_center_size(c, vec2(d, d));
                 let response = ui.interact(hit, ui.scope_id().with("ribbon_more"), Sense::click());
                 theme::disc(
@@ -155,20 +157,35 @@ pub fn ribbon(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) {
             }
             for other in list.iter().rev().take(shown) {
                 let other = *other;
-                let c = pos2(x, rect.center().y);
-                let (leader_id, leader_name, colors, civ, alive) = {
+                let c = pos2(x, portrait_y);
+                let (leader_id, leader_name, colors, civ, alive, sci, mil, gold) = {
                     let o = &s.game.players[other];
                     let leader = &s.game.rules.content.leaders[o.leader];
+                    let inc = s.game.income(other);
+                    let mil: i32 = s
+                        .game
+                        .player_units(other)
+                        .map(|u| {
+                            let ty = s.game.unit_type(u);
+                            ty.combat.max(ty.ranged_combat)
+                        })
+                        .sum();
                     (
                         leader.id.clone(),
                         o.name.clone(),
                         (o.primary, o.secondary),
                         o.civ_name.clone(),
                         o.alive,
+                        inc.yields[3],
+                        mil,
+                        o.gold,
                     )
                 };
                 let rel = relationship(s, other);
-                let hit = Rect::from_center_size(c, vec2(d, d));
+                let hit = Rect::from_min_size(
+                    pos2(x - d / 2.0, rect.top() + 6.0),
+                    vec2(d, d + stats_h + 6.0),
+                );
                 let response = ui.interact(hit, ui.scope_id().with(("ribbon", other)), Sense::click());
                 theme::medallion(
                     &painter,
@@ -185,8 +202,38 @@ pub fn ribbon(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context) {
                 }
                 painter.circle_filled(c + vec2(d * 0.34, d * 0.34), 7.0, NAVY);
                 painter.circle_filled(c + vec2(d * 0.34, d * 0.34), 5.0, rel.status_color);
+                // Civ VI Leader HUD Ribbon: compact Science + Military strip below portrait.
+                if stats_h > 0.0 && alive {
+                    let strip = Rect::from_min_size(
+                        pos2(x - d * 0.52, portrait_y + d / 2.0 + 3.0),
+                        vec2(d * 1.04, 22.0),
+                    );
+                    painter.rect_filled(strip, 5.0, Color32::from_rgba_unmultiplied(10, 18, 32, 215));
+                    painter.rect_stroke(
+                        strip,
+                        5.0,
+                        Stroke::new(0.8, palette::with_alpha(GOLD_DIM, 110)),
+                        StrokeKind::Inside,
+                    );
+                    theme::text_bold(
+                        &painter,
+                        pos2(strip.center().x, strip.top() + 5.5),
+                        Align2::CENTER_CENTER,
+                        format!("S:{sci:.0}  M:{mil}"),
+                        10.0,
+                        palette::YIELD_COLORS[3].lerp_to_gamma(Color32::WHITE, 0.25),
+                    );
+                    theme::text(
+                        &painter,
+                        pos2(strip.center().x, strip.bottom() - 5.5),
+                        Align2::CENTER_CENTER,
+                        format!("{gold}g"),
+                        9.5,
+                        GOLD,
+                    );
+                }
                 let tip = format!(
-                    "{leader_name} of {civ}\n{} - {}\n{}\nClick for diplomacy.",
+                    "{leader_name} of {civ}\n{} - {}\nScience +{sci:.1}/t · Military {mil} · Gold {gold}\n{}\nClick for diplomacy.",
                     rel.status, rel.mood, rel.detail
                 );
                 if response.on_hover_text(tip).clicked() {

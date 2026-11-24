@@ -22,12 +22,16 @@ pub mod resources;
 pub mod terrain;
 pub mod units;
 pub mod veil;
+pub mod view3d;
+pub mod yields;
 
 use egui::Pos2;
 use std::path::PathBuf;
 use wayciv_core::{Game, PlayerId, Pos};
 
 pub struct Art {
+    pub assets_dir: PathBuf,
+    pub pack3d: view3d::Pack3D,
     pub terrain: terrain::TerrainArt,
     pub resources: resources::ResourceArt,
     pub buildings: buildings::BuildingArt,
@@ -39,6 +43,8 @@ impl Art {
     /// Cheap: nothing is loaded until first drawn.
     pub fn new(assets: PathBuf) -> Self {
         Self {
+            assets_dir: assets.clone(),
+            pack3d: view3d::Pack3D::default(),
             terrain: terrain::TerrainArt::new(assets.clone()),
             resources: resources::ResourceArt::new(assets.clone()),
             buildings: buildings::BuildingArt::new(assets.clone()),

@@ -10,7 +10,6 @@ use crate::ui;
 use egui::{Align2, Color32, RichText, Sense, pos2, vec2};
 use wayciv_core::diplomacy::DiploEvent;
 use wayciv_core::research::Tree;
-use wayciv_core::rules::YIELD_NAMES;
 use wayciv_core::state::Production;
 use wayciv_core::turn::Blocker;
 use wayciv_core::{CityId, Game, PlayerId, Pos, UnitId};
@@ -47,6 +46,18 @@ pub struct Session {
     pub graph_stat: usize,
     /// Return to the main menu at the end of this frame.
     pub quit_to_menu: bool,
+    /// Map visual & lens settings (yields, grid style, active lens, atmosphere).
+    pub map_settings: crate::render::yields::MapSettings,
+    /// Last horizontal facing per unit (true = facing left/west).
+    pub unit_facing_left: std::collections::HashMap<UnitId, bool>,
+    /// Screen hitboxes of city banners drawn last frame, for direct click-to-open.
+    pub city_banners: Vec<(CityId, egui::Rect)>,
+    /// Multi-tech research target (auto-queues prereqs as each finishes).
+    pub tech_goal: Option<usize>,
+    /// Search filter inside the Tech Tree.
+    pub tech_search: String,
+    /// Whether the Tech Tree should auto-scroll to the player's current era on open.
+    pub tech_autoscroll: bool,
 }
 
 impl Session {
@@ -62,6 +73,8 @@ impl Session {
             cam: Camera {
                 center: map_view::world(start),
                 zoom: 34.0,
+                target_zoom: 34.0,
+                zoom_anchor: None,
             },
             selected_unit: None,
             selected_city: None,
@@ -83,6 +96,12 @@ impl Session {
             game_over_seen: false,
             graph_stat: 0,
             quit_to_menu: false,
+            map_settings: Default::default(),
+            unit_facing_left: std::collections::HashMap::new(),
+            city_banners: Vec::new(),
+            tech_goal: None,
+            tech_search: String::new(),
+            tech_autoscroll: true,
         };
         let first = s
             .game
@@ -127,6 +146,12 @@ impl Session {
         self.city_targeting = false;
         self.reachable.clear();
         self.path_preview.clear();
+        if let Some(cid) = city
+            && let Some(c) = self.game.cities.get(&cid)
+        {
+            let pos = c.pos;
+            map_view::center_on_city(self, pos);
+        }
     }
 
     pub fn refresh_selection(&mut self) {
@@ -300,10 +325,59 @@ impl Session {
 
     pub fn end_turn(&mut self) {
         self.game.end_turn();
+        self.advance_tech_goal();
         self.refresh_selection();
         if self.selected_unit.is_none() && self.selected_city.is_none() {
             self.next_unit();
         }
+    }
+
+    /// If the player queued a future target tech and current research is now
+    /// empty, automatically pick the next researchable prerequisite toward it.
+    pub fn advance_tech_goal(&mut self) {
+        let Some(goal) = self.tech_goal else { return };
+        let me = self.me();
+        if self.game.known(me, Tree::Tech, goal) {
+            self.tech_goal = None;
+            return;
+        }
+        if self.game.current_research(me, Tree::Tech).is_some() {
+            return;
+        }
+        if let Some(next) = self.next_prereq_toward(goal) {
+            let _ = self.game.set_research(me, Tree::Tech, next);
+        }
+    }
+
+    /// Finds the earliest researchable prerequisite tech needed to reach `goal`.
+    pub fn next_prereq_toward(&self, goal: usize) -> Option<usize> {
+        let me = self.me();
+        if self.game.known(me, Tree::Tech, goal) {
+            return None;
+        }
+        if self.game.researchable(me, Tree::Tech, goal) {
+            return Some(goal);
+        }
+        let items = self.game.tree_items(Tree::Tech);
+        let mut stack = vec![goal];
+        let mut visited = std::collections::HashSet::new();
+        let mut candidates = Vec::new();
+        while let Some(i) = stack.pop() {
+            if !visited.insert(i) || self.game.known(me, Tree::Tech, i) {
+                continue;
+            }
+            if self.game.researchable(me, Tree::Tech, i) {
+                candidates.push(i);
+            } else {
+                for p in &items[i].prereqs {
+                    if let Some(j) = items.iter().position(|x| &x.id == p) {
+                        stack.push(j);
+                    }
+                }
+            }
+        }
+        candidates.sort_by_key(|&i| self.game.research_cost(Tree::Tech, i));
+        candidates.into_iter().next()
     }
 }
 
@@ -316,108 +390,6 @@ pub fn year(game: &Game) -> String {
     } else {
         format!("{y} AD")
     }
-}
-
-pub fn tile_tooltip(s: &Session, pos: Pos) -> String {
-    let game = &s.game;
-    let content = &game.rules.content;
-    let me = s.me();
-    let tile = game.map.tile(pos);
-    let terrain = &content.terrains[tile.terrain];
-    let mut lines = vec![];
-    let relief = if terrain.mountain {
-        " (Mountains)"
-    } else if terrain.hills {
-        " (Hills)"
-    } else {
-        ""
-    };
-    lines.push(format!("{}{relief}", palette::biome_name(&terrain.id)));
-    if let Some(f) = tile.feature {
-        lines.push(content.features[f].name.clone());
-    }
-    if tile.river {
-        lines.push("River".into());
-    }
-    if tile.cliffs {
-        lines.push("Cliffs (+3 defense)".into());
-    }
-    if let Some(r) = tile.resource {
-        let res = &content.resources[r];
-        if game.players[me].meets(&game.rules, res.prereq_tech.as_deref()) {
-            let class = res
-                .class
-                .trim_start_matches("RESOURCECLASS_")
-                .to_lowercase();
-            lines.push(format!("{} ({class} resource)", res.name));
-        }
-    }
-    if let Some(i) = tile.improvement {
-        lines.push(format!(
-            "{}{}",
-            content.improvements[i].name,
-            if tile.pillaged { " (pillaged)" } else { "" }
-        ));
-    }
-    if let Some(d) = tile.district.filter(|&d| !content.districts[d].city_center) {
-        lines.push(content.districts[d].name.clone());
-    }
-    if let Some(w) = tile.wonder {
-        lines.push(content.buildings[w].name.clone());
-    }
-    let y = game.tile_yields(me, pos);
-    let yields: Vec<String> = (0..6)
-        .filter(|&i| y[i] != 0)
-        .map(|i| format!("{} {}", y[i], YIELD_NAMES[i]))
-        .collect();
-    if !yields.is_empty() {
-        lines.push(yields.join(", "));
-    }
-    if let Some(owner) = tile.owner {
-        let city = tile
-            .owning_city
-            .and_then(|c| game.cities.get(&c))
-            .map(|c| c.name.clone())
-            .unwrap_or_default();
-        lines.push(format!(
-            "Territory of {} ({city})",
-            game.players[owner].civ_name
-        ));
-    }
-    if game.players[me].visible[game.map.grid.index(pos)] {
-        for u in game.units_at(pos) {
-            let ty = game.unit_type(u);
-            if game.is_military(u) {
-                let strength = if ty.ranged_combat > 0 {
-                    format!("{} / ranged {}", ty.combat, ty.ranged_combat)
-                } else {
-                    ty.combat.to_string()
-                };
-                lines.push(format!(
-                    "{} {} - strength {strength}, {} HP",
-                    game.players[u.owner].civ_name, ty.name, u.hp
-                ));
-            } else {
-                lines.push(format!(
-                    "{} {} (civilian: one attack kills it)",
-                    game.players[u.owner].civ_name, ty.name
-                ));
-            }
-        }
-    }
-    if let Some(unit) = s.selected_unit
-        && game
-            .units
-            .get(&unit)
-            .is_some_and(|u| game.can_attack(u, pos))
-        && let Some(p) = game.preview(unit, pos)
-    {
-        lines.push(format!(
-            "Attack: {} vs {}. Expected damage dealt {}, taken {}.",
-            p.attack, p.defense, p.damage_to_defender, p.damage_to_attacker
-        ));
-    }
-    lines.join("\n")
 }
 
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
@@ -464,6 +436,8 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     ui::notify::panel(s, &ctx);
     legend(s, &ctx);
     banners(s, &ctx);
+    ui::tactical::top_overlays(s, &ctx);
+    ui::tactical::combat_preview(s, &ctx);
 
     screens::windows(s, &mut app.portraits, &ctx);
     if s.quit_to_menu
@@ -487,8 +461,8 @@ fn banners(s: &mut Session, ctx: &egui::Context) {
         None
     };
     let screen = ctx.content_rect();
-    // The middle column between the trackers on the left and the leader
-    // ribbon / city panel on the right.
+    // Stay strictly inside the open column between the left trackers and the
+    // right-hand city panel so nothing ever overlaps.
     let left = ui::MARGIN + 290.0 + 14.0;
     let right = screen.right()
         - ui::MARGIN
@@ -497,10 +471,18 @@ fn banners(s: &mut Session, ctx: &egui::Context) {
         } else {
             0.0
         };
-    let max_w = (right - left - 24.0).clamp(300.0, 900.0);
-    let center_x = ((left + right) / 2.0).min(screen.center().x.max(left + max_w / 2.0));
-    let center_x = center_x.max(left + max_w / 2.0);
-    let mut y = ui::TOP_BAR + ui::MARGIN;
+    let (avail_left, avail_right) = if right - left >= 280.0 {
+        (left, right)
+    } else {
+        (ui::MARGIN, right.max(ui::MARGIN + 240.0))
+    };
+    let max_w = (avail_right - avail_left - 16.0).clamp(220.0, 680.0);
+    let center_x = (avail_left + avail_right) * 0.5;
+    let mut y = if right - left >= 280.0 {
+        ui::TOP_BAR + ui::MARGIN
+    } else {
+        ui::TOP_BAR + ui::MARGIN + 92.0
+    };
     let mut cancel = false;
     if let Some(text) = hint {
         let stacked = max_w < 560.0;

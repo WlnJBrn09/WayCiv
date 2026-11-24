@@ -39,6 +39,10 @@ pub enum Glyph {
     Chevrons,
     Arrow,
     Bow,
+    Gear,
+    Grid,
+    Water,
+    Search,
 }
 
 /// Fills a star-shaped outline as a fan of triangles from `c`.
@@ -272,20 +276,20 @@ pub fn paint(painter: &Painter, g: Glyph, c: Pos2, r: f32, color: Color32) {
             painter.circle_filled(p(0.0, 0.78), r * 0.18, color);
         }
         Glyph::Crown => {
-            fan(
-                painter,
-                p(0.0, 0.6),
-                &[
-                    p(-0.85, 0.6),
-                    p(-0.85, -0.5),
-                    p(-0.4, 0.0),
-                    p(0.0, -0.75),
-                    p(0.4, 0.0),
-                    p(0.85, -0.5),
-                    p(0.85, 0.6),
-                ],
+            // Base band plus three distinct spikes (strictly convex pieces, no
+            // degenerate fan edges).
+            painter.rect_filled(
+                egui::Rect::from_min_max(p(-0.84, 0.22), p(0.84, 0.66)),
+                r * 0.08,
                 color,
             );
+            poly(vec![p(-0.84, 0.26), p(-0.84, -0.46), p(-0.34, 0.26)]);
+            poly(vec![p(-0.42, 0.26), p(0.0, -0.74), p(0.42, 0.26)]);
+            poly(vec![p(0.34, 0.26), p(0.84, -0.46), p(0.84, 0.26)]);
+            for (x, y) in [(-0.84, -0.52), (0.0, -0.78), (0.84, -0.52)] {
+                painter.circle_filled(p(x, y), r * 0.13, color);
+            }
+            painter.line_segment([p(-0.7, 0.44), p(0.7, 0.44)], Stroke::new(w * 0.55, dark));
         }
         Glyph::Temple => {
             poly(vec![p(-0.9, -0.2), p(0.0, -0.85), p(0.9, -0.2)]);
@@ -389,6 +393,34 @@ pub fn paint(painter: &Painter, g: Glyph, c: Pos2, r: f32, color: Color32) {
             painter.line_segment([p(-0.3, -0.9), p(-0.3, 0.9)], Stroke::new(w * 0.4, color));
             painter.line_segment([p(-0.5, 0.0), p(0.8, 0.0)], Stroke::new(w * 0.6, color));
             poly(vec![p(0.95, 0.0), p(0.55, -0.22), p(0.55, 0.22)]);
+        }
+        Glyph::Gear => {
+            let pts = star(c, r * 0.95, r * 0.68, 8, 0.0);
+            fan(painter, c, &pts, color);
+            painter.circle_filled(c, r * 0.38, dark);
+            painter.circle_stroke(c, r * 0.38, Stroke::new(w * 0.5, color));
+        }
+        Glyph::Grid => {
+            let s = Stroke::new((r * 0.16).max(1.2), color);
+            for (cx, cy) in [(-0.42, -0.32), (0.42, -0.32), (0.0, 0.4)] {
+                let pts: Vec<Pos2> = (0..6)
+                    .map(|i| {
+                        let a = PI / 6.0 + i as f32 * TAU / 6.0;
+                        p(cx + 0.44 * a.cos(), cy + 0.44 * a.sin())
+                    })
+                    .collect();
+                painter.add(Shape::closed_line(pts, s));
+            }
+        }
+        Glyph::Water => {
+            // Teardrop.
+            painter.circle_filled(p(0.0, 0.28), r * 0.54, color);
+            poly(vec![p(0.0, -0.88), p(0.52, 0.16), p(-0.52, 0.16)]);
+            painter.circle_filled(p(-0.18, 0.22), r * 0.14, Color32::from_white_alpha(120));
+        }
+        Glyph::Search => {
+            painter.circle_stroke(p(-0.15, -0.15), r * 0.56, stroke);
+            painter.line_segment([p(0.28, 0.28), p(0.82, 0.82)], Stroke::new(w * 1.25, color));
         }
     }
     let _ = pos2(0.0, 0.0);

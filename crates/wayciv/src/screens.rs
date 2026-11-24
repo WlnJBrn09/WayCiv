@@ -28,6 +28,7 @@ pub struct Windows {
     pub leaders: bool,
     pub notifications: bool,
     pub legend: bool,
+    pub settings: bool,
     pub diplomacy: Option<PlayerId>,
     pub policy_draft: Option<Vec<usize>>,
     /// A religion being founded with a Great Prophet.
@@ -48,6 +49,7 @@ pub enum Panel {
     Cards,
     Leaders,
     Notifications,
+    Settings,
     Diplomacy(PlayerId),
 }
 
@@ -72,6 +74,7 @@ impl Windows {
             || self.cards
             || self.leaders
             || self.notifications
+            || self.settings
             || self.diplomacy.is_some()
     }
 
@@ -93,6 +96,7 @@ impl Windows {
             Panel::Cards => self.cards,
             Panel::Leaders => self.leaders,
             Panel::Notifications => self.notifications,
+            Panel::Settings => self.settings,
             Panel::Diplomacy(p) => self.diplomacy == Some(p),
         }
     }
@@ -112,6 +116,7 @@ impl Windows {
             Panel::Cards => self.cards = true,
             Panel::Leaders => self.leaders = true,
             Panel::Notifications => self.notifications = true,
+            Panel::Settings => self.settings = true,
             Panel::Diplomacy(p) => self.diplomacy = Some(p),
         }
     }
@@ -159,8 +164,10 @@ fn themed_window(
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
             theme::plate_ui(ui, 20, |ui| {
-                ui.set_width(size.x - 40.0);
-                ui.set_max_height(size.y - 40.0);
+                let inner_w = (size.x - 40.0).max(260.0);
+                ui.set_width(inner_w);
+                ui.set_max_width(inner_w);
+                ui.set_max_height((size.y - 40.0).max(200.0));
                 ui.horizontal(|ui| {
                     let (rect, _) = ui.allocate_exact_size(vec2(48.0, 48.0), Sense::hover());
                     theme::disc(
@@ -243,9 +250,26 @@ fn windows_inner(s: &mut Session, portraits: &mut Portraits, ctx: &egui::Context
         // Choosing something closes the tree.
         let open = open && !picked;
         match tree {
-            Tree::Tech => s.windows.tech &= open,
+            Tree::Tech => {
+                if !open {
+                    s.tech_autoscroll = true;
+                }
+                s.windows.tech &= open;
+            }
             Tree::Ai => s.windows.ai &= open,
         }
+    }
+    if s.windows.settings {
+        let mut close = false;
+        let open = themed_window(
+            ctx,
+            "Settings & Controls",
+            Glyph::Gear,
+            Some("F1"),
+            vec2(780.0, 620.0),
+            |ui| close = ui::tactical::settings_window(s, ui),
+        );
+        s.windows.settings &= open && !close;
     }
     // The empire menus close themselves once their choice is made.
     type Menu = fn(&mut Session, &mut egui::Ui) -> bool;
@@ -439,6 +463,22 @@ fn unlocked_units(game: &Game, tree: Tree, id: &str) -> Vec<String> {
         .collect()
 }
 
+/// Collects all transitive prerequisite indices of `target` in `items`.
+fn ancestor_set(items: &[wayciv_core::rules::Research], target: usize) -> std::collections::HashSet<usize> {
+    let mut out = std::collections::HashSet::new();
+    let mut stack = vec![target];
+    while let Some(i) = stack.pop() {
+        for p in &items[i].prereqs {
+            if let Some(j) = items.iter().position(|x| &x.id == p)
+                && out.insert(j)
+            {
+                stack.push(j);
+            }
+        }
+    }
+    out
+}
+
 /// Draws a tree; returns true when the player picked something to research.
 fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
     let me = s.me();
@@ -448,7 +488,8 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
     let min_row = positions.values().map(|p| p.1).min().unwrap_or(0);
     let max_col = positions.values().map(|p| p.0).max().unwrap_or(0);
     let max_row = positions.values().map(|p| p.1).max().unwrap_or(0);
-    let (w, h, gx, gy) = (248.0, 64.0, 296.0, 78.0);
+    let (w, h, gx, gy) = (252.0, 66.0, 296.0, 78.0);
+    let era_bar_h = if tree == Tree::Tech { 30.0 } else { 0.0 };
     let current = s.game.current_research(me, tree);
     let accent = match tree {
         Tree::Tech => YIELD_COLORS[3],
@@ -458,21 +499,42 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
         Tree::Tech => ("tech", Glyph::Science),
         Tree::Ai => ("ai", Glyph::Chip),
     };
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing = vec2(8.0, 4.0);
         ui.label(
-            RichText::new("Click a bright item to research it next. Dim items need the ones before them first. Hover for what each unlocks.")
-                .color(palette::TEXT),
+            RichText::new(if tree == Tree::Tech {
+                "Click any tech to research (or queue its prerequisites). Hover to highlight its path."
+            } else {
+                "Click a bright item to research it next. Hover for effects."
+            })
+            .size(13.5)
+            .color(palette::TEXT),
         );
         for (name, color) in [
             ("current", GOLD),
             ("available", accent),
             ("known", palette::GOOD),
         ] {
-            let (rect, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
-            ui.painter().rect_filled(rect, 4.0, color.gamma_multiply(0.8));
-            ui.label(RichText::new(name).color(palette::TEXT_DIM).size(13.5));
+            let (rect, _) = ui.allocate_exact_size(vec2(12.0, 12.0), Sense::hover());
+            ui.painter().rect_filled(rect, 3.0, color.gamma_multiply(0.85));
+            ui.label(RichText::new(name).color(palette::TEXT_DIM).size(12.5));
         }
     });
+    if tree == Tree::Tech {
+        ui.add_space(4.0);
+        ui.horizontal(|ui| {
+            let (sr, _) = ui.allocate_exact_size(vec2(18.0, 22.0), Sense::hover());
+            ui::glyph::paint(ui.painter(), Glyph::Search, sr.center(), 7.0, palette::GOLD_DIM);
+            ui.add(
+                egui::TextEdit::singleline(&mut s.tech_search)
+                    .hint_text("Search techs & unlocks...")
+                    .desired_width(240.0),
+            );
+            if !s.tech_search.is_empty() && ui.small_button("×").clicked() {
+                s.tech_search.clear();
+            }
+        });
+    }
     if tree == Tree::Ai {
         let compute = s.game.compute(me);
         if !s.game.ai_tree_unlocked(me) {
@@ -480,16 +542,57 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                 RichText::new("Research Artificial Intelligence to open this tree.").color(GOLD),
             );
         } else {
-            ui.label(RichText::new(format!("Compute +{compute:.0}/turn. Datacenters produce Compute: +6 each, +2 per adjacent district, +3 next to a river or the coast.")).color(crate::palette::COMPUTE));
+            ui.label(
+                RichText::new(format!(
+                    "Compute +{compute:.0}/turn. Datacenters produce Compute: +6 each, +2 per adjacent district, +3 next to a river or the coast."
+                ))
+                .color(crate::palette::COMPUTE),
+            );
         }
     }
-    egui::ScrollArea::both().show(ui, |ui| {
+    let query = s.tech_search.trim().to_lowercase();
+    let mut scroll = egui::ScrollArea::both().auto_shrink([false, false]);
+    if tree == Tree::Tech && s.tech_autoscroll {
+        s.tech_autoscroll = false;
+        let focus_col = current
+            .and_then(|i| positions.get(&i).map(|p| p.0))
+            .or_else(|| {
+                (0..items.len())
+                    .filter(|&i| s.game.researchable(me, tree, i))
+                    .filter_map(|i| positions.get(&i).map(|p| p.0))
+                    .min()
+            })
+            .unwrap_or(0);
+        let target_x = ((focus_col as f32 - 0.6) * gx).max(0.0);
+        scroll = scroll.horizontal_scroll_offset(target_x);
+    }
+    // Map each column to its predominant era name (for era headers & bands).
+    let mut col_era: HashMap<i32, usize> = HashMap::new();
+    if tree == Tree::Tech {
+        for (i, item) in items.iter().enumerate() {
+            if let Some(&(col, _)) = positions.get(&i) {
+                let e = s
+                    .game
+                    .rules
+                    .content
+                    .eras
+                    .iter()
+                    .position(|er| er.id == item.era)
+                    .unwrap_or(0);
+                col_era
+                    .entry(col)
+                    .and_modify(|cur| *cur = (*cur).max(e))
+                    .or_insert(e);
+            }
+        }
+    }
+    scroll.show(ui, |ui| {
         let size = vec2(
-            gx * (max_col + 1) as f32 + 20.0,
-            gy * (max_row - min_row + 1) as f32 + 20.0,
+            gx * (max_col + 1) as f32 + 24.0,
+            era_bar_h + gy * (max_row - min_row + 1) as f32 + 24.0,
         );
         let (area, _) = ui.allocate_exact_size(size, Sense::hover());
-        let origin = area.min + vec2(10.0, 10.0);
+        let origin = area.min + vec2(12.0, 10.0 + era_bar_h);
         let node_rect = |i: usize| {
             let (c, r) = positions[&i];
             Rect::from_min_size(
@@ -499,11 +602,72 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
         };
         let painter = ui.painter().clone();
         let ctx = ui.ctx().clone();
-        // The node under the pointer lights up its links to the items around it.
+
+        // Draw Era vertical bands & header banners.
+        if tree == Tree::Tech {
+            let mut last_era: Option<usize> = None;
+            for col in 0..=max_col {
+                let era = col_era.get(&col).copied().unwrap_or(0);
+                let x0 = origin.x + col as f32 * gx - 18.0;
+                let band = Rect::from_min_size(
+                    pos2(x0, area.min.y),
+                    vec2(gx, size.y),
+                );
+                if era % 2 == 1 {
+                    painter.rect_filled(band, 0.0, Color32::from_white_alpha(6));
+                }
+                if last_era != Some(era) {
+                    last_era = Some(era);
+                    if col > 0 {
+                        painter.line_segment(
+                            [pos2(x0, area.min.y + 4.0), pos2(x0, area.max.y - 4.0)],
+                            Stroke::new(1.0, palette::with_alpha(palette::GOLD_DIM, 75)),
+                        );
+                    }
+                    let ename = s
+                        .game
+                        .rules
+                        .content
+                        .eras
+                        .get(era)
+                        .map(|e| e.name.as_str())
+                        .unwrap_or("");
+                    if !ename.is_empty() {
+                        theme::text_bold(
+                            &painter,
+                            pos2(x0 + 18.0, area.min.y + 15.0),
+                            Align2::LEFT_CENTER,
+                            ename.to_uppercase(),
+                            12.5,
+                            palette::GOLD,
+                        );
+                    }
+                }
+            }
+        }
+
+        // The node under the pointer lights up its full prerequisite chain!
         let pointer = ctx
             .pointer_hover_pos()
             .filter(|p| ui.clip_rect().contains(*p));
         let hover_node = pointer.and_then(|p| (0..items.len()).find(|&i| node_rect(i).contains(p)));
+        let chain = hover_node
+            .map(|h| {
+                let mut set = ancestor_set(&items, h);
+                set.insert(h);
+                set
+            })
+            .unwrap_or_default();
+        let goal_chain = if tree == Tree::Tech {
+            s.tech_goal.map(|g| {
+                let mut set = ancestor_set(&items, g);
+                set.insert(g);
+                set
+            })
+        } else {
+            None
+        };
+
         for (i, item) in items.iter().enumerate() {
             for p in &item.prereqs {
                 if let Some(j) = items.iter().position(|x| &x.id == p) {
@@ -511,15 +675,20 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                     let from = a.right_center();
                     let to = b.left_center();
                     let mid = Pos2::new((from.x + to.x) / 2.0, from.y);
-                    let lit = hover_node == Some(i) || hover_node == Some(j);
-                    let lit_t = anim::hover(&ctx, ui.scope_id().with(("link", i, j)), lit, 0.15);
-                    let mut line = if s.game.known(me, tree, j) {
+                    let in_hover = chain.contains(&i) && chain.contains(&j);
+                    let in_goal = goal_chain
+                        .as_ref()
+                        .is_some_and(|gc| gc.contains(&i) && gc.contains(&j));
+                    let lit_t = anim::hover(&ctx, ui.scope_id().with(("link", i, j)), in_hover, 0.14);
+                    let mut line = if in_goal {
+                        Stroke::new(2.4, palette::GOLD)
+                    } else if s.game.known(me, tree, j) {
                         Stroke::new(2.0, palette::GOLD_DIM)
                     } else {
                         Stroke::new(1.5, Color32::from_rgb(54, 66, 84))
                     };
-                    line.width += 1.2 * lit_t;
-                    line.color = anim::mix(line.color, GOLD, lit_t);
+                    line.width += 1.4 * lit_t;
+                    line.color = anim::mix(line.color, palette::GOLD_HI, lit_t);
                     let path = vec![from, mid, Pos2::new(mid.x, to.y), to];
                     painter.add(egui::Shape::line(
                         path.clone(),
@@ -539,8 +708,17 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                 Tree::Ai => false,
             };
             let is_current = Some(i) == current;
-            let (fill, edge, text) = if is_current {
+            let is_goal = tree == Tree::Tech && s.tech_goal == Some(i);
+            let unlocked_list = unlocks(&s.game, tree, &item.id);
+            let matches_query = query.is_empty()
+                || item.name.to_lowercase().contains(&query)
+                || unlocked_list.iter().any(|u| u.to_lowercase().contains(&query));
+            let in_chain = chain.contains(&i);
+            let clickable = available || (tree == Tree::Tech && !known && !is_current);
+            let (mut fill, mut edge, mut text) = if is_current {
                 (Color32::from_rgb(70, 54, 20), GOLD, Color32::WHITE)
+            } else if is_goal {
+                (Color32::from_rgb(52, 46, 24), GOLD, Color32::WHITE)
             } else if known {
                 (
                     Color32::from_rgb(20, 58, 50),
@@ -553,20 +731,33 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                 (
                     Color32::from_rgb(15, 22, 34),
                     Color32::from_rgb(46, 58, 76),
-                    Color32::from_gray(130),
+                    Color32::from_gray(145),
                 )
             };
+            if in_chain && !known && !available {
+                edge = palette::GOLD_DIM;
+                text = Color32::from_gray(215);
+            }
+            if !query.is_empty() {
+                if matches_query {
+                    edge = palette::GOLD_HI;
+                } else {
+                    fill = fill.gamma_multiply(0.45);
+                    edge = edge.gamma_multiply(0.35);
+                    text = text.gamma_multiply(0.4);
+                }
+            }
             let response = ui.interact(base, ui.scope_id().with(("node", i)), Sense::click());
-            let hovered = response.hovered() && (available || known);
+            let hovered = response.hovered() && (clickable || known);
             let id = response.id;
             let hot = anim::hover(&ctx, id.with("hot"), hovered, 0.13);
             let down = anim::hover(
                 &ctx,
                 id.with("down"),
-                available && response.is_pointer_button_down_on(),
+                clickable && response.is_pointer_button_down_on(),
                 0.07,
             );
-            if response.clicked() && available {
+            if response.clicked() && clickable {
                 anim::trigger(&ctx, id.with("pop"));
             }
             // Hovering lifts a node; the current one breathes a gold glow.
@@ -575,7 +766,7 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                 .shrink(1.2 * down);
             let on_screen = ui.is_rect_visible(rect);
             if on_screen {
-                if is_current {
+                if is_current || is_goal {
                     anim::ambient(&ctx);
                     theme::glow(&painter, rect, 14.0, GOLD, 0.3 + 0.55 * anim::wave(&ctx, 2.4));
                 }
@@ -601,7 +792,7 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                 rect,
                 14.0,
                 Stroke::new(
-                    anim::lerp(1.5, 2.5, hot.max(if is_current { 1.0 } else { 0.0 })),
+                    anim::lerp(1.5, 2.5, hot.max(if is_current || is_goal { 1.0 } else { 0.0 })),
                     anim::mix(edge, Color32::WHITE, hot * 0.3),
                 ),
                 StrokeKind::Inside,
@@ -633,7 +824,7 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                 Stroke::new(1.0, Color32::from_black_alpha(150)),
             );
             let text_x = h + 4.0;
-            let name = ui::trackers::fit(&painter, &item.name, 15.5, w - text_x - 30.0);
+            let name = ui::trackers::fit(&painter, &item.name, 15.0, w - text_x - 36.0);
             painter.text(
                 rect.min + vec2(text_x, 17.0),
                 Align2::LEFT_CENTER,
@@ -642,13 +833,17 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                 text,
             );
             if known {
-                // A check mark in the corner of researched items.
                 let c = rect.right_top() + vec2(-17.0, 17.0);
                 theme::disc(&painter, c, 8.5, palette::GOOD.gamma_multiply(0.5), palette::GOOD);
                 painter.add(egui::Shape::line(
                     vec![c + vec2(-3.5, 0.0), c + vec2(-1.0, 3.0), c + vec2(3.5, -3.0)],
                     Stroke::new(2.0, Color32::WHITE),
                 ));
+            } else if is_goal {
+                let badge = Rect::from_min_size(rect.right_top() + vec2(-46.0, 7.0), vec2(38.0, 18.0));
+                painter.rect_filled(badge, 9.0, palette::with_alpha(GOLD, 48));
+                painter.rect_stroke(badge, 9.0, Stroke::new(1.0, GOLD), StrokeKind::Inside);
+                theme::text_bold(&painter, badge.center(), Align2::CENTER_CENTER, "GOAL", 10.0, GOLD);
             }
             let cost = s.game.research_cost(tree, i);
             let (status, status_color) = if known {
@@ -661,7 +856,7 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                     if available {
                         accent
                     } else {
-                        Color32::from_gray(120)
+                        Color32::from_gray(125)
                     },
                 )
             };
@@ -695,7 +890,7 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                     ui::trackers::fit(&painter, &format!("Boost: {b}"), 11.5, w - text_x - 12.0)
                 };
                 painter.text(
-                    rect.min + vec2(text_x, 50.0),
+                    rect.min + vec2(text_x, 51.0),
                     Align2::LEFT_CENTER,
                     label,
                     FontId::proportional(11.5),
@@ -736,30 +931,46 @@ fn research_tree(s: &mut Session, ui: &mut egui::Ui, tree: Tree) -> bool {
                 {
                     tip += &format!("\n{}", t.description);
                 }
-            } else {
-                let unlocked = unlocks(&s.game, tree, &item.id);
-                if !unlocked.is_empty() {
-                    tip += &format!("\nUnlocks: {}", unlocked.join(", "));
-                }
+            } else if !unlocked_list.is_empty() {
+                tip += &format!("\nUnlocks: {}", unlocked_list.join(", "));
             }
             if let Some(b) = &item.boost {
                 tip += &format!("\nBoost (50%): {b}");
             }
             if available {
                 tip += "\n\nClick to research this next.";
+            } else if tree == Tree::Tech && !known && !is_current {
+                tip += "\n\nClick to queue path (auto-researches prerequisites).";
             } else if !known && !is_current {
                 tip += "\n\nResearch the items before it first.";
             }
             let response = response.on_hover_text(tip);
-            let response = if available {
+            let response = if clickable {
                 response.on_hover_cursor(egui::CursorIcon::PointingHand)
             } else {
                 response
             };
-            if response.clicked() && available {
-                let r = s.game.set_research(me, tree, i);
-                picked = r.is_ok();
-                s.result(r);
+            if response.clicked() {
+                if available {
+                    if tree == Tree::Tech {
+                        s.tech_goal = None;
+                    }
+                    let r = s.game.set_research(me, tree, i);
+                    picked = r.is_ok();
+                    s.result(r);
+                } else if tree == Tree::Tech && !known && !is_current {
+                    s.tech_goal = Some(i);
+                    if let Some(next) = s.next_prereq_toward(i) {
+                        let next_name = items[next].name.clone();
+                        let goal_name = item.name.clone();
+                        let r = s.game.set_research(me, Tree::Tech, next);
+                        if r.is_ok() {
+                            s.toast(format!("Goal set: {goal_name} (starting {next_name})."));
+                            picked = true;
+                        }
+                        s.result(r);
+                    }
+                }
             }
         }
     });
@@ -937,8 +1148,8 @@ fn diplomacy(s: &mut Session, portraits: &mut Portraits, ui: &mut egui::Ui, othe
         palette::with_alpha(palette::GOLD_DIM, 220),
     );
     ui.add_space(14.0);
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 12.0;
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing = vec2(10.0, 8.0);
         let say = |s: &mut Session, event: DiploEvent| {
             let line = s.game.dialogue(other, event);
             s.toast(format!("{}: \"{line}\"", leader.name));

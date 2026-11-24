@@ -15,10 +15,10 @@ use wayciv_core::{CityId, Game};
 
 pub const WIDTH: f32 = 400.0;
 
-/// The lowest edge of the panel: above the minimap and the Next Turn button.
+/// The lowest edge of the panel: above the minimap (+ its lens bar) and the Next Turn button.
 pub fn bottom_limit(s: &Session, screen: Rect) -> f32 {
-    (screen.bottom() - MARGIN - super::minimap::outer_size(s).y - 10.0)
-        .min(screen.bottom() - 170.0)
+    (screen.bottom() - MARGIN - super::minimap::total_height(s) - 10.0)
+        .min(screen.bottom() - 180.0)
 }
 
 const TABS: [(&str, Glyph); 7] = [
@@ -704,7 +704,9 @@ fn item_row(
     let turns = ((cost - done).max(0) as f32 / rate).ceil() as i32;
     let name = s.game.item_name(item);
     let price = s.game.purchase_cost(id, item);
-    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 52.0), Sense::click());
+    let summary = item_brief(&s.game, item);
+    let row_h = if summary.is_empty() { 54.0 } else { 62.0 };
+    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), row_h), Sense::click());
     let painter = ui.painter().clone();
     let current = c.production.as_ref() == Some(item);
     let hovered = response.hovered();
@@ -741,7 +743,7 @@ fn item_row(
     let name = super::trackers::fit(&painter, &name, 16.0, rect.right() - x - right_pad);
     theme::text_bold(
         &painter,
-        pos2(x, rect.top() + 18.0),
+        pos2(x, rect.top() + 16.0),
         Align2::LEFT_CENTER,
         name,
         16.0,
@@ -750,18 +752,29 @@ fn item_row(
     glyph::paint(
         &painter,
         Glyph::Production,
-        pos2(x + 7.0, rect.top() + 37.0),
-        6.5,
+        pos2(x + 7.0, rect.top() + 34.0),
+        6.0,
         YIELD_COLORS[1],
     );
     theme::text(
         &painter,
-        pos2(x + 18.0, rect.top() + 37.0),
+        pos2(x + 17.0, rect.top() + 34.0),
         Align2::LEFT_CENTER,
-        format!("{cost}   {turns} turn{}", if turns == 1 { "" } else { "s" }),
-        13.5,
+        format!("{cost}  ·  {turns} turn{}", if turns == 1 { "" } else { "s" }),
+        13.0,
         TEXT_DIM,
     );
+    if !summary.is_empty() {
+        let brief = super::trackers::fit(&painter, &summary, 12.0, rect.right() - x - right_pad);
+        theme::text(
+            &painter,
+            pos2(x, rect.top() + 50.0),
+            Align2::LEFT_CENTER,
+            brief,
+            12.0,
+            palette::TEAL,
+        );
+    }
     // The wonder race: rivals you know of who are building it too.
     let rivals = match item {
         Production::Wonder(w, _) => s.game.wonder_rivals(me, *w),
@@ -964,6 +977,82 @@ fn info(s: &mut Session, ui: &mut Ui, id: CityId, c: &wayciv_core::state::City) 
     }
     if !any {
         ui.label(RichText::new("Nothing built yet.").color(TEXT_DIM));
+    }
+}
+
+/// Short one-line stat summary shown directly inside each production row so
+/// players know what an item does without hovering every row.
+fn item_brief(game: &Game, item: &Production) -> String {
+    let content = &game.rules.content;
+    const SHORT: [&str; 6] = ["Food", "Prod", "Gold", "Sci", "Cult", "Faith"];
+    match item {
+        Production::Unit(i) => {
+            let u = &content.units[*i];
+            if u.found_city {
+                format!("Founds a new city · {} MP", u.moves)
+            } else if u.build_charges > 0 {
+                format!("{} build charges · {} MP", u.build_charges, u.moves)
+            } else if u.make_trade_route {
+                "Establishes a trade route & road".into()
+            } else if u.bombard > 0 {
+                format!("Bombard {} · Range {} · {} MP", u.bombard, u.range, u.moves)
+            } else if u.ranged_combat > 0 {
+                format!("Ranged {} · Range {} · {} MP", u.ranged_combat, u.range, u.moves)
+            } else if u.combat > 0 {
+                format!("Strength {} · {} MP", u.combat, u.moves)
+            } else {
+                format!("{} MP", u.moves)
+            }
+        }
+        Production::Building(i) | Production::Wonder(i, _) => {
+            let b = &content.buildings[*i];
+            let mut parts: Vec<String> = (0..6)
+                .filter(|&k| b.yields[k] != 0)
+                .map(|k| format!("+{} {}", b.yields[k], SHORT[k]))
+                .collect();
+            if b.housing > 0 {
+                parts.push(format!("+{} Housing", b.housing));
+            }
+            if b.amenities > 0 {
+                parts.push(format!("+{} Amenities", b.amenities));
+            }
+            if b.outer_defense > 0 {
+                parts.push(format!("+{} Walls", b.outer_defense));
+            }
+            if parts.is_empty() {
+                b.description.lines().next().unwrap_or("").to_string()
+            } else {
+                parts.join(" · ")
+            }
+        }
+        Production::District(i, _) => {
+            let d = &content.districts[*i];
+            let mut parts = Vec::new();
+            if d.housing > 0 {
+                parts.push(format!("+{} Housing", d.housing));
+            }
+            if d.amenities > 0 {
+                parts.push(format!("+{} Amenities", d.amenities));
+            }
+            if d.id == "DISTRICT_DATACENTER" {
+                parts.push("+6 Compute (+adjacency)".into());
+            } else if let Some(first) = d.adjacencies.first() {
+                parts.push(format!("Adjacency: {}", SHORT[first.yield_index.min(5)]));
+            }
+            if parts.is_empty() {
+                d.description.lines().next().unwrap_or("").to_string()
+            } else {
+                parts.join(" · ")
+            }
+        }
+        Production::Project(i) => {
+            let p = &content.projects[*i];
+            if p.space_race {
+                "Science Victory space project".into()
+            } else {
+                p.description.lines().next().unwrap_or("").to_string()
+            }
+        }
     }
 }
 

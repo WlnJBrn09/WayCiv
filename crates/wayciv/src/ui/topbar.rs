@@ -153,7 +153,7 @@ fn bar(s: &mut Session, ui: &mut Ui) {
     let unread = s.unread_notifications();
     let ai = s.game.ai_tree_unlocked(me);
     let _ = ai;
-    let menu: [MenuItem; 9] = [
+    let menu: [MenuItem; 10] = [
         MenuItem::new(Glyph::Bell, "Notifications", "Alerts", "N", Some(Panel::Notifications), GOLD, "What happened recently"),
         MenuItem::new(Glyph::Crown, "Leaders", "Leaders", "L", Some(Panel::Leaders), GOLD, "Other leaders, how they feel about you, diplomacy"),
         MenuItem::new(Glyph::Temple, "Government", "Policies", "G", Some(Panel::Government), GOLD, "Your government and policy cards"),
@@ -163,11 +163,13 @@ fn bar(s: &mut Session, ui: &mut Ui) {
         MenuItem::new(Glyph::Cup, "Victory Progress", "Victory", "V", Some(Panel::Victory), GOLD, "How close everyone is to winning"),
         MenuItem::new(Glyph::Hourglass, "Eras and Timeline", "Eras", "T", Some(Panel::Eras), palette::AGE_GOLDEN, "Your age, era score, dedications, and historic moments"),
         MenuItem::new(Glyph::Hex, "Map Key", "Map Key", "K", None, TEXT, "What the map colors and symbols mean"),
+        MenuItem::new(Glyph::Gear, "Settings & Controls", "Menu", "F1", Some(Panel::Settings), TEXT, "Graphics options, controls, and return to main menu"),
     ];
-    let gap = 6.0;
+    let compact_bar = rect.width() < 1080.0;
+    let gap = if compact_bar { 3.0 } else { 6.0 };
     let width_of = |tier: Tier| -> f32 {
         menu.iter()
-            .map(|m| m.width(&painter, tier))
+            .map(|m| m.width(&painter, tier, compact_bar))
             .sum::<f32>()
             + (menu.len() - 1) as f32 * gap
     };
@@ -234,8 +236,8 @@ fn bar(s: &mut Session, ui: &mut Ui) {
         );
     }
     for m in menu {
-        let w = m.width(&painter, tier);
-        let h = if tier == Tier::Captions { 46.0 } else { 36.0 };
+        let w = m.width(&painter, tier, compact_bar);
+        let h = if tier == Tier::Captions { 46.0 } else if compact_bar && tier == Tier::Icons { 33.0 } else { 36.0 };
         let r = Rect::from_min_size(pos2(x, cy - h / 2.0 + if h > 40.0 { 1.0 } else { 0.0 }), vec2(w, h));
         let response = ui.interact(r, ui.scope_id().with(("menu", m.name)), Sense::click());
         let active = match m.panel {
@@ -292,11 +294,12 @@ fn bar(s: &mut Session, ui: &mut Ui) {
         [pos2(menu_left - 15.0, cy - 17.0), pos2(menu_left - 15.0, cy + 17.0)],
         Stroke::new(1.0, palette::with_alpha(GOLD_DIM, 150)),
     );
-    let avail = block_x - 24.0 - (rect.left() + 12.0);
+    let avail = (block_x - 24.0 - (rect.left() + 12.0)).max(0.0);
 
-    // Left side: yield chips, dropping the least important when narrow.
+    // Left side: yield chips, dropping the least important whenever they would
+    // crowd the turn readout (never overlap Turn XX even on narrow screens).
     let mut chips = chips;
-    while total(&chips) > avail && chips.len() > 3 {
+    while total(&chips) > avail && chips.len() > 1 {
         let (i, _) = chips
             .iter()
             .enumerate()
@@ -304,16 +307,56 @@ fn bar(s: &mut Session, ui: &mut Ui) {
             .unwrap();
         chips.remove(i);
     }
+    if total(&chips) > avail {
+        chips.clear();
+    }
     let mut x = rect.left() + 12.0;
     for chip in &chips {
         let w = chip_width(&painter, chip);
         let r = Rect::from_min_size(pos2(x, cy - 18.0), vec2(w, 36.0));
-        let response = ui.interact(r, ui.scope_id().with(("chip", chip.id)), Sense::hover());
+        let clickable = matches!(chip.id, "era" | "science" | "culture" | "faith" | "population");
+        let response = ui.interact(
+            r,
+            ui.scope_id().with(("chip", chip.id)),
+            if clickable { Sense::click() } else { Sense::hover() },
+        );
         draw_chip(&painter, r, chip, response.hovered());
+        let response = if clickable {
+            response.on_hover_cursor(egui::CursorIcon::PointingHand)
+        } else {
+            response
+        };
+        let clicked = response.clicked();
         if chip.id == "population" {
             response.on_hover_ui(|ui| population_tip(s, ui));
         } else {
             response.on_hover_text(&chip.tip);
+        }
+        if clicked {
+            match chip.id {
+                "era" => s.windows.toggle(Panel::Eras),
+                "science" => s.windows.toggle(Panel::Tech),
+                "culture" => s.windows.toggle(Panel::Government),
+                "faith" => s.windows.toggle(Panel::Religion),
+                "population" => {
+                    let mut cities: Vec<wayciv_core::CityId> =
+                        s.game.player_cities(me).map(|c| c.id).collect();
+                    cities.sort();
+                    if !cities.is_empty() {
+                        let next = match s
+                            .selected_city
+                            .and_then(|cur| cities.iter().position(|&id| id == cur))
+                        {
+                            Some(i) => cities[(i + 1) % cities.len()],
+                            None => cities[0],
+                        };
+                        s.select_city(Some(next));
+                        let pos = s.game.cities[&next].pos;
+                        crate::map_view::center_on(s, pos);
+                    }
+                }
+                _ => {}
+            }
         }
         x += w + 8.0;
     }
@@ -360,9 +403,9 @@ impl MenuItem {
             .x
     }
 
-    fn width(&self, painter: &egui::Painter, tier: Tier) -> f32 {
+    fn width(&self, painter: &egui::Painter, tier: Tier, compact: bool) -> f32 {
         match tier {
-            Tier::Icons => 38.0,
+            Tier::Icons => if compact { 33.0 } else { 38.0 },
             Tier::Captions => {
                 let g = painter.layout_no_wrap(self.label.to_string(), FontId::proportional(11.5), TEXT);
                 (g.size().x + 10.0).max(38.0)

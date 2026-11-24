@@ -51,10 +51,19 @@ pub fn size(s: &Session) -> egui::Vec2 {
     vec2(WIDTH, WIDTH * hw / ww)
 }
 
+/// Height of the map lens / display toolbar sitting cleanly above the minimap.
+const LENS_BAR_H: f32 = 34.0;
+const LENS_BAR_GAP: f32 = 6.0;
+
 /// Size of the whole minimap plate: map, button column and padding.
 pub fn outer_size(s: &Session) -> egui::Vec2 {
     let m = size(s);
     vec2(m.x + TOOLS + PAD * 2.0, m.y.max(4.0 * 28.0 + 3.0 * 4.0) + PAD * 2.0)
+}
+
+/// Total vertical height occupied by the minimap plus its lens toolbar.
+pub fn total_height(s: &Session) -> f32 {
+    outer_size(s).y + LENS_BAR_H + LENS_BAR_GAP
 }
 
 /// Where the explored part of the map is, with a margin, shaped like the
@@ -329,7 +338,8 @@ pub fn show(s: &mut Session, ctx: &egui::Context, corner: egui::Pos2) {
     }
     s.minimap = minimap;
     if zoom != 1.0 {
-        s.cam.zoom = (s.cam.zoom * zoom).min(70.0);
+        s.cam.target_zoom = (s.cam.target_zoom * zoom).clamp(8.0, 70.0);
+        s.cam.zoom_anchor = None;
     }
     if recenter {
         let target = s
@@ -352,5 +362,128 @@ pub fn show(s: &mut Session, ctx: &egui::Context, corner: egui::Pos2) {
         if let Some(p) = target {
             map_view::center_on(s, p);
         }
+    }
+    lens_toolbar(s, ctx, corner - vec2(outer.x, outer.y + LENS_BAR_GAP + LENS_BAR_H), outer.x);
+}
+
+/// Sleek Map View & Lens toolbar sitting directly above the minimap:
+/// Yields (Y), Hex Grid (H), Settler (4), Empire (5), Religion (6), Resources (7).
+fn lens_toolbar(s: &mut Session, ctx: &egui::Context, top_left: egui::Pos2, width: f32) {
+    use super::glyph::Glyph;
+    use crate::render::overlay::GridMode;
+    use crate::render::yields::MapLens;
+
+    let mut toggle_yields = false;
+    let mut cycle_grid = false;
+    let mut pick_lens: Option<MapLens> = None;
+
+    egui::Area::new(egui::Id::unique("minimap_lenses"))
+        .fixed_pos(top_left)
+        .order(egui::Order::Middle)
+        .show(ctx, |ui| {
+            let (plate, _) = ui.allocate_exact_size(vec2(width, LENS_BAR_H), Sense::hover());
+            let painter = ui.painter().clone();
+            theme::plate(&painter, plate, 10.0);
+
+            let items: [(Glyph, Color32, bool, &str, &str, &str, u8); 6] = [
+                (
+                    Glyph::Food,
+                    palette::GOOD,
+                    s.map_settings.show_yields,
+                    "Tile Yields",
+                    "Show Food, Production, Gold, Science, Culture & Faith icons on tiles.",
+                    "Y",
+                    0,
+                ),
+                (
+                    Glyph::Grid,
+                    palette::TEXT,
+                    s.map_settings.grid != GridMode::Off,
+                    "Hex Grid",
+                    match s.map_settings.grid {
+                        GridMode::Subtle => "Grid: Subtle. Click to switch to Crisp.",
+                        GridMode::Crisp => "Grid: Crisp. Click to hide the grid.",
+                        GridMode::Off => "Grid: Off. Click to show Subtle grid.",
+                    },
+                    "H",
+                    1,
+                ),
+                (
+                    Glyph::Water,
+                    Color32::from_rgb(76, 224, 148),
+                    s.map_settings.lens == MapLens::Settler,
+                    "Settler Lens",
+                    "Highlight fresh water (+5 housing), coastal (+3), dry, and blocked settle sites.",
+                    "4",
+                    2,
+                ),
+                (
+                    Glyph::Crown,
+                    palette::GOLD,
+                    s.map_settings.lens == MapLens::Empire,
+                    "Empire Lens",
+                    "Emphasize civilization territories and borders.",
+                    "5",
+                    3,
+                ),
+                (
+                    Glyph::Faith,
+                    palette::YIELD_COLORS[5],
+                    s.map_settings.lens == MapLens::Religion,
+                    "Religion Lens",
+                    "Shade cities and lands by their majority religion.",
+                    "6",
+                    4,
+                ),
+                (
+                    Glyph::Star,
+                    Color32::from_rgb(206, 130, 240),
+                    s.map_settings.lens == MapLens::Resources,
+                    "Resources & Villages Lens",
+                    "Highlight Bonus, Luxury, Strategic resources and unexplored Tribal Villages.",
+                    "7",
+                    5,
+                ),
+            ];
+            let btn_d = 26.0;
+            let count = items.len() as f32;
+            let gap = ((width - 16.0 - count * btn_d) / (count - 1.0).max(1.0)).clamp(4.0, 18.0);
+            let total_w = count * btn_d + (count - 1.0) * gap;
+            let mut x = plate.center().x - total_w * 0.5;
+            let cy = plate.center().y;
+            for (g, col, active, name, tip, key, code) in items {
+                let r = Rect::from_min_size(pos2(x, cy - btn_d * 0.5), vec2(btn_d, btn_d));
+                let resp = ui.interact(r, ui.scope_id().with(("lens_btn", code)), Sense::click());
+                theme::paint_round_button(&painter, r, &resp, g, col, None, true, active);
+                if resp
+                    .on_hover_text(widgets::tooltip(name, tip, Some(key), None))
+                    .on_hover_cursor(egui::CursorIcon::PointingHand)
+                    .clicked()
+                {
+                    match code {
+                        0 => toggle_yields = true,
+                        1 => cycle_grid = true,
+                        2 => pick_lens = Some(MapLens::Settler),
+                        3 => pick_lens = Some(MapLens::Empire),
+                        4 => pick_lens = Some(MapLens::Religion),
+                        _ => pick_lens = Some(MapLens::Resources),
+                    }
+                }
+                x += btn_d + gap;
+            }
+        });
+
+    if toggle_yields {
+        s.map_settings.show_yields = !s.map_settings.show_yields;
+    }
+    if cycle_grid {
+        s.map_settings.grid = s.map_settings.grid.next();
+    }
+    if let Some(lens) = pick_lens {
+        s.map_settings.lens = if s.map_settings.lens == lens {
+            MapLens::None
+        } else {
+            lens
+        };
     }
 }

@@ -17,9 +17,10 @@ pub struct Portraits {
     cache: HashMap<String, Option<TextureHandle>>,
 }
 
-/// WayCiv's asset folder: WAYCIV_ASSETS, then the installed copy
-/// (~/.local/share/wayciv/assets, see install.sh), then assets next to the
-/// binary, then the source tree.
+/// WayCiv's asset folder: WAYCIV_ASSETS, then `./assets` in the working
+/// directory, then assets next to the binary (or repo root two levels up from
+/// `target/<profile>`), then the installed copy (`~/.local/share/wayciv/assets`),
+/// then the compile-time source tree.
 pub fn assets_dir() -> PathBuf {
     let data_home = std::env::var_os("XDG_DATA_HOME")
         .map(PathBuf::from)
@@ -27,14 +28,26 @@ pub fn assets_dir() -> PathBuf {
     std::env::var_os("WAYCIV_ASSETS")
         .map(PathBuf::from)
         .or_else(|| {
-            data_home
-                .map(|d| d.join("wayciv/assets"))
+            std::env::current_dir()
+                .ok()
+                .map(|d| d.join("assets"))
                 .filter(|p| p.is_dir())
         })
         .or_else(|| {
             std::env::current_exe()
                 .ok()
                 .and_then(|e| e.parent().map(|p| p.join("assets")))
+                .filter(|p| p.is_dir())
+        })
+        .or_else(|| {
+            std::env::current_exe()
+                .ok()
+                .and_then(|e| e.parent()?.parent()?.parent().map(|p| p.join("assets")))
+                .filter(|p| p.is_dir())
+        })
+        .or_else(|| {
+            data_home
+                .map(|d| d.join("wayciv/assets"))
                 .filter(|p| p.is_dir())
         })
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets"))

@@ -81,14 +81,14 @@ pub fn tooltip(name: &str, tip: &str, key: Option<&str>, disabled: Option<&str>)
 
 /// Width a pill needs.
 pub fn pill_width(painter: &Painter, b: &Btn) -> f32 {
-    let size = if b.kind == Kind::Primary { 17.0 } else { 15.0 };
+    let size = if b.kind == Kind::Primary { 16.5 } else { 14.5 };
     let galley = painter.layout_no_wrap(b.label.to_string(), FontId::proportional(size), TEXT);
-    let mut w = galley.size().x + 26.0;
+    let mut w = galley.size().x + 20.0;
     if b.glyph.is_some() {
-        w += 28.0;
+        w += 26.0;
     }
     if let Some(k) = b.key {
-        w += keycap_width(painter, k) + 8.0;
+        w += keycap_width(painter, k) + 6.0;
     }
     w
 }
@@ -122,38 +122,80 @@ pub fn paint_pill(painter: &Painter, rect: Rect, response: &egui::Response, b: &
     let enabled = b.disabled.is_none();
     let hovered = response.hovered() && enabled;
     let fade = |c: Color32| if enabled { c } else { c.gamma_multiply(0.4) };
-    let (fill, rim, width) = match b.kind {
+    let (top, bot, rim, width) = match b.kind {
         Kind::Primary => (
             if hovered {
-                Color32::from_rgb(44, 150, 102)
+                Color32::from_rgb(54, 172, 118)
             } else {
-                Color32::from_rgb(30, 116, 80)
+                Color32::from_rgb(38, 138, 94)
+            },
+            if hovered {
+                Color32::from_rgb(28, 114, 76)
+            } else {
+                Color32::from_rgb(20, 82, 56)
             },
             GOLD,
-            2.5,
+            2.2,
         ),
         Kind::Danger => (
-            if hovered { NAVY_HOVER } else { NAVY_RAISED },
-            if hovered { BAD } else { BAD.gamma_multiply(0.6) },
+            if hovered {
+                Color32::from_rgb(66, 30, 36)
+            } else {
+                NAVY_RAISED.lerp_to_gamma(Color32::WHITE, 0.06)
+            },
+            if hovered {
+                Color32::from_rgb(36, 16, 20)
+            } else {
+                NAVY_RAISED.lerp_to_gamma(Color32::BLACK, 0.28)
+            },
+            if hovered { BAD } else { BAD.gamma_multiply(0.65) },
             1.5,
         ),
         Kind::Normal => (
-            if hovered { NAVY_HOVER } else { NAVY_RAISED },
+            if hovered {
+                NAVY_HOVER.lerp_to_gamma(Color32::WHITE, 0.1)
+            } else {
+                NAVY_RAISED.lerp_to_gamma(Color32::WHITE, 0.08)
+            },
+            if hovered {
+                NAVY_HOVER.lerp_to_gamma(Color32::BLACK, 0.22)
+            } else {
+                NAVY_RAISED.lerp_to_gamma(Color32::BLACK, 0.30)
+            },
             if hovered { GOLD } else { GOLD_DIM },
             1.5,
         ),
     };
     let r = rect.height() / 2.0;
-    painter.rect_filled(rect, r, fade(fill));
-    painter.rect_stroke(rect, r, Stroke::new(width, fade(rim)), StrokeKind::Inside);
-    let mut x = rect.left() + 10.0;
-    if let Some(g) = b.glyph {
-        let c = pos2(x + 12.0, rect.center().y);
-        painter.circle_filled(c, 13.0, Color32::from_black_alpha(if primary { 70 } else { 90 }));
-        glyph::paint(painter, g, c, 8.5, fade(b.color));
-        x += 28.0;
+    // Soft grounded shadow under interactive pills.
+    if enabled {
+        painter.rect_filled(
+            rect.translate(vec2(0.0, 2.0)),
+            r,
+            Color32::from_black_alpha(if hovered { 105 } else { 75 }),
+        );
     }
-    let size = if primary { 17.0 } else { 15.0 };
+    painter.add(theme::gradient_rect(rect, r, fade(top), fade(bot)));
+    // Subtle top specular highlight along the beveled upper edge.
+    painter.line_segment(
+        [
+            pos2(rect.left() + r * 0.8, rect.top() + 1.5),
+            pos2(rect.right() - r * 0.8, rect.top() + 1.5),
+        ],
+        Stroke::new(
+            1.0,
+            Color32::from_white_alpha(if enabled && primary { 64 } else if enabled { 34 } else { 14 }),
+        ),
+    );
+    painter.rect_stroke(rect, r, Stroke::new(width, fade(rim)), StrokeKind::Inside);
+    let mut x = rect.left() + 8.0;
+    if let Some(g) = b.glyph {
+        let c = pos2(x + 11.0, rect.center().y);
+        painter.circle_filled(c, 12.0, Color32::from_black_alpha(if primary { 75 } else { 95 }));
+        glyph::paint(painter, g, c, 8.0, fade(b.color));
+        x += 25.0;
+    }
+    let size = if primary { 16.5 } else { 14.5 };
     let label_color = fade(if primary { Color32::WHITE } else { TEXT });
     let rect_text = theme::text_bold(
         painter,
@@ -167,7 +209,7 @@ pub fn paint_pill(painter: &Painter, rect: Rect, response: &egui::Response, b: &
         let kw = keycap_width(painter, k);
         theme::keycap(
             painter,
-            pos2(rect_text.right() + 8.0 + kw / 2.0, rect.center().y),
+            pos2(rect_text.right() + 6.0 + kw / 2.0, rect.center().y),
             k,
         );
     }

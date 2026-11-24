@@ -5,16 +5,16 @@
 
 use super::TileCtx;
 use super::anim::smooth;
-use super::hex::{EDGES, SQRT3, corners};
+use super::hex::{EDGES, corners};
 use super::mesh;
 use crate::palette::with_alpha;
 use egui::epaint::Vertex;
 use egui::{Color32, ColorImage, Mesh, Painter, Pos2, Rect, Shape, TextureHandle, TextureId, TextureOptions, pos2, vec2};
 
-/// The color of unexplored ground on average; the frontier fades into it.
-pub const UNKNOWN: Color32 = Color32::from_rgb(34, 29, 25);
-/// Tint of tiles you have seen but cannot see now.
-const FOG: [u8; 3] = [78, 66, 50];
+/// The color of unexplored ground on average (Civ VI Age-of-Exploration warm parchment).
+pub const UNKNOWN: Color32 = Color32::from_rgb(206, 184, 144);
+/// Tint of tiles you have seen but cannot see now (Civ VI warm sepia cartographic parchment).
+const FOG: [u8; 3] = [194, 170, 128];
 
 /// Textures for the unexplored world, made on first use.
 #[derive(Default)]
@@ -58,27 +58,34 @@ fn fbm(u: f32, v: f32, cells: i32, layers: u32, seed: u32) -> f32 {
 
 const SIZE: usize = 512;
 
-/// Aged parchment in the dark: mottled stains, fine fibres, a few creases.
+/// Warm Age-of-Exploration cartographer's parchment: antique vellum mottling,
+/// tea stains, fine linen paper fibres, and faint deckle creases.
 fn parchment() -> ColorImage {
     let mut image = ColorImage::filled([SIZE, SIZE], UNKNOWN);
     for y in 0..SIZE {
         for x in 0..SIZE {
             let (u, v) = (x as f32 / SIZE as f32, y as f32 / SIZE as f32);
             let blotch = fbm(u, v, 3, 5, 11);
-            let stain = smooth((fbm(u, v, 2, 3, 71) - 0.5) * 3.0 + 0.5);
-            // Fibres run in both directions at a fine scale.
-            let fibre = noise(u * 220.0, v * 7.0, 220, 7, 5) * 0.5 + noise(u * 6.0, v * 190.0, 6, 190, 9) * 0.5;
+            let stain = smooth((fbm(u, v, 2, 3, 71) - 0.5) * 2.8 + 0.5);
+            // Woven parchment paper fibres in both directions.
+            let fibre = noise(u * 210.0, v * 8.0, 210, 8, 5) * 0.5
+                + noise(u * 7.0, v * 195.0, 7, 195, 9) * 0.5;
             let grain = hash(x as i32, y as i32, 3);
             let crease = 1.0 - (noise(u * 5.0, v * 5.0, 5, 5, 41) - 0.5).abs() * 14.0;
-            let lum = (blotch - 0.5) * 26.0 + (fibre - 0.5) * 9.0 + (grain - 0.5) * 3.0 - stain * 7.0 - crease.max(0.0) * 6.0;
+            let lum = (blotch - 0.5) * 28.0
+                + (fibre - 0.5) * 10.0
+                + (grain - 0.5) * 4.0
+                - stain * 14.0
+                - crease.max(0.0) * 8.0;
             let c = |base: f32, warm: f32| (base + lum * warm).clamp(0.0, 255.0) as u8;
-            image.pixels[y * SIZE + x] = Color32::from_rgb(c(40.0, 1.0), c(34.0, 0.9), c(28.0, 0.75));
+            image.pixels[y * SIZE + x] =
+                Color32::from_rgb(c(210.0, 1.0), c(188.0, 0.92), c(148.0, 0.78));
         }
     }
     image
 }
 
-/// Soft cloud banks, white with a noisy alpha.
+/// Soft drifting parchment-gold clouds across unexplored chart margins.
 fn mist() -> ColorImage {
     const S: usize = 256;
     let mut image = ColorImage::filled([S, S], Color32::TRANSPARENT);
@@ -86,8 +93,9 @@ fn mist() -> ColorImage {
         for x in 0..S {
             let (u, v) = (x as f32 / S as f32, y as f32 / S as f32);
             let n = fbm(u, v, 4, 5, 23);
-            let a = smooth(((n - 0.42) / 0.3).clamp(0.0, 1.0));
-            image.pixels[y * S + x] = Color32::from_rgba_unmultiplied(214, 196, 164, (a * 255.0) as u8);
+            let a = smooth(((n - 0.44) / 0.30).clamp(0.0, 1.0));
+            image.pixels[y * S + x] =
+                Color32::from_rgba_unmultiplied(242, 228, 196, (a * 255.0) as u8);
         }
     }
     image
@@ -133,9 +141,12 @@ pub fn unknown(art: &mut VeilArt, painter: &Painter, rect: Rect, center: egui::V
 
     let to_screen = |w: egui::Vec2| rect.center() + (w - center) * z;
     let mut lines = Mesh::default();
-    let ink = Color32::from_rgba_unmultiplied(206, 176, 120, 20);
+    let ink = Color32::from_rgba_unmultiplied(112, 82, 48, 56);
+    let faint_ink = Color32::from_rgba_unmultiplied(118, 86, 50, 32);
+    let rose_ink = Color32::from_rgba_unmultiplied(92, 64, 34, 96);
+    let gold_ink = Color32::from_rgba_unmultiplied(168, 126, 58, 88);
     let (lo, hi) = (center - rect.size() / (2.0 * z), center + rect.size() / (2.0 * z));
-    let width = if z >= 20.0 { 1.4 } else { 1.0 };
+    let width = if z >= 20.0 { 1.15 } else { 0.85 };
     let mut x = (lo.x / GRATICULE).floor() * GRATICULE;
     while x <= hi.x {
         let (a, b) = (to_screen(vec2(x, lo.y)), to_screen(vec2(x, hi.y)));
@@ -148,12 +159,47 @@ pub fn unknown(art: &mut VeilArt, painter: &Painter, rect: Rect, center: egui::V
         mesh::line(&mut lines, a, b, width, ink);
         y += GRATICULE;
     }
+    // Ornate Renaissance 8-point compass roses & rhumb spokes at alternating intersections.
+    if z >= 14.0 {
+        let mut gx = (lo.x / GRATICULE).floor() as i32;
+        let gx_end = (hi.x / GRATICULE).ceil() as i32;
+        let gy_start = (lo.y / GRATICULE).floor() as i32;
+        let gy_end = (hi.y / GRATICULE).ceil() as i32;
+        while gx <= gx_end {
+            for gy in gy_start..=gy_end {
+                if (gx + gy).rem_euclid(2) == 0 {
+                    let c = to_screen(vec2(gx as f32 * GRATICULE, gy as f32 * GRATICULE));
+                    let r = (z * 0.72).clamp(10.0, 36.0);
+                    let diag = r * 0.62;
+                    let rhumb = r * 2.2;
+                    // Faint diagonal rhumb lines radiating across the parchment chart.
+                    mesh::line(&mut lines, c + vec2(-rhumb, -rhumb), c + vec2(rhumb, rhumb), 0.75, faint_ink);
+                    mesh::line(&mut lines, c + vec2(-rhumb, rhumb), c + vec2(rhumb, -rhumb), 0.75, faint_ink);
+                    // Cardinal & intercardinal compass needles.
+                    mesh::line(&mut lines, c + vec2(-r, 0.0), c + vec2(r, 0.0), 1.4, rose_ink);
+                    mesh::line(&mut lines, c + vec2(0.0, -r), c + vec2(0.0, r), 1.4, rose_ink);
+                    mesh::line(&mut lines, c + vec2(-diag, -diag), c + vec2(diag, diag), 1.0, gold_ink);
+                    mesh::line(&mut lines, c + vec2(-diag, diag), c + vec2(diag, -diag), 1.0, gold_ink);
+                    // Outer & inner calibration rings (16-segment polygon).
+                    let ring_pts = |rad: f32| -> [Pos2; 16] {
+                        std::array::from_fn(|i| {
+                            let a = std::f32::consts::TAU * i as f32 / 16.0;
+                            c + vec2(a.cos() * rad, a.sin() * rad)
+                        })
+                    };
+                    mesh::outline(&mut lines, &ring_pts(r * 0.62), 1.1, rose_ink);
+                    mesh::outline(&mut lines, &ring_pts(r * 0.44), 0.85, gold_ink);
+                }
+            }
+            gx += 1;
+        }
+    }
     painter.add(Shape::mesh(lines));
 
-    // Two banks drifting different ways, so the mist never repeats visibly.
+    // Gentle sunlit mist drifting across unexplored parchment.
     let tint = |a: f32| Color32::from_white_alpha((a * 255.0) as u8);
-    pinned(painter, mist, rect, center, z, MIST_SPAN, vec2(now * 0.12, now * 0.04), tint(0.16));
-    pinned(painter, mist, rect, center, z, MIST_SPAN * 0.63, vec2(-now * 0.07 + 9.0, now * 0.05 + 4.0), tint(0.1));
+    pinned(painter, mist, rect, center, z, MIST_SPAN, vec2(now * 0.12, now * 0.04), tint(0.22));
+    pinned(painter, mist, rect, center, z, MIST_SPAN * 0.63, vec2(-now * 0.07 + 9.0, now * 0.05 + 4.0), tint(0.14));
 }
 
 /// Which of a hex's corners touch a neighbor satisfying `flag` (indexed by
@@ -193,26 +239,24 @@ pub fn frontier(m: &mut Mesh, t: &TileCtx) {
 }
 
 /// The fog over a tile you have seen but cannot see now (`strength` 0 to
-/// 1): a desaturating sepia wash that leaves the grid line clear and eases
-/// out toward tiles that are in sight.
+/// 1): a smooth warm cartographic wash that softens along sight boundaries.
 pub fn fog(t: &TileCtx, strength: f32) -> Shape {
     let player = &t.game.players[t.viewer];
     let grid = t.game.map.grid;
     let lit: [bool; 6] = std::array::from_fn(|d| t.neighbor(d).is_some_and(|n| player.visible[grid.index(n)]));
-    let wash = |k: f32| Color32::from_rgba_unmultiplied(FOG[0], FOG[1], FOG[2], (k * strength * 160.0) as u8);
-    let clear = (t.z * 0.05).clamp(1.2, 2.8) * 0.5 - 0.2;
-    let r = t.z - clear / (SQRT3 / 2.0);
+    let wash = |k: f32| Color32::from_rgba_unmultiplied(FOG[0], FOG[1], FOG[2], (k * strength * 144.0) as u8);
+    let r = t.z * 1.01;
     let mut m = Mesh::default();
     if !lit.contains(&true) {
         mesh::fill(&mut m, &corners(t.c, r), wash(1.0));
         return Shape::mesh(m);
     }
     let touches = corner_flags(lit);
-    let inner = corners(t.c, r * 0.55);
+    let inner = corners(t.c, r * 0.45);
     let outer = corners(t.c, r);
     mesh::fill(&mut m, &inner, wash(1.0));
     for &(a, b) in &EDGES {
-        let rim = |c: usize| wash(if touches[c] { 0.3 } else { 1.0 });
+        let rim = |c: usize| wash(if touches[c] { 0.14 } else { 1.0 });
         mesh::quad(&mut m, (inner[a], wash(1.0)), (inner[b], wash(1.0)), (outer[b], rim(b)), (outer[a], rim(a)));
     }
     Shape::mesh(m)
@@ -259,10 +303,10 @@ pub fn lighting(painter: &Painter, rect: Rect) {
             let p = pos2(rect.left() + u * rect.width(), rect.top() + v * rect.height());
             // Distance from the middle, 0 at the center, about 1 at the corners.
             let d = (((u - 0.5) * 2.0).powi(2) + ((v - 0.5) * 2.0).powi(2)).sqrt() / 1.41;
-            let edge = smooth(((d - 0.5) / 0.5).clamp(0.0, 1.0));
-            dark.colored_vertex(p, Color32::from_rgba_unmultiplied(4, 6, 14, (edge * 92.0) as u8));
-            let warm = (1.0 - ((u * u + v * v).sqrt() / 1.3)).clamp(0.0, 1.0);
-            sun.colored_vertex(p, Color32::from_rgba_unmultiplied(255, 226, 150, (warm * warm * 22.0) as u8));
+            let edge = smooth(((d - 0.52) / 0.48).clamp(0.0, 1.0));
+            dark.colored_vertex(p, Color32::from_rgba_unmultiplied(18, 14, 10, (edge * 52.0) as u8));
+            let warm = (1.0 - ((u * u + v * v).sqrt() / 1.4)).clamp(0.0, 1.0);
+            sun.colored_vertex(p, Color32::from_rgba_unmultiplied(255, 232, 166, (warm * warm * 30.0) as u8));
         }
     }
     let stride = (N + 1) as u32;

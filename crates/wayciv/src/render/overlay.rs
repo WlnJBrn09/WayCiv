@@ -21,23 +21,60 @@ fn inset(d: f32) -> f32 {
     d / (SQRT3 / 2.0)
 }
 
-/// The hex grid for one tile: a dark ink line on every edge, with a light
-/// bevel inside it that makes tiles read as raised. Each shared edge's line
-/// is drawn once, by the tile east, north-east or north-west of it.
-/// `strength` fades the grid out when zoomed far out.
-pub fn grid(m: &mut Mesh, t: &TileCtx, strength: f32) {
+/// Hex grid visibility style.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum GridMode {
+    /// Delicate translucent hairline (AAA default: world shines through).
+    #[default]
+    Subtle,
+    /// Stronger tactical hex grid.
+    Crisp,
+    /// Borderless painterly world.
+    Off,
+}
+
+impl GridMode {
+    pub fn next(self) -> Self {
+        match self {
+            GridMode::Subtle => GridMode::Crisp,
+            GridMode::Crisp => GridMode::Off,
+            GridMode::Off => GridMode::Subtle,
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            GridMode::Subtle => "Subtle",
+            GridMode::Crisp => "Crisp",
+            GridMode::Off => "Off",
+        }
+    }
+}
+
+/// The hex grid for one tile: delicate translucent ink on land and whisper-soft
+/// lines over water so the painted terrain and oceans take center stage.
+pub fn grid(m: &mut Mesh, t: &TileCtx, strength: f32, mode: GridMode) {
+    if mode == GridMode::Off {
+        return;
+    }
     let (c, z) = (t.c, t.z);
     let player = &t.game.players[t.viewer];
     let grid = t.game.map.grid;
-    let ink_w = (z * 0.05).clamp(1.2, 2.8);
-    let ink = Color32::from_rgba_unmultiplied(18, 14, 10, (165.0 * strength) as u8);
+    let water = t.game.map.is_water(&t.game.rules, t.pos);
+    let (ink_w, land_a, water_a) = match mode {
+        GridMode::Subtle => ((z * 0.028).clamp(0.85, 1.35), 48.0, 18.0),
+        GridMode::Crisp => ((z * 0.042).clamp(1.1, 2.0), 108.0, 42.0),
+        GridMode::Off => return,
+    };
+    let ink = if water {
+        Color32::from_rgba_unmultiplied(12, 24, 44, (water_a * strength) as u8)
+    } else {
+        Color32::from_rgba_unmultiplied(24, 20, 14, (land_a * strength) as u8)
+    };
     let outer = corners(c, z);
-    let bevel = z >= 18.0;
-    let bevel_w = (z * 0.022).clamp(0.8, 1.6);
+    let bevel = mode == GridMode::Crisp && z >= 22.0 && !water;
+    let bevel_w = (z * 0.018).clamp(0.7, 1.2);
     let ring = corners(c, z - inset(ink_w * 0.5 + bevel_w * 0.5));
-    let soft = z >= 24.0;
-    let depth = z * 0.2;
-    let deep = corners(c, z - inset(depth));
     for (dir, &(a, b)) in EDGES.iter().enumerate() {
         let shared = t
             .neighbor(dir)
@@ -45,9 +82,13 @@ pub fn grid(m: &mut Mesh, t: &TileCtx, strength: f32) {
         if dir < 3 || !shared {
             mesh::line(m, outer[a], outer[b], ink_w, ink);
         }
-        let light = LIGHT[dir];
         if bevel {
-            let (col, a8) = if light > 0.0 { ((255, 244, 210), 92.0) } else { ((10, 8, 6), 70.0) };
+            let light = LIGHT[dir];
+            let (col, a8) = if light > 0.0 {
+                ((255, 246, 220), 42.0)
+            } else {
+                ((10, 8, 6), 34.0)
+            };
             let alpha = (a8 * light.abs() * strength) as u8;
             mesh::line(
                 m,
@@ -57,13 +98,15 @@ pub fn grid(m: &mut Mesh, t: &TileCtx, strength: f32) {
                 Color32::from_rgba_unmultiplied(col.0, col.1, col.2, alpha),
             );
         }
-        if soft {
-            let (col, a8) = if light > 0.0 { ((255, 240, 200), 36.0) } else { ((8, 6, 4), 44.0) };
-            let alpha = (a8 * light.abs() * strength) as u8;
-            let edge = Color32::from_rgba_unmultiplied(col.0, col.1, col.2, alpha);
-            let clear = with_alpha(edge, 0);
-            mesh::quad(m, (outer[a], edge), (outer[b], edge), (deep[b], clear), (deep[a], clear));
-        }
+    }
+}
+
+/// A translucent lens tint for one hex (Settler, Empire, Religion, Resources).
+pub fn lens_tile(m: &mut Mesh, c: Pos2, z: f32, fill: Color32, rim: Color32) {
+    let pts = corners(c, z * 0.96);
+    mesh::fill(m, &pts, fill);
+    if rim.a() > 0 {
+        mesh::outline(m, &pts, (z * 0.045).clamp(1.2, 2.4), rim);
     }
 }
 
@@ -108,7 +151,7 @@ pub fn territory(m: &mut Mesh, t: &TileCtx, claim: f32) {
     let o = &game.players[owner];
     let (primary, secondary) = (rgb(o.primary), rgb(o.secondary));
     let (c, z) = (t.c, t.z);
-    mesh::fill(m, &corners(c, z), with_alpha(primary, (50.0 * claim) as u8));
+    mesh::fill(m, &corners(c, z), with_alpha(primary, (18.0 * claim) as u8));
 
     let owner_at = |p: Option<Pos>| p.map(|p| game.map.tile(p).owner);
     let rows = ribbon(z, primary, secondary, claim);

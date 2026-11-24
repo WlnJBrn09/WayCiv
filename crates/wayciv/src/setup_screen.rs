@@ -16,6 +16,7 @@ pub struct Setup {
     pub opponents: usize,
     pub city_states: usize,
     pub seed: u64,
+    pub search: String,
 }
 
 impl Setup {
@@ -39,6 +40,7 @@ impl Setup {
             opponents: 9,
             city_states: 12,
             seed,
+            search: String::new(),
         }
     }
 }
@@ -81,16 +83,57 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         .show(ui, |ui| {
             theme::plate_ui(ui, 22, |ui| {
                 ui.set_min_size(ui.available_size());
+                ui.label(
+                    egui::RichText::new("WAYCIV")
+                        .size(12.5)
+                        .strong()
+                        .color(palette::GOLD),
+                );
+                ui.label(theme::title("Choose Your Leader", 30.0));
+                ui.label(
+                    egui::RichText::new(
+                        "Every leader brings a civilization with its own bonuses, unique units and buildings.",
+                    )
+                    .size(13.5)
+                    .color(palette::TEXT_DIM),
+                );
+                ui.add_space(6.0);
                 ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        ui.label(theme::title("Choose Your Leader", 36.0));
-                        ui.label(
-                            egui::RichText::new(
-                                "Every leader brings a civilization with its own bonuses, unique units and buildings.",
-                            )
-                            .size(14.5)
-                            .color(palette::TEXT_DIM),
-                        );
+                    let (icon_r, _) = ui.allocate_exact_size(vec2(20.0, 24.0), Sense::hover());
+                    crate::ui::glyph::paint(
+                        ui.painter(),
+                        crate::ui::glyph::Glyph::Search,
+                        icon_r.center(),
+                        7.5,
+                        palette::GOLD_DIM,
+                    );
+                    let search_w = (ui.available_width() - 128.0).clamp(120.0, 260.0);
+                    ui.add(
+                        egui::TextEdit::singleline(&mut setup.search)
+                            .hint_text("Search leader or civ...")
+                            .desired_width(search_w),
+                    );
+                    if !setup.search.is_empty() && ui.small_button("×").clicked() {
+                        setup.search.clear();
+                    }
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if theme::pill_button(
+                            ui,
+                            Some(crate::ui::glyph::Glyph::Star),
+                            "Random",
+                            palette::GOLD,
+                            0.0,
+                        )
+                        .on_hover_text("Pick a random leader")
+                        .clicked()
+                        {
+                            let n = content.leaders.len().max(1);
+                            let r = std::time::SystemTime::now()
+                                .duration_since(std::time::UNIX_EPOCH)
+                                .map(|d| d.subsec_nanos() as usize)
+                                .unwrap_or(0);
+                            setup.leader = (r + setup.leader + 1) % n;
+                        }
                     });
                 });
                 let y = ui.cursor().top() + 8.0;
@@ -142,8 +185,30 @@ fn leader_grid(portraits: &mut Portraits, rules: &Rules, setup: &mut Setup, ui: 
         .auto_shrink([false, false])
         .show(ui, |ui| {
             let per_row = ((ui.available_width() / pitch.x).floor() as usize).max(1);
-            let mut order: Vec<usize> = (0..content.leaders.len()).collect();
+            let q = setup.search.trim().to_lowercase();
+            let mut order: Vec<usize> = (0..content.leaders.len())
+                .filter(|&i| {
+                    if q.is_empty() {
+                        return true;
+                    }
+                    let l = &content.leaders[i];
+                    let cname = rules
+                        .civilization(&l.civilization)
+                        .map(|c| c.name.as_str())
+                        .unwrap_or("");
+                    l.name.to_lowercase().contains(&q) || cname.to_lowercase().contains(&q)
+                })
+                .collect();
             order.sort_by_key(|&i| content.leaders[i].name.clone());
+            if order.is_empty() {
+                ui.add_space(24.0);
+                ui.label(
+                    egui::RichText::new("No leaders match your search.")
+                        .size(16.0)
+                        .color(palette::TEXT_DIM),
+                );
+                return;
+            }
             // Center the grid in the space left over.
             let used = per_row as f32 * pitch.x;
             let indent = ((ui.available_width() - used) / 2.0).max(0.0);
@@ -260,7 +325,9 @@ fn details(portraits: &mut Portraits, rules: &Rules, setup: &mut Setup, ui: &mut
     let side = if compact {
         84.0
     } else {
-        (ui.available_width() - 2.0 * frame).min(ui.available_height() * 0.5)
+        (ui.available_width() - 2.0 * frame)
+            .min(ui.available_height() * 0.42)
+            .min(185.0)
     };
     let mut header = |ui: &mut egui::Ui| {
         let (rect, _) = ui.allocate_exact_size(
@@ -308,8 +375,10 @@ fn details(portraits: &mut Portraits, rules: &Rules, setup: &mut Setup, ui: &mut
         });
     }
     ui.add_space(8.0);
+    ui.spacing_mut().scroll = egui::style::ScrollStyle::solid();
     egui::ScrollArea::vertical()
         .auto_shrink([false, false])
+        .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
         .show(ui, |ui| {
             ui.spacing_mut().item_spacing.y = 8.0;
             let block = |ui: &mut egui::Ui, name: &str, desc: &str, gold: bool| {
@@ -340,6 +409,35 @@ fn details(portraits: &mut Portraits, rules: &Rules, setup: &mut Setup, ui: &mut
                 for t in &civ.traits {
                     block(ui, &t.name, &t.description, false);
                 }
+            }
+            // Show unique units, buildings, districts, and improvements for this civ/leader.
+            let civ_id = civ.map(|c| c.id.as_str()).unwrap_or("");
+            let matches_owner = |u: &Option<String>| {
+                u.as_deref() == Some(leader.id.as_str()) || (!civ_id.is_empty() && u.as_deref() == Some(civ_id))
+            };
+            let mut uniques: Vec<String> = Vec::new();
+            for u in &content.units {
+                if matches_owner(&u.unique_to) {
+                    uniques.push(format!("Unique Unit: {} (Str {})", u.name, u.combat.max(u.ranged_combat)));
+                }
+            }
+            for b in &content.buildings {
+                if matches_owner(&b.unique_to) {
+                    uniques.push(format!("Unique Building: {}", b.name));
+                }
+            }
+            for d in &content.districts {
+                if matches_owner(&d.unique_to) {
+                    uniques.push(format!("Unique District: {}", d.name));
+                }
+            }
+            for imp in &content.improvements {
+                if matches_owner(&imp.unique_to) {
+                    uniques.push(format!("Unique Improvement: {}", imp.name));
+                }
+            }
+            if !uniques.is_empty() {
+                block(ui, "Unique Infrastructure & Forces", &uniques.join("\n"), false);
             }
             if let Some((name, desc)) = &leader.agenda {
                 block(ui, &format!("Agenda: {name}"), desc, true);

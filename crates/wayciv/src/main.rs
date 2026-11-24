@@ -311,6 +311,7 @@ impl App {
                 Some("city_states") => s.windows.open(Panel::CityStates),
                 Some("leaders") => s.windows.open(Panel::Leaders),
                 Some("notifications") => s.windows.open(Panel::Notifications),
+                Some("settings") => s.windows.open(Panel::Settings),
                 Some("legend") => s.windows.legend = true,
                 Some("diplomacy") => {
                     let me = s.game.human();
@@ -370,6 +371,62 @@ impl App {
             }
             if let Some(z) = env("WAYCIV_ZOOM").and_then(|z| z.parse().ok()) {
                 s.cam.zoom = z;
+                s.cam.target_zoom = z;
+            }
+            if env("WAYCIV_OPEN").as_deref() == Some("city")
+                && let Some((_, pos)) = first_city
+            {
+                map_view::snap_to_city(s, pos);
+            }
+            if env("WAYCIV_STAGE_COMBAT").is_some()
+                && let Some((_, cap)) = first_city
+            {
+                // Stage a clean melee combat preview right next to the capital.
+                let grid = s.game.map.grid;
+                let enemy_p = (0..s.game.players.len())
+                    .find(|&p| p != human && s.game.players[p].is_major())
+                    .unwrap_or(1);
+                s.game.players[human].relations[enemy_p].met = true;
+                s.game.players[enemy_p].relations[human].met = true;
+                s.game.players[human].relations[enemy_p].at_war = true;
+                s.game.players[enemy_p].relations[human].at_war = true;
+                let land: Vec<wayciv_core::Pos> = grid
+                    .neighbors(cap)
+                    .filter(|&p| {
+                        let t = &s.game.rules.content.terrains[s.game.map.tile(p).terrain];
+                        !t.water && !t.mountain
+                    })
+                    .collect();
+                if land.len() >= 2 {
+                    let a = land[0];
+                    let b = land.iter().copied().find(|&p| grid.distance(a, p) == 1).unwrap_or(land[1]);
+                    if let Some(uid) = s.game.spawn(human, "UNIT_WARRIOR", a) {
+                        let _ = s.game.spawn(enemy_p, "UNIT_WARRIOR", b);
+                        s.select_unit(Some(uid));
+                        map_view::snap_to(s, b);
+                        s.hover = Some(b);
+                        s.update_path_preview();
+                    }
+                }
+            }
+            if env("WAYCIV_STAGE_PATH").is_some()
+                && let Some((_, cap)) = first_city
+            {
+                let grid = s.game.map.grid;
+                if let Some(uid) = s.game.spawn(human, "UNIT_WARRIOR", cap) {
+                    s.select_unit(Some(uid));
+                    if let Some(target) = grid.within(cap, 4).into_iter().find(|&p| {
+                        grid.distance(cap, p) == 4
+                            && s.game.players[human].revealed[grid.index(p)]
+                            && !s.game.rules.content.terrains[s.game.map.tile(p).terrain].water
+                            && !s.game.rules.content.terrains[s.game.map.tile(p).terrain].mountain
+                            && s.game.find_path(&s.game.units[&uid], p).is_some()
+                    }) {
+                        map_view::snap_to(s, target);
+                        s.hover = Some(target);
+                        s.update_path_preview();
+                    }
+                }
             }
             if let Some((x, y)) = env("WAYCIV_CENTER").and_then(|c| {
                 c.split_once(',')

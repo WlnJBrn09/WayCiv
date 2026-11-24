@@ -158,8 +158,19 @@ pub fn show(s: &mut Session, ctx: &egui::Context) -> f32 {
                 );
             }
             theme::keycap(&painter, c + vec2(0.0, r - 22.0), "Enter");
+            if blockers.len() > 1 {
+                theme::badge(
+                    &painter,
+                    c + vec2(r * 0.68, -r * 0.68),
+                    &blockers.len().to_string(),
+                    palette::GOLD_DIM,
+                );
+            }
             let tip = match &winner {
                 Some(w) => format!("{w}\n\n{label} (Enter)"),
+                None if blockers.len() > 1 => {
+                    format!("{label} (Enter)\n{} decisions remaining this turn.", blockers.len())
+                }
                 None => format!("{label} (Enter)"),
             };
             if response.on_hover_text(tip).clicked() {

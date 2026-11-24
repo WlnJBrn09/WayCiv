@@ -497,6 +497,81 @@ impl Frame {
         )
     }
 
+    /// A soft elliptical ground shadow (ambient occlusion / directional cast
+    /// shadow) pushed into `FRINGE` so it sits on the ground under relief,
+    /// forests, and cities with zero extra draw calls.
+    fn ground_shadow(&mut self, c: Pos2, rx: f32, ry: f32, alpha: f32) {
+        let uv = self.cell_center_uv(GROUND_WHITE);
+        let m = self.bufs[FRINGE].mesh(17);
+        let base = m.vertices.len() as u32;
+        m.vertices.push(Vertex {
+            pos: c,
+            uv,
+            color: pm([0.04, 0.06, 0.09], alpha),
+        });
+        const STEPS: usize = 16;
+        for k in 0..STEPS {
+            let a = TAU * k as f32 / STEPS as f32;
+            m.vertices.push(Vertex {
+                pos: c + vec2(a.cos() * rx, a.sin() * ry),
+                uv,
+                color: Color32::TRANSPARENT,
+            });
+        }
+        for k in 0..STEPS as u32 {
+            m.indices
+                .extend_from_slice(&[base, base + 1 + k, base + 1 + (k + 1) % STEPS as u32]);
+        }
+    }
+
+    /// A soft verdant ground wash along riverbanks in arid/plains biomes.
+    fn riparian_wash(&mut self, c: Pos2, radius: f32, alpha: f32) {
+        let uv = self.cell_center_uv(GROUND_WHITE);
+        let m = self.bufs[FRINGE].mesh(13);
+        let base = m.vertices.len() as u32;
+        m.vertices.push(Vertex {
+            pos: c,
+            uv,
+            color: pm([0.24, 0.50, 0.18], alpha),
+        });
+        const STEPS: usize = 12;
+        for k in 0..STEPS {
+            let a = TAU * k as f32 / STEPS as f32;
+            m.vertices.push(Vertex {
+                pos: c + vec2(a.cos() * radius, a.sin() * radius),
+                uv,
+                color: Color32::TRANSPARENT,
+            });
+        }
+        for k in 0..STEPS as u32 {
+            m.indices
+                .extend_from_slice(&[base, base + 1 + k, base + 1 + (k + 1) % STEPS as u32]);
+        }
+    }
+
+    /// A delicate sunlit specular glint diamond pushed into `FRINGE`.
+    fn water_sparkle(&mut self, c: Pos2, rx: f32, ry: f32, alpha: f32) {
+        let uv = self.cell_center_uv(GROUND_WHITE);
+        let m = self.bufs[FRINGE].mesh(5);
+        let base = m.vertices.len() as u32;
+        m.vertices.push(Vertex {
+            pos: c,
+            uv,
+            color: pm([1.0, 0.98, 0.88], alpha),
+        });
+        for off in [vec2(rx, 0.0), vec2(0.0, ry), vec2(-rx, 0.0), vec2(0.0, -ry)] {
+            m.vertices.push(Vertex {
+                pos: c + off,
+                uv,
+                color: Color32::TRANSPARENT,
+            });
+        }
+        for k in 0..4u32 {
+            m.indices
+                .extend_from_slice(&[base, base + 1 + k, base + 1 + (k + 1) % 4]);
+        }
+    }
+
     /// A textured quad covering sprite `cell` over `rect`.
     fn sprite(&mut self, layer: usize, cell: usize, rect: Rect, flip: bool) {
         let (cx, cy) = ((cell % self.scols) as f32, (cell / self.scols) as f32);
@@ -880,6 +955,27 @@ fn tile(
     let dim = if info.mountain { 0.78 } else { 1.0 };
     if info.water {
         water_fan(f, infos, t, &pts);
+        // Subtle sunlit specular sparkles dancing across shallow coastal waters.
+        let is_shallow = (0..6).any(|d| {
+            t.neighbor(d)
+                .is_some_and(|n| !infos.terrains[game.map.tile(n).terrain].water)
+        });
+        if f.fx && z >= 20.0 && is_shallow {
+            f.moving = true;
+            for k in 0..3u32 {
+                let hk = hash2(pos.x + k as i32 * 13, pos.y - k as i32 * 7, 19);
+                let phase = (hk % 628) as f32 * 0.01;
+                let s = (f.time * 1.45 + phase).sin();
+                let glint = ((s - 0.52) / 0.48).clamp(0.0, 1.0);
+                if glint > 0.05 {
+                    let ang = ((hk >> 8) % 360) as f32 * std::f32::consts::TAU / 360.0;
+                    let dist = (0.14 + ((hk >> 16) % 45) as f32 * 0.01) * z;
+                    let gp = c + vec2(ang.cos() * dist, ang.sin() * dist);
+                    let len = (2.6 + 2.8 * glint) * (z / 42.0).clamp(0.6, 1.3);
+                    f.water_sparkle(gp, len, len * 0.38, glint * glint * 0.48);
+                }
+            }
+        }
     } else {
         let center_uv = f.ground_uv(cell, Vec2::ZERO);
         let verts: Vec<Vertex> = std::iter::once(Vertex {
@@ -942,24 +1038,26 @@ fn tile(
         };
         if info.water == ninfo.water {
             if !info.water && grid.index(nb) < grid.index(pos) {
-                // Fade this tile's texture over the earlier neighbour.
-                let rows = [(0.0, 1.0), (0.15, 0.38), (0.30, 0.0)];
+                // Fade this tile's texture smoothly over the earlier neighbour.
+                let rows = [(0.0, 1.0), (0.18, 0.42), (0.36, 0.0)];
                 edge_strip(f, FRINGE, &side, z, cell, &rows, [1.0; 3], 0.0);
             }
         } else if !info.water {
-            // Land meets water: sand on the land, foam on the water.
+            // Land meets water: warm sand/rock shoreline on the land, delicate
+            // animated surf curls on the water.
             let sand_cell = Cell {
                 cell: GROUND_SAND,
                 rot: ((h >> 12) & 3) as u8,
                 flip: false,
             };
             let tint = match biome {
-                3 => Some([0.78, 0.80, 0.76]),
-                0 | 1 => Some([1.0, 0.98, 0.94]),
+                3 => Some([0.74, 0.76, 0.72]),
+                0 | 1 => Some([0.96, 0.92, 0.84]),
+                2 => Some([1.0, 0.94, 0.80]),
                 _ => None,
             };
             if let Some(tint) = tint {
-                let rows = [(0.0, 0.0), (-0.07, 0.75), (-0.2, 0.0)];
+                let rows = [(0.0, 0.0), (-0.06, 0.58), (-0.20, 0.0)];
                 edge_strip(f, FRINGE, &side, z, sand_cell, &rows, tint, 0.0);
             }
             let white = Cell {
@@ -970,14 +1068,14 @@ fn tile(
             // Swells roll in along the coast: the foam laps out and back.
             let sw = if f.fx {
                 f.moving = true;
-                0.5 + 0.5 * (f.time * 1.25 - wp.x * 0.55 - wp.y * 0.85 + d as f32 * 0.4).sin()
+                0.5 + 0.5 * (f.time * 1.15 - wp.x * 0.55 - wp.y * 0.85 + d as f32 * 0.4).sin()
             } else {
                 0.0
             };
-            let foam = [(0.0, 0.9), (0.05 + 0.05 * sw, 0.6), (0.15 + 0.12 * sw, 0.0)];
-            edge_strip(f, FRINGE, &side, z, white, &foam, [1.0; 3], 0.45);
-            let wide = [(0.0, 0.0), (0.12 + 0.08 * sw, 0.3), (0.28 + 0.16 * sw, 0.0)];
-            edge_strip(f, FRINGE, &side, z, white, &wide, [0.85, 1.0, 1.0], 0.3);
+            let foam = [(0.0, 0.62), (0.04 + 0.04 * sw, 0.36), (0.12 + 0.10 * sw, 0.0)];
+            edge_strip(f, FRINGE, &side, z, white, &foam, [0.95, 0.99, 1.0], 0.40);
+            let wide = [(0.0, 0.0), (0.10 + 0.08 * sw, 0.18), (0.24 + 0.14 * sw, 0.0)];
+            edge_strip(f, FRINGE, &side, z, white, &wide, [0.55, 0.92, 0.96], 0.28);
             if tile.cliffs {
                 let rock = Cell {
                     cell: GROUND_ROCK,
@@ -986,18 +1084,21 @@ fn tile(
                 };
                 let wall = [(0.04, 0.0), (0.0, 1.0), (-0.1, 1.0), (-0.24, 0.85), (-0.34, 0.0)];
                 edge_strip(f, FRINGE, &side, z, rock, &wall, [1.0; 3], 0.0);
-                let shadow = [(0.0, 0.5), (0.12, 0.0)];
+                let shadow = [(0.0, 0.52), (0.14, 0.0)];
                 edge_strip(f, FRINGE, &side, z, white, &shadow, [0.0; 3], 0.0);
             }
         }
     }
 
-    // 3. River.
+    // 3. River (plus soft verdant riparian warmth on arid/plains tiles).
     if tile.river && !info.water {
+        if biome == 1 || biome == 2 {
+            f.riparian_wash(c, z * 0.88, if biome == 2 { 0.24 } else { 0.16 });
+        }
         river(f, racc, &pts, t, h);
     }
 
-    // 4. Relief and feature sprites.
+    // 4. Relief and feature sprites, grounded with directional SE shadows.
     let feat = tile.feature.map(|x| infos.features[x]);
     let wonder = match feat {
         Some(Feat::Wonder(i)) => Some(i),
@@ -1006,10 +1107,12 @@ fn tile(
     let bidx = biome.min(4);
     if has.relief && wonder.is_none() && biome <= 4 {
         if info.mountain {
+            f.ground_shadow(c + vec2(0.18 * z, 0.16 * z), 0.95 * z, 0.62 * z, 0.34);
             let size = MTN_SCALE * (0.92 + 0.14 * ((h >> 16) & 7) as f32 / 7.0);
             let rect = Frame::sprite_rect(c, z, MTN_OFF, size, 0.0);
             f.sprite(SPRITES, 15 + bidx * MOUNTAINS + (h >> 4) as usize % MOUNTAINS, rect, false);
         } else if info.hills {
+            f.ground_shadow(c + vec2(0.12 * z, 0.12 * z), 0.82 * z, 0.54 * z, 0.22);
             let rect = Frame::sprite_rect(c, z, HILL_OFF, 1.0, 0.0);
             f.sprite(SPRITES, bidx * 3 + variant, rect, false);
         }
@@ -1021,6 +1124,9 @@ fn tile(
         if has.features
             && let Some((first, count)) = feat.cells()
         {
+            if matches!(feat, Feat::Forest | Feat::Jungle | Feat::Taiga) {
+                f.ground_shadow(c + vec2(0.14 * z, 0.12 * z), 0.86 * z, 0.58 * z, 0.26);
+            }
             let hills = info.hills as i32 as f32;
             let rect = Frame::sprite_rect(c, z, FEAT_OFF, 1.0 - 0.06 * hills, 0.1 * hills);
             let layer = if matches!(
@@ -1045,6 +1151,7 @@ fn tile(
             f.sprite(layer, SPRITE_FEATURES + first + (h >> 4) as usize % count, rect, flip);
         }
         if let Feat::Wonder(i) = feat {
+            f.ground_shadow(c + vec2(0.16 * z, 0.14 * z), 1.02 * z, 0.66 * z, 0.34);
             if has.wonders {
                 let rect = Frame::sprite_rect(c, z, WONDER_OFF, WONDER_SCALE, 0.0);
                 f.sprite(SPRITES, SPRITE_WONDERS + i, rect, false);
@@ -1091,16 +1198,16 @@ fn depth_of(info: TerrainInfo) -> f32 {
     }
 }
 
-/// The sea's colour at a depth: pale turquoise shallows to deep blue.
-/// Multiplied by the (light) water texture, so these run bright.
+/// The sea's colour at a depth: luminous turquoise shallows to sapphire cobalt
+/// and deep abyssal ocean. Multiplied by the water texture.
 fn sea_color(depth: f32) -> Color32 {
     const STOPS: [(f32, [f32; 3]); 6] = [
-        (-0.35, [0.78, 1.0, 0.92]),
-        (0.0, [0.55, 0.98, 0.98]),
-        (0.2, [0.38, 0.88, 1.0]),
-        (0.5, [0.20, 0.64, 1.0]),
-        (0.8, [0.12, 0.42, 0.86]),
-        (1.0, [0.08, 0.30, 0.72]),
+        (-0.35, [0.42, 0.88, 0.86]),
+        (0.0, [0.24, 0.76, 0.88]),
+        (0.22, [0.16, 0.58, 0.86]),
+        (0.52, [0.10, 0.39, 0.76]),
+        (0.82, [0.06, 0.24, 0.58]),
+        (1.0, [0.04, 0.16, 0.44]),
     ];
     let d = depth.clamp(STOPS[0].0, STOPS[5].0.max(1.0));
     let i = (0..5).find(|&i| d <= STOPS[i + 1].0).unwrap_or(4);
@@ -1505,15 +1612,15 @@ fn river_profile(off: f32, shade: f32) -> ([f32; 3], f32) {
         ]
     };
     if off > 1.0 {
-        let bank = lerp3([0.34, 0.33, 0.22], [0.18, 0.22, 0.14], shadow);
-        (bank, if off > 1.4 { 0.0 } else { 0.5 })
+        let bank = lerp3([0.28, 0.30, 0.18], [0.14, 0.18, 0.11], shadow);
+        (bank, if off > 1.4 { 0.0 } else { 0.55 })
     } else if off > 0.7 {
-        // Pale shallows on the lit side, dark under the bank.
-        (lerp3([0.62, 0.90, 0.95], [0.12, 0.36, 0.56], shadow), 1.0)
-    } else if off > 0.3 {
-        (lerp3([0.24, 0.62, 0.88], [0.14, 0.44, 0.72], shadow), 1.0)
+        // Luminous sky reflection on the lit rim, deep shaded bank opposite.
+        (lerp3([0.52, 0.86, 0.96], [0.10, 0.30, 0.52], shadow), 1.0)
+    } else if off > 0.28 {
+        (lerp3([0.16, 0.54, 0.84], [0.10, 0.38, 0.68], shadow), 1.0)
     } else {
-        ([0.30, 0.68, 0.92], 1.0)
+        ([0.26, 0.68, 0.94], 1.0)
     }
 }
 

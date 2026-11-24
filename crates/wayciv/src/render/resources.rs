@@ -254,7 +254,7 @@ fn paint_road(painter: &egui::Painter, t: &TileCtx) {
         return;
     }
     let seed = hash(t);
-    let w = (z * 0.105).max(1.6);
+    let w = (z * 0.082).max(1.45);
     let sf = surface(kind);
     let fade = |c: Color32, k: f32| c.gamma_multiply(k);
     let clear = Color32::TRANSPARENT;
@@ -482,14 +482,14 @@ fn draw_field(
     } else {
         format!("imp_plantation_{look}")
     };
-    let turns = h % 6;
+    // Keep 3/4 isometric terraced farms upright so NW sunlight & terrace depth match the map.
+    let turns = 0u32;
     if let Some(tex) = art.tex(&ctx, "improvements", &decal) {
         blit(painter, tex, c, DECAL * z, tint, turns);
     }
     paint_road(painter, t);
-    let (s, co) = (turns as f32 * std::f32::consts::FRAC_PI_3).sin_cos();
-    let at = c + vec2(YARD.x * co - YARD.y * s, YARD.x * s + YARD.y * co) * z;
-    let scale = if t.tile().resource.is_some() { 0.46 } else { 0.68 };
+    let at = c + YARD * z;
+    let scale = if t.tile().resource.is_some() { 0.44 } else { 0.62 };
     if let Some(tex) = art.tex(&ctx, "improvements", &format!("imp_farmhouse_{era}")) {
         blit(painter, tex, at, SPRITE * z * scale, tint, 0);
     }

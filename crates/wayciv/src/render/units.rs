@@ -16,7 +16,8 @@
 use crate::icons::Icons;
 use crate::palette::rgb;
 use egui::{
-    Color32, Pos2, Rect, Shape, Stroke, TextureFilter, TextureHandle, TextureOptions, pos2, vec2,
+    Color32, Pos2, Rect, Shape, Stroke, TextureFilter, TextureHandle, TextureOptions, Vec2, pos2,
+    vec2,
 };
 use std::collections::HashMap;
 use std::f32::consts::{FRAC_PI_2, PI};
@@ -265,6 +266,8 @@ pub struct UnitFx {
     pub lift: f32,
     /// Lean in radians about the feet, clockwise (walking).
     pub tilt: f32,
+    /// Horizontally mirror the sprite when moving westward.
+    pub flip_x: bool,
 }
 
 impl UnitFx {
@@ -275,6 +278,7 @@ impl UnitFx {
         scale: 1.0,
         lift: 0.0,
         tilt: 0.0,
+        flip_x: false,
     };
 }
 
@@ -299,10 +303,15 @@ fn draw_sprite(
     stretch: f32,
     flash: f32,
     tilt: f32,
+    flip_x: bool,
 ) {
     let min = ground - vec2(px * 0.5, px * sprite.anchor * stretch);
     let rect = Rect::from_min_size(min, vec2(px, px * stretch));
-    let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+    let uv = if flip_x {
+        Rect::from_min_max(pos2(1.0, 0.0), pos2(0.0, 1.0))
+    } else {
+        Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0))
+    };
     // A quad turned about the feet, so a walking figure leans.
     let image = |texture: egui::TextureId, tint: Color32| {
         let mut mesh = egui::Mesh::with_texture(texture);
@@ -322,7 +331,7 @@ fn draw_sprite(
 }
 
 /// A soft pool of shade right under the feet (the sprite carries the cast shadow).
-fn ground_shadow(painter: &egui::Painter, ground: Pos2, rx: f32, alpha: u8) {
+pub(crate) fn ground_shadow(painter: &egui::Painter, ground: Pos2, rx: f32, alpha: u8) {
     for (k, a) in [(1.0, 0.22), (0.8, 0.28), (0.58, 0.34), (0.38, 0.4)] {
         painter.add(Shape::ellipse_filled(
             ground,
@@ -333,7 +342,7 @@ fn ground_shadow(painter: &egui::Painter, ground: Pos2, rx: f32, alpha: u8) {
 }
 
 /// The ring under the selected unit: breathes, and a second ring ripples out.
-fn selection_ring(painter: &egui::Painter, ground: Pos2, rx: f32, time: f32) {
+pub(crate) fn selection_ring(painter: &egui::Painter, ground: Pos2, rx: f32, time: f32) {
     let pulse = if time > 0.0 { 0.5 + 0.5 * (time * 3.4).sin() } else { 1.0 };
     let r = vec2(rx * (1.0 + 0.03 * pulse), rx * 0.46 * (1.0 + 0.03 * pulse));
     painter.add(Shape::ellipse_filled(
@@ -440,14 +449,59 @@ pub fn draw_unit(
     let has_sprite = if let Some(s) = art.find(painter.ctx(), &ids) {
         // Every unit stands as tall as a Settler; long ships are kept to
         // about a Settler's width.
-        let px = uniform_px(s, height * radius * 1.1, width * radius * 1.2);
+        let px = uniform_px(s, height * radius * 1.15, width * radius * 1.24);
         let rx = (radius * (0.8 + 0.12 * s.ortho)).min(radius * 1.7).min(px * s.bounds.width() * 0.5);
         if selected {
             selection_ring(painter, ground, rx, fx.time);
+        } else if u.owner == game.human() && !spent && !u.fortified && !u.sleeping && !u.skipped {
+            // Subtle luminous readiness rim so active units stand out cleanly.
+            let pulse = if fx.time > 0.0 { 0.5 + 0.5 * (fx.time * 2.2 + ph).sin() } else { 0.5 };
+            painter.add(Shape::ellipse_stroke(
+                ground,
+                vec2(rx * 0.88, rx * 0.40),
+                Stroke::new(
+                    1.4,
+                    Color32::from_rgba_unmultiplied(245, 224, 150, (46.0 + 36.0 * pulse) as u8),
+                ),
+            ));
         }
         let high = (1.0 - lift / (radius * 3.0)).clamp(0.6, 1.0);
-        ground_shadow(painter, ground, rx * 0.8 * high, if spent { 80 } else { 110 });
-        draw_sprite(s, painter, hover, px * fx.scale, primary, spent, stretch, fx.flash, fx.tilt);
+        // Civ VI multi-figure infantry formation: 3 staggered soldiers for Melee/Ranged
+        // squads (not giant siege engines/ships/civilians) for authentic miniature scale!
+        let squad = matches!(class, Class::Melee | Class::Ranged)
+            && !naval
+            && ty.domain == "DOMAIN_LAND"
+            && radius >= 12.0;
+        if squad {
+            let members: [(Vec2, f32); 3] = [
+                (vec2(-radius * 0.44, -radius * 0.24), 0.74),
+                (vec2(radius * 0.42, -radius * 0.18), 0.74),
+                (vec2(0.0, radius * 0.14), 0.84),
+            ];
+            ground_shadow(painter, ground, rx * 1.05 * high, if spent { 76 } else { 112 });
+            for (idx, (off, sc)) in members.into_iter().enumerate() {
+                let m_stretch = if fx.time > 0.0 && !is_still(u) {
+                    1.0 + 0.014 * (fx.time * 1.7 + ph + idx as f32 * 2.1).sin()
+                } else {
+                    1.0
+                };
+                draw_sprite(
+                    s,
+                    painter,
+                    hover + off,
+                    px * fx.scale * sc,
+                    primary,
+                    spent,
+                    m_stretch,
+                    fx.flash,
+                    fx.tilt,
+                    fx.flip_x,
+                );
+            }
+        } else {
+            ground_shadow(painter, ground, rx * 0.85 * high, if spent { 80 } else { 118 });
+            draw_sprite(s, painter, hover, px * fx.scale, primary, spent, stretch, fx.flash, fx.tilt, fx.flip_x);
+        }
         true
     } else {
         // No model: Codex icon on a disc, else the class symbol.
@@ -476,12 +530,24 @@ pub fn draw_unit(
         false
     };
 
-    // Owner flag with the class symbol on the top left; fortified shield top right.
+    // Owner flag with the class symbol on the top left; fortified shield &
+    // veteran stars top right.
     if has_sprite {
-        let br = (radius * 0.4).max(6.0);
+        let br = (radius * 0.44).max(6.5);
         draw_badge(painter, class, at + vec2(-radius * 0.82, -radius * 0.78), br, primary, secondary, spent);
         if u.fortified {
             draw_fortified(painter, at + vec2(radius * 0.82, -radius * 0.78), br * 0.9, spent);
+        }
+        if u.level > 0 {
+            let stars = u.level.min(4) as usize;
+            let step = (br * 0.52).max(4.5);
+            let start_x = at.x - (stars as f32 - 1.0) * step * 0.5;
+            let sy = at.y - radius * 1.16;
+            for k in 0..stars {
+                let p = pos2(start_x + k as f32 * step, sy);
+                painter.circle_filled(p, (br * 0.24).max(2.2), Color32::from_black_alpha(170));
+                painter.circle_filled(p, (br * 0.18).max(1.7), crate::palette::GOLD);
+            }
         }
     } else if u.fortified {
         draw_fortified(painter, at + vec2(radius * 0.8, -radius * 0.8), radius * 0.4, spent);
@@ -494,7 +560,7 @@ fn is_still(u: &wayciv_core::state::Unit) -> bool {
     u.fortified
 }
 
-fn hp_bar(u: &wayciv_core::state::Unit, painter: &egui::Painter, at: Pos2, radius: f32, military: bool) {
+pub(crate) fn hp_bar(u: &wayciv_core::state::Unit, painter: &egui::Painter, at: Pos2, radius: f32, military: bool) {
     // Civilians have no health bar: they are alive or dead.
     if u.hp >= 100 || !military {
         return;
@@ -529,30 +595,74 @@ fn hp_bar(u: &wayciv_core::state::Unit, painter: &egui::Painter, at: Pos2, radiu
     );
 }
 
-/// An owner-coloured round flag with a class symbol: a gem-like disc with a
-/// light top half, a ring in the second colour and a soft drop shadow.
-fn draw_badge(painter: &egui::Painter, class: Class, c: Pos2, r: f32, primary: Color32, secondary: Color32, spent: bool) {
+/// An owner-coloured emblem with a class symbol: shield crest for military,
+/// circle for civilians, diamond for air/great people, with glossy bevels.
+pub(crate) fn draw_badge(painter: &egui::Painter, class: Class, c: Pos2, r: f32, primary: Color32, secondary: Color32, spent: bool) {
     let ink = dim(secondary, spent);
     let fill = dim(primary, spent);
-    painter.circle_filled(c + vec2(0.0, r * 0.22), r + 1.5, Color32::from_black_alpha(80));
-    painter.circle_filled(c, r + 1.0, Color32::from_rgb(18, 20, 26));
-    painter.circle_filled(c, r, ink);
-    let inner = r * 0.82;
-    painter.circle_filled(c, inner, fill);
-    // Glossy cap on the upper half of the disc.
-    let cap: Vec<Pos2> = (0..=12)
-        .map(|i| {
-            let a = PI + PI * i as f32 / 12.0;
-            c + vec2(a.cos() * inner * 0.92, a.sin() * inner * 0.92 * 0.95)
-        })
-        .collect();
-    painter.add(Shape::convex_polygon(cap, Color32::from_white_alpha(if spent { 20 } else { 38 }), Stroke::NONE));
+    let military_shape = matches!(class, Class::Melee | Class::Ranged | Class::Cavalry | Class::Siege | Class::Naval);
+    let diamond_shape = matches!(class, Class::Air | Class::Great);
+    if military_shape {
+        let shield = |scale: f32, off: egui::Vec2| -> Vec<Pos2> {
+            let s = r * scale;
+            vec![
+                c + off + vec2(-s * 0.86, -s * 0.88),
+                c + off + vec2(s * 0.86, -s * 0.88),
+                c + off + vec2(s * 0.86, s * 0.12),
+                c + off + vec2(0.0, s * 1.06),
+                c + off + vec2(-s * 0.86, s * 0.12),
+            ]
+        };
+        painter.add(Shape::convex_polygon(shield(1.12, vec2(0.0, r * 0.2)), Color32::from_black_alpha(95), Stroke::NONE));
+        painter.add(Shape::convex_polygon(shield(1.08, egui::Vec2::ZERO), Color32::from_rgb(16, 18, 24), Stroke::NONE));
+        painter.add(Shape::convex_polygon(shield(1.0, egui::Vec2::ZERO), ink, Stroke::NONE));
+        painter.add(Shape::convex_polygon(shield(0.84, egui::Vec2::ZERO), fill, Stroke::NONE));
+        // Glossy top sheen.
+        let s = r * 0.82;
+        painter.add(Shape::convex_polygon(
+            vec![
+                c + vec2(-s * 0.82, -s * 0.84),
+                c + vec2(s * 0.82, -s * 0.84),
+                c + vec2(s * 0.82, -s * 0.08),
+                c + vec2(-s * 0.82, -s * 0.08),
+            ],
+            Color32::from_white_alpha(if spent { 18 } else { 36 }),
+            Stroke::NONE,
+        ));
+    } else if diamond_shape {
+        let dia = |scale: f32, off: egui::Vec2| -> Vec<Pos2> {
+            let s = r * scale * 1.1;
+            vec![
+                c + off + vec2(0.0, -s),
+                c + off + vec2(s, 0.0),
+                c + off + vec2(0.0, s),
+                c + off + vec2(-s, 0.0),
+            ]
+        };
+        painter.add(Shape::convex_polygon(dia(1.12, vec2(0.0, r * 0.2)), Color32::from_black_alpha(95), Stroke::NONE));
+        painter.add(Shape::convex_polygon(dia(1.06, egui::Vec2::ZERO), Color32::from_rgb(16, 18, 24), Stroke::NONE));
+        painter.add(Shape::convex_polygon(dia(1.0, egui::Vec2::ZERO), ink, Stroke::NONE));
+        painter.add(Shape::convex_polygon(dia(0.84, egui::Vec2::ZERO), fill, Stroke::NONE));
+    } else {
+        painter.circle_filled(c + vec2(0.0, r * 0.22), r + 1.5, Color32::from_black_alpha(85));
+        painter.circle_filled(c, r + 1.0, Color32::from_rgb(18, 20, 26));
+        painter.circle_filled(c, r, ink);
+        let inner = r * 0.82;
+        painter.circle_filled(c, inner, fill);
+        let cap: Vec<Pos2> = (0..=12)
+            .map(|i| {
+                let a = PI + PI * i as f32 / 12.0;
+                c + vec2(a.cos() * inner * 0.92, a.sin() * inner * 0.92 * 0.95)
+            })
+            .collect();
+        painter.add(Shape::convex_polygon(cap, Color32::from_white_alpha(if spent { 20 } else { 38 }), Stroke::NONE));
+    }
     // Dark glyph outline, then the glyph itself in the second colour.
-    draw_glyph(painter, class, c + vec2(0.0, r * 0.05), r * 0.62, Color32::from_black_alpha(110));
-    draw_glyph(painter, class, c, r * 0.62, ink);
+    draw_glyph(painter, class, c + vec2(0.0, r * 0.05), r * 0.60, Color32::from_black_alpha(120));
+    draw_glyph(painter, class, c, r * 0.60, ink);
 }
 
-fn draw_fortified(painter: &egui::Painter, c: Pos2, r: f32, spent: bool) {
+pub(crate) fn draw_fortified(painter: &egui::Painter, c: Pos2, r: f32, spent: bool) {
     let col = dim(Color32::from_rgb(222, 226, 232), spent);
     let edge = Stroke::new(1.3, Color32::from_rgb(40, 46, 58));
     let pts = vec![
@@ -715,7 +825,7 @@ pub fn draw_aircraft(
         // The plane hovers above a soft shadow.
         ground_shadow(painter, at + vec2(r * 0.2, r * 1.0), r * 0.75, 70);
         let px = r * 2.0 * (0.62 + 0.2 * s.ortho);
-        draw_sprite(s, painter, at + vec2(0.0, px * (s.anchor - 0.5)), px, primary, spent, 1.0, 0.0, 0.0);
+        draw_sprite(s, painter, at + vec2(0.0, px * (s.anchor - 0.5)), px, primary, spent, 1.0, 0.0, 0.0, false);
         draw_badge(painter, Class::Air, at + vec2(-r * 0.95, -r * 0.8), (r * 0.62).max(5.0), primary, secondary, spent);
         hp_bar(u, painter, at + vec2(0.0, -r * 0.55), r * 0.9, game.is_military(u));
     } else {

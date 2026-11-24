@@ -295,6 +295,36 @@ impl Game {
         0
     }
 
+    /// Simulates moving `unit` along `path` and returns the turn number (1-based:
+    /// 1 = reachable this turn, 2 = next turn, ...) on which the unit reaches
+    /// each step of `path`.
+    pub fn path_step_turns(&self, unit: &Unit, path: &[Pos]) -> Vec<i32> {
+        let full = self.unit_type(unit).moves.max(1) + self.bonus_moves(unit);
+        let zoc_applies = self.zoc_applies(unit);
+        let mut turn = 1;
+        let mut left = unit.moves;
+        let mut prev = unit.pos;
+        let mut out = Vec::with_capacity(path.len());
+        for (idx, &next) in path.iter().enumerate() {
+            let cost = self.move_cost(unit, prev, next);
+            if left <= 0 || (cost > left && left < full) {
+                turn += 1;
+                left = full;
+            }
+            left = if cost == i32::MAX {
+                0
+            } else {
+                (left - cost).max(0)
+            };
+            if idx + 1 < path.len() && zoc_applies && self.zone_of_control(unit.owner, next) {
+                left = 0;
+            }
+            out.push(turn);
+            prev = next;
+        }
+        out
+    }
+
     /// Orders `unit` toward `goal`. Moves as far as possible this turn,
     /// attacking if the goal holds an enemy in reach.
     pub fn move_unit(&mut self, id: UnitId, goal: Pos) -> Result<(), String> {

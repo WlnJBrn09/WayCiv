@@ -6,7 +6,7 @@
 use crate::palette::{self, rgb};
 use crate::ui::glyph::{self, Glyph};
 use crate::ui::theme;
-use egui::{Align2, Color32, CornerRadius, FontId, Pos2, Rect, Stroke, StrokeKind, pos2, vec2};
+use egui::{Align2, Color32, CornerRadius, Pos2, Rect, Stroke, StrokeKind, pos2, vec2};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use wayciv_core::state::Production;
@@ -90,7 +90,9 @@ pub fn draw_city_banner(
     c: Pos2,
     z: f32,
     mine: bool,
-) {
+    hovered: bool,
+    selected: bool,
+) -> Rect {
     let owner = &game.players[city.owner];
     let primary = rgb(owner.primary);
     let secondary = rgb(owner.secondary);
@@ -102,27 +104,30 @@ pub fn draw_city_banner(
     } else {
         Color32::WHITE
     };
-    let fs = (z * 0.46).clamp(11.0, 20.0);
-    let pr = fs * 1.2 + 3.0;
-    let ph = fs * 1.5 + 4.0;
-    let name_font = FontId::proportional(fs);
+    let fs = (z * 0.44).clamp(10.5, 19.0);
+    let pr = fs * 1.15 + 3.0;
+    let ph = fs * 1.48 + 4.0;
+    let name_font = palette::bold(fs);
     let galley = painter.layout_no_wrap(city.name.clone(), name_font, text_color);
     let star_w = if city.capital { fs + 4.0 } else { 0.0 };
-    let name_x = pr * 0.75 + 6.0;
+    let name_x = pr * 0.78 + 6.0;
     let content = name_x + star_w + galley.size().x + 12.0;
     let info = if mine { Some(details(game, city)) } else { None };
     let production = if mine { city.production.as_ref() } else { None };
-    let prod_r = ph * 0.82;
+    let prod_r = ph * 0.80;
     let total = pr + content + if production.is_some() { 2.0 * prod_r } else { 0.0 };
     let x0 = c.x - total / 2.0;
     let cx = x0 + pr;
-    let cy = c.y - z * 1.05 - pr + 4.0;
+    let cy = c.y - z * 1.04 - pr + 4.0;
 
     // Plate: a pill with a soft shadow, lit from above, trimmed in the
-    // civilization's second color.
+    // civilization's second color (or gold when hovered/selected).
     let plate_right = cx + content + if production.is_some() { prod_r } else { 0.0 };
     let plate = Rect::from_min_max(pos2(cx, cy - ph / 2.0), pos2(plate_right, cy + ph / 2.0));
     let radius = ph / 2.0;
+    if hovered || selected {
+        theme::glow(painter, plate, radius, palette::GOLD, if selected { 0.85 } else { 0.55 });
+    }
     shadow(painter, plate, radius);
     painter.rect_filled(plate, radius, primary);
     let (top, bottom) = plate.split_top_bottom_at_fraction(0.5);
@@ -130,7 +135,12 @@ pub fn draw_city_banner(
     painter.rect_filled(top, CornerRadius { nw: round, ne: round, sw: 0, se: 0 }, Color32::from_white_alpha(30));
     painter.rect_filled(bottom, CornerRadius { nw: 0, ne: 0, sw: round, se: round }, Color32::from_black_alpha(36));
     painter.rect_stroke(plate, radius, Stroke::new(1.0, Color32::from_black_alpha(190)), StrokeKind::Outside);
-    painter.rect_stroke(plate, radius, Stroke::new(1.8, secondary), StrokeKind::Inside);
+    painter.rect_stroke(
+        plate,
+        radius,
+        Stroke::new(if hovered || selected { 2.4 } else { 1.8 }, if hovered || selected { palette::GOLD } else { secondary }),
+        StrokeKind::Inside,
+    );
     painter.rect_stroke(
         plate.shrink(2.8),
         (radius - 2.8).max(0.0),
@@ -282,6 +292,39 @@ pub fn draw_city_banner(
             meter(painter, walls, held, Color32::from_rgb(124, 176, 244));
         }
     }
+
+    // Compact city defense strength shield above the plate when fortified or at war.
+    let at_war_with_viewer = !mine && game.players[game.human()].at_war_with(city.owner);
+    if (city.wall_hp > 0 || at_war_with_viewer || city.hp < 200) && fs >= 11.5 {
+        let strength = game.city_strength(city.id);
+        let sc = pos2(plate.center().x, plate.top() - fs * 0.56);
+        let stag = Rect::from_center_size(sc, vec2(fs * 2.5, fs * 0.96));
+        let trim = if at_war_with_viewer {
+            palette::BAD
+        } else if mine && game.max_walls(city.id) > 0 && !city.has_attacked {
+            palette::GOLD
+        } else {
+            Color32::from_rgb(130, 180, 240)
+        };
+        capsule(painter, stag, trim);
+        glyph::paint(painter, Glyph::Shield, pos2(stag.left() + fs * 0.56, sc.y), fs * 0.36, trim);
+        theme::text_bold(
+            painter,
+            pos2(stag.right() - fs * 0.65, sc.y),
+            Align2::CENTER_CENTER,
+            strength,
+            fs * 0.76,
+            Color32::WHITE,
+        );
+    }
+
+    let hit_left = (cx - pr).min(plate.left());
+    let hit_right = if production.is_some() {
+        (plate_right + prod_r).max(plate.right())
+    } else {
+        plate.right()
+    };
+    Rect::from_min_max(pos2(hit_left, cy - pr), pos2(hit_right, cy + pr))
 }
 
 /// A soft drop shadow under a rounded rect: a few widening, fading layers.

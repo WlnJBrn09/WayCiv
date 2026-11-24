@@ -51,6 +51,35 @@ pub fn handle(s: &mut Session, ctx: &egui::Context) {
     if pressed(Key::K) {
         s.windows.legend = !s.windows.legend;
     }
+    if pressed(Key::F1) {
+        s.windows.toggle(Panel::Settings);
+    }
+    if pressed(Key::Y) {
+        s.map_settings.show_yields = !s.map_settings.show_yields;
+        s.toast(if s.map_settings.show_yields {
+            "Tile yields shown."
+        } else {
+            "Tile yields hidden."
+        });
+    }
+    if pressed(Key::H) {
+        s.map_settings.grid = s.map_settings.grid.next();
+        s.toast(format!("Hex grid: {}.", s.map_settings.grid.label()));
+    }
+    for (key, lens) in [
+        (Key::Num4, crate::render::yields::MapLens::Settler),
+        (Key::Num5, crate::render::yields::MapLens::Empire),
+        (Key::Num6, crate::render::yields::MapLens::Religion),
+        (Key::Num7, crate::render::yields::MapLens::Resources),
+    ] {
+        if pressed(key) {
+            s.map_settings.lens = if s.map_settings.lens == lens {
+                crate::render::yields::MapLens::None
+            } else {
+                lens
+            };
+        }
+    }
     if pressed(Key::Enter) {
         s.end_turn_clicked();
     }
@@ -58,10 +87,12 @@ pub fn handle(s: &mut Session, ctx: &egui::Context) {
         s.next_unit();
     }
     if pressed(Key::Plus) || pressed(Key::Equals) {
-        s.cam.zoom = (s.cam.zoom * 1.3).min(70.0);
+        s.cam.target_zoom = (s.cam.target_zoom * 1.3).min(70.0);
+        s.cam.zoom_anchor = None;
     }
     if pressed(Key::Minus) {
-        s.cam.zoom /= 1.3;
+        s.cam.target_zoom = (s.cam.target_zoom / 1.3).max(8.0);
+        s.cam.zoom_anchor = None;
     }
     if pressed(Key::Escape) {
         if s.placing.is_some() || s.city_targeting {
@@ -69,6 +100,8 @@ pub fn handle(s: &mut Session, ctx: &egui::Context) {
             s.city_targeting = false;
         } else if s.windows.any_open() {
             s.windows.close_all();
+        } else if s.map_settings.lens != crate::render::yields::MapLens::None {
+            s.map_settings.lens = crate::render::yields::MapLens::None;
         } else {
             s.select_unit(None);
             s.select_city(None);

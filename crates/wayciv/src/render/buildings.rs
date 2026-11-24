@@ -149,11 +149,11 @@ impl BuildingArt {
     fn era(&mut self, game: &Game, owner: PlayerId) -> u8 {
         *self.cache.eras.entry(owner).or_insert_with(|| {
             let p = game.game_progress(owner);
-            if p < 0.22 {
+            if p < 0.08 {
                 0
-            } else if p < 0.5 {
+            } else if p < 0.45 {
                 1
-            } else if p < 0.78 {
+            } else if p < 0.75 {
                 2
             } else {
                 3
