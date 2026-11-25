@@ -1,0 +1,26 @@
+.panel { background-color: rgba(13, 24, 32, 0.96); border-color: rgb(62, 77, 78); border-width: 1px; padding: 14px; position: absolute; }
+.topbar { left: 16px; right: 16px; top: 16px; height: 64px; flex-direction: row; align-items: center; }
+.brand { font-size: 22px; -unity-font-style: bold; color: rgb(233, 202, 136); margin-right: 22px; }
+.date { flex-grow: 1; }
+.stat { margin-left: 16px; font-size: 12px; }
+.navigation { top: 90px; left: 16px; flex-direction: row; flex-wrap: wrap; padding: 6px; max-width: 1180px; }
+.turnbar { bottom: 16px; right: 16px; width: 310px; }
+.help { bottom: 16px; left: 16px; padding: 10px; }
+.selection { left: 16px; bottom: 78px; width: 340px; max-height: 520px; }
+.drawer { right: 16px; top: 90px; bottom: 174px; width: 420px; }
+.message { left: 372px; right: 342px; bottom: 80px; }
+.mainmenu { width: 600px; left: 50%; top: 50%; translate: -50% -50%; padding: 44px; }
+.title { font-size: 70px; -unity-font-style: bold; color: rgb(233, 202, 136); margin-top: 10px; margin-bottom: 4px; }
+.subtitle { font-size: 16px; margin-bottom: 18px; white-space: normal; }
+.heading { font-size: 24px; -unity-font-style: bold; margin-top: 6px; margin-bottom: 12px; }
+.eyebrow { font-size: 11px; letter-spacing: 2px; color: rgb(224, 193, 126); margin-top: 8px; margin-bottom: 6px; }
+.muted { color: rgb(157, 174, 180); font-size: 12px; margin-top: 4px; margin-bottom: 6px; white-space: normal; }
+.card { background-color: rgb(24, 38, 47); padding: 12px; margin-top: 6px; margin-bottom: 6px; white-space: normal; }
+.card-title { font-size: 16px; -unity-font-style: bold; white-space: normal; }
+Button { background-color: rgb(34, 53, 61); color: rgb(229, 235, 228); border-color: rgb(73, 95, 101); border-width: 1px; border-radius: 3px; padding: 8px 12px; margin: 4px 2px; font-size: 12px; }
+Button:hover { background-color: rgb(53, 78, 83); border-color: rgb(231, 199, 131); }
+Button:disabled { opacity: 0.45; }
+Button.primary { background-color: rgb(205, 171, 100); color: rgb(20, 29, 32); -unity-font-style: bold; margin-top: 12px; }
+TextField, IntegerField, DropdownField { margin-top: 8px; margin-bottom: 8px; }
+.unity-base-field__input { min-height: 30px; background-color: rgb(31, 47, 55); color: rgb(230, 235, 229); }
+.unity-base-field__label { min-width: 124px; color: rgb(190, 202, 202); }

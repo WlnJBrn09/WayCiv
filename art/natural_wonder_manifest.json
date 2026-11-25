@@ -1,0 +1,164 @@
+{
+  "assets": [
+    {
+      "id": "FEATURE_BARRIER_REEF",
+      "name": "Great Barrier Reef",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_BARRIER_REEF.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_BARRIER_REEF.fbx",
+      "meshes": 137
+    },
+    {
+      "id": "FEATURE_CLIFFS_DOVER",
+      "name": "White Cliffs of Dover",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_CLIFFS_DOVER.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_CLIFFS_DOVER.fbx",
+      "meshes": 25
+    },
+    {
+      "id": "FEATURE_CRATER_LAKE",
+      "name": "Crater Lake",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_CRATER_LAKE.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_CRATER_LAKE.fbx",
+      "meshes": 3
+    },
+    {
+      "id": "FEATURE_DEAD_SEA",
+      "name": "Dead Sea",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_DEAD_SEA.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_DEAD_SEA.fbx",
+      "meshes": 19
+    },
+    {
+      "id": "FEATURE_EVEREST",
+      "name": "Mount Everest",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_EVEREST.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_EVEREST.fbx",
+      "meshes": 2
+    },
+    {
+      "id": "FEATURE_GALAPAGOS",
+      "name": "Gal\u00e1pagos Islands",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_GALAPAGOS.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_GALAPAGOS.fbx",
+      "meshes": 14
+    },
+    {
+      "id": "FEATURE_KILIMANJARO",
+      "name": "Kilimanjaro",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_KILIMANJARO.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_KILIMANJARO.fbx",
+      "meshes": 73
+    },
+    {
+      "id": "FEATURE_PANTANAL",
+      "name": "Pantanal",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_PANTANAL.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_PANTANAL.fbx",
+      "meshes": 121
+    },
+    {
+      "id": "FEATURE_PIOPIOTAHI",
+      "name": "Milford Sound",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_PIOPIOTAHI.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_PIOPIOTAHI.fbx",
+      "meshes": 4
+    },
+    {
+      "id": "FEATURE_TORRES_DEL_PAINE",
+      "name": "Torres del Paine",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_TORRES_DEL_PAINE.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_TORRES_DEL_PAINE.fbx",
+      "meshes": 5
+    },
+    {
+      "id": "FEATURE_TSINGY",
+      "name": "Tsingy de Bemaraha",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_TSINGY.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_TSINGY.fbx",
+      "meshes": 109
+    },
+    {
+      "id": "FEATURE_YOSEMITE",
+      "name": "Yosemite Valley",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_YOSEMITE.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_YOSEMITE.fbx",
+      "meshes": 67
+    },
+    {
+      "id": "FEATURE_ULURU",
+      "name": "Uluru",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_ULURU.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_ULURU.fbx",
+      "meshes": 1
+    },
+    {
+      "id": "FEATURE_HA_LONG_BAY",
+      "name": "H\u1ea1 Long Bay",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_HA_LONG_BAY.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_HA_LONG_BAY.fbx",
+      "meshes": 23
+    },
+    {
+      "id": "FEATURE_EYJAFJALLAJOKULL",
+      "name": "Eyjafjallaj\u00f6kull",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_EYJAFJALLAJOKULL.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_EYJAFJALLAJOKULL.fbx",
+      "meshes": 7
+    },
+    {
+      "id": "FEATURE_LYSEFJORDEN",
+      "name": "Lysefjord",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_LYSEFJORDEN.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_LYSEFJORDEN.fbx",
+      "meshes": 3
+    },
+    {
+      "id": "FEATURE_GIANTS_CAUSEWAY",
+      "name": "Giant's Causeway",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_GIANTS_CAUSEWAY.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_GIANTS_CAUSEWAY.fbx",
+      "meshes": 120
+    },
+    {
+      "id": "FEATURE_BERMUDA_TRIANGLE",
+      "name": "Bermuda Triangle",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_BERMUDA_TRIANGLE.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_BERMUDA_TRIANGLE.fbx",
+      "meshes": 8
+    },
+    {
+      "id": "FEATURE_FOUNTAIN_OF_YOUTH",
+      "name": "Fountain of Youth",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_FOUNTAIN_OF_YOUTH.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_FOUNTAIN_OF_YOUTH.fbx",
+      "meshes": 128
+    },
+    {
+      "id": "FEATURE_PAITITI",
+      "name": "Paititi",
+      "variant": 0,
+      "blend": "art/blender/natural_wonders/FEATURE_PAITITI.blend",
+      "fbx": "art/exports/natural_wonders/FEATURE_PAITITI.fbx",
+      "meshes": 146
+    }
+  ]
+}

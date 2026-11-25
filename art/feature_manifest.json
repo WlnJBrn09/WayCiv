@@ -1,0 +1,235 @@
+{
+  "assets": [
+    {
+      "id": "FEATURE_FOREST",
+      "variant": 0,
+      "blend": "art/blender/features/FEATURE_FOREST_v00.blend",
+      "fbx": "art/exports/features/FEATURE_FOREST_v00.fbx",
+      "meshes": 81
+    },
+    {
+      "id": "FEATURE_FOREST",
+      "variant": 1,
+      "blend": "art/blender/features/FEATURE_FOREST_v01.blend",
+      "fbx": "art/exports/features/FEATURE_FOREST_v01.fbx",
+      "meshes": 81
+    },
+    {
+      "id": "FEATURE_FOREST",
+      "variant": 2,
+      "blend": "art/blender/features/FEATURE_FOREST_v02.blend",
+      "fbx": "art/exports/features/FEATURE_FOREST_v02.fbx",
+      "meshes": 81
+    },
+    {
+      "id": "FEATURE_TAIGA",
+      "variant": 0,
+      "blend": "art/blender/features/FEATURE_TAIGA_v00.blend",
+      "fbx": "art/exports/features/FEATURE_TAIGA_v00.fbx",
+      "meshes": 48
+    },
+    {
+      "id": "FEATURE_TAIGA",
+      "variant": 1,
+      "blend": "art/blender/features/FEATURE_TAIGA_v01.blend",
+      "fbx": "art/exports/features/FEATURE_TAIGA_v01.fbx",
+      "meshes": 48
+    },
+    {
+      "id": "FEATURE_TAIGA",
+      "variant": 2,
+      "blend": "art/blender/features/FEATURE_TAIGA_v02.blend",
+      "fbx": "art/exports/features/FEATURE_TAIGA_v02.fbx",
+      "meshes": 48
+    },
+    {
+      "id": "FEATURE_JUNGLE",
+      "variant": 0,
+      "blend": "art/blender/features/FEATURE_JUNGLE_v00.blend",
+      "fbx": "art/exports/features/FEATURE_JUNGLE_v00.fbx",
+      "meshes": 117
+    },
+    {
+      "id": "FEATURE_JUNGLE",
+      "variant": 1,
+      "blend": "art/blender/features/FEATURE_JUNGLE_v01.blend",
+      "fbx": "art/exports/features/FEATURE_JUNGLE_v01.fbx",
+      "meshes": 117
+    },
+    {
+      "id": "FEATURE_JUNGLE",
+      "variant": 2,
+      "blend": "art/blender/features/FEATURE_JUNGLE_v02.blend",
+      "fbx": "art/exports/features/FEATURE_JUNGLE_v02.fbx",
+      "meshes": 117
+    },
+    {
+      "id": "FEATURE_MARSH",
+      "variant": 0,
+      "blend": "art/blender/features/FEATURE_MARSH_v00.blend",
+      "fbx": "art/exports/features/FEATURE_MARSH_v00.fbx",
+      "meshes": 102
+    },
+    {
+      "id": "FEATURE_MARSH",
+      "variant": 1,
+      "blend": "art/blender/features/FEATURE_MARSH_v01.blend",
+      "fbx": "art/exports/features/FEATURE_MARSH_v01.fbx",
+      "meshes": 102
+    },
+    {
+      "id": "FEATURE_MARSH",
+      "variant": 2,
+      "blend": "art/blender/features/FEATURE_MARSH_v02.blend",
+      "fbx": "art/exports/features/FEATURE_MARSH_v02.fbx",
+      "meshes": 102
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS",
+      "variant": 0,
+      "blend": "art/blender/features/FEATURE_FLOODPLAINS_v00.blend",
+      "fbx": "art/exports/features/FEATURE_FLOODPLAINS_v00.fbx",
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS",
+      "variant": 1,
+      "blend": "art/blender/features/FEATURE_FLOODPLAINS_v01.blend",
+      "fbx": "art/exports/features/FEATURE_FLOODPLAINS_v01.fbx",
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS",
+      "variant": 2,
+      "blend": "art/blender/features/FEATURE_FLOODPLAINS_v02.blend",
+      "fbx": "art/exports/features/FEATURE_FLOODPLAINS_v02.fbx",
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS_GRASSLAND",
+      "variant": 0,
+      "blend": "art/blender/features/FEATURE_FLOODPLAINS_GRASSLAND_v00.blend",
+      "fbx": "art/exports/features/FEATURE_FLOODPLAINS_GRASSLAND_v00.fbx",
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS_GRASSLAND",
+      "variant": 1,
+      "blend": "art/blender/features/FEATURE_FLOODPLAINS_GRASSLAND_v01.blend",
+      "fbx": "art/exports/features/FEATURE_FLOODPLAINS_GRASSLAND_v01.fbx",
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS_GRASSLAND",
+      "variant": 2,
+      "blend": "art/blender/features/FEATURE_FLOODPLAINS_GRASSLAND_v02.blend",
+      "fbx": "art/exports/features/FEATURE_FLOODPLAINS_GRASSLAND_v02.fbx",
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS_PLAINS",
+      "variant": 0,
+      "blend": "art/blender/features/FEATURE_FLOODPLAINS_PLAINS_v00.blend",
+      "fbx": "art/exports/features/FEATURE_FLOODPLAINS_PLAINS_v00.fbx",
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS_PLAINS",
+      "variant": 1,
+      "blend": "art/blender/features/FEATURE_FLOODPLAINS_PLAINS_v01.blend",
+      "fbx": "art/exports/features/FEATURE_FLOODPLAINS_PLAINS_v01.fbx",
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS_PLAINS",
+      "variant": 2,
+      "blend": "art/blender/features/FEATURE_FLOODPLAINS_PLAINS_v02.blend",
+      "fbx": "art/exports/features/FEATURE_FLOODPLAINS_PLAINS_v02.fbx",
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_OASIS",
+      "variant": 0,
+      "blend": "art/blender/features/FEATURE_OASIS_v00.blend",
+      "fbx": "art/exports/features/FEATURE_OASIS_v00.fbx",
+      "meshes": 26
+    },
+    {
+      "id": "FEATURE_OASIS",
+      "variant": 1,
+      "blend": "art/blender/features/FEATURE_OASIS_v01.blend",
+      "fbx": "art/exports/features/FEATURE_OASIS_v01.fbx",
+      "meshes": 26
+    },
+    {
+      "id": "FEATURE_OASIS",
+      "variant": 2,
+      "blend": "art/blender/features/FEATURE_OASIS_v02.blend",
+      "fbx": "art/exports/features/FEATURE_OASIS_v02.fbx",
+      "meshes": 26
+    },
+    {
+      "id": "FEATURE_DUNES",
+      "variant": 0,
+      "blend": "art/blender/features/FEATURE_DUNES_v00.blend",
+      "fbx": "art/exports/features/FEATURE_DUNES_v00.fbx",
+      "meshes": 3
+    },
+    {
+      "id": "FEATURE_DUNES",
+      "variant": 1,
+      "blend": "art/blender/features/FEATURE_DUNES_v01.blend",
+      "fbx": "art/exports/features/FEATURE_DUNES_v01.fbx",
+      "meshes": 3
+    },
+    {
+      "id": "FEATURE_DUNES",
+      "variant": 2,
+      "blend": "art/blender/features/FEATURE_DUNES_v02.blend",
+      "fbx": "art/exports/features/FEATURE_DUNES_v02.fbx",
+      "meshes": 3
+    },
+    {
+      "id": "FEATURE_ICE",
+      "variant": 0,
+      "blend": "art/blender/features/FEATURE_ICE_v00.blend",
+      "fbx": "art/exports/features/FEATURE_ICE_v00.fbx",
+      "meshes": 20
+    },
+    {
+      "id": "FEATURE_ICE",
+      "variant": 1,
+      "blend": "art/blender/features/FEATURE_ICE_v01.blend",
+      "fbx": "art/exports/features/FEATURE_ICE_v01.fbx",
+      "meshes": 20
+    },
+    {
+      "id": "FEATURE_ICE",
+      "variant": 2,
+      "blend": "art/blender/features/FEATURE_ICE_v02.blend",
+      "fbx": "art/exports/features/FEATURE_ICE_v02.fbx",
+      "meshes": 20
+    },
+    {
+      "id": "FEATURE_GLACIER",
+      "variant": 0,
+      "blend": "art/blender/features/FEATURE_GLACIER_v00.blend",
+      "fbx": "art/exports/features/FEATURE_GLACIER_v00.fbx",
+      "meshes": 36
+    },
+    {
+      "id": "FEATURE_GLACIER",
+      "variant": 1,
+      "blend": "art/blender/features/FEATURE_GLACIER_v01.blend",
+      "fbx": "art/exports/features/FEATURE_GLACIER_v01.fbx",
+      "meshes": 36
+    },
+    {
+      "id": "FEATURE_GLACIER",
+      "variant": 2,
+      "blend": "art/blender/features/FEATURE_GLACIER_v02.blend",
+      "fbx": "art/exports/features/FEATURE_GLACIER_v02.fbx",
+      "meshes": 36
+    }
+  ]
+}

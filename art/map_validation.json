@@ -1,0 +1,436 @@
+{
+  "tiles": 61,
+  "river_joins": 8,
+  "river_mouths": 1,
+  "max_port_error_m": 3.1817257122794e-16,
+  "supported_nonempty_masks": 63,
+  "cells": [
+    {
+      "q": -4,
+      "r": 0,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -4,
+      "r": 1,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -4,
+      "r": 2,
+      "terrain": "GRASS_MOUNTAIN",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -4,
+      "r": 3,
+      "terrain": "GRASS_MOUNTAIN",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -4,
+      "r": 4,
+      "terrain": "GRASS_MOUNTAIN",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -3,
+      "r": -1,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -3,
+      "r": 0,
+      "terrain": "RIVER",
+      "river_mask": 1,
+      "shore_mask": 0
+    },
+    {
+      "q": -3,
+      "r": 1,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -3,
+      "r": 2,
+      "terrain": "GRASS_MOUNTAIN",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -3,
+      "r": 3,
+      "terrain": "GRASS_MOUNTAIN",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -3,
+      "r": 4,
+      "terrain": "GRASS_MOUNTAIN",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -2,
+      "r": -2,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -2,
+      "r": -1,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -2,
+      "r": 0,
+      "terrain": "RIVER",
+      "river_mask": 9,
+      "shore_mask": 0
+    },
+    {
+      "q": -2,
+      "r": 1,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -2,
+      "r": 2,
+      "terrain": "GRASS_MOUNTAIN",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -2,
+      "r": 3,
+      "terrain": "GRASS_MOUNTAIN",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -2,
+      "r": 4,
+      "terrain": "GRASS_MOUNTAIN",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -1,
+      "r": -3,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -1,
+      "r": -2,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -1,
+      "r": -1,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -1,
+      "r": 0,
+      "terrain": "RIVER",
+      "river_mask": 9,
+      "shore_mask": 0
+    },
+    {
+      "q": -1,
+      "r": 1,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -1,
+      "r": 2,
+      "terrain": "GRASS_MOUNTAIN",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -1,
+      "r": 3,
+      "terrain": "GRASS_MOUNTAIN",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": -1,
+      "r": 4,
+      "terrain": "GRASS_MOUNTAIN",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 0,
+      "r": -4,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 0,
+      "r": -3,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 0,
+      "r": -2,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 0,
+      "r": -1,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 0,
+      "r": 0,
+      "terrain": "RIVER",
+      "river_mask": 11,
+      "shore_mask": 0
+    },
+    {
+      "q": 0,
+      "r": 1,
+      "terrain": "RIVER",
+      "river_mask": 18,
+      "shore_mask": 0
+    },
+    {
+      "q": 0,
+      "r": 2,
+      "terrain": "RIVER",
+      "river_mask": 18,
+      "shore_mask": 0
+    },
+    {
+      "q": 0,
+      "r": 3,
+      "terrain": "RIVER",
+      "river_mask": 16,
+      "shore_mask": 0
+    },
+    {
+      "q": 0,
+      "r": 4,
+      "terrain": "GRASS_HILLS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 1,
+      "r": -4,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 1,
+      "r": -3,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 1,
+      "r": -2,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 1,
+      "r": -1,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 1,
+      "r": 0,
+      "terrain": "RIVER",
+      "river_mask": 9,
+      "shore_mask": 0
+    },
+    {
+      "q": 1,
+      "r": 1,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 1,
+      "r": 2,
+      "terrain": "GRASS_HILLS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 1,
+      "r": 3,
+      "terrain": "GRASS_HILLS",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 2,
+      "r": -4,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 1
+    },
+    {
+      "q": 2,
+      "r": -3,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 33
+    },
+    {
+      "q": 2,
+      "r": -2,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 33
+    },
+    {
+      "q": 2,
+      "r": -1,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 33
+    },
+    {
+      "q": 2,
+      "r": 0,
+      "terrain": "RIVER",
+      "river_mask": 9,
+      "shore_mask": 33
+    },
+    {
+      "q": 2,
+      "r": 1,
+      "terrain": "GRASS",
+      "river_mask": 0,
+      "shore_mask": 33
+    },
+    {
+      "q": 2,
+      "r": 2,
+      "terrain": "GRASS_HILLS",
+      "river_mask": 0,
+      "shore_mask": 32
+    },
+    {
+      "q": 3,
+      "r": -4,
+      "terrain": "COAST",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 3,
+      "r": -3,
+      "terrain": "COAST",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 3,
+      "r": -2,
+      "terrain": "COAST",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 3,
+      "r": -1,
+      "terrain": "COAST",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 3,
+      "r": 0,
+      "terrain": "COAST",
+      "river_mask": 8,
+      "shore_mask": 0
+    },
+    {
+      "q": 3,
+      "r": 1,
+      "terrain": "COAST",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 4,
+      "r": -4,
+      "terrain": "COAST",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 4,
+      "r": -3,
+      "terrain": "COAST",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 4,
+      "r": -2,
+      "terrain": "COAST",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 4,
+      "r": -1,
+      "terrain": "COAST",
+      "river_mask": 0,
+      "shore_mask": 0
+    },
+    {
+      "q": 4,
+      "r": 0,
+      "terrain": "COAST",
+      "river_mask": 0,
+      "shore_mask": 0
+    }
+  ]
+}

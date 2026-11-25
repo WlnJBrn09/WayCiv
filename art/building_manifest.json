@@ -1,0 +1,3078 @@
+{
+  "assets": [
+    {
+      "id": "BUILDING_AIRPORT",
+      "asset_id": "building_airport",
+      "variant": "building_airport",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_airport.blend",
+      "fbx": "art/exports/buildings/building_airport.fbx",
+      "triangles": 204,
+      "materials": [
+        {
+          "name": "Game_steel0",
+          "rgba": [
+            0.32314321398735046,
+            0.37123769521713257,
+            0.44520118832588196,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_dark1",
+          "rgba": [
+            0.024157632142305374,
+            0.026241222396492958,
+            0.03310476616024971,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_white2",
+          "rgba": [
+            0.9215818643569946,
+            0.8962693810462952,
+            0.838798999786377,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_red3",
+          "rgba": [
+            0.5271151065826416,
+            0.040915198624134064,
+            0.024157632142305374,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_concrete4",
+          "rgba": [
+            0.5088813304901123,
+            0.5088813304901123,
+            0.4793201684951782,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD5",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_steel6",
+          "rgba": [
+            0.32314321398735046,
+            0.37123769521713257,
+            0.44520118832588196,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_AMPHITHEATER",
+      "asset_id": "building_amphitheater",
+      "variant": "building_amphitheater",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_amphitheater.blend",
+      "fbx": "art/exports/buildings/building_amphitheater.fbx",
+      "triangles": 544,
+      "materials": [
+        {
+          "name": "Game_stone0",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_sand1",
+          "rgba": [
+            0.7912979125976562,
+            0.6239603757858276,
+            0.3049873113632202,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra2",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_ARENA",
+      "asset_id": "building_arena",
+      "variant": "building_arena",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_arena.blend",
+      "fbx": "art/exports/buildings/building_arena.fbx",
+      "triangles": 524,
+      "materials": [
+        {
+          "name": "Game_stone0.001",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_sand1.001",
+          "rgba": [
+            0.7912979125976562,
+            0.6239603757858276,
+            0.3049873113632202,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_ARMORY",
+      "asset_id": "building_armory",
+      "variant": "building_armory",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_armory.blend",
+      "fbx": "art/exports/buildings/building_armory.fbx",
+      "triangles": 1044,
+      "materials": [
+        {
+          "name": "Game_stone0.002",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra1",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_iron5",
+          "rgba": [
+            0.09084171056747437,
+            0.10224173218011856,
+            0.12213877588510513,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_steel6.001",
+          "rgba": [
+            0.32314321398735046,
+            0.37123769521713257,
+            0.44520118832588196,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_BANK",
+      "asset_id": "building_bank",
+      "variant": "building_bank",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_bank.blend",
+      "fbx": "art/exports/buildings/building_bank.fbx",
+      "triangles": 3288,
+      "materials": [
+        {
+          "name": "Game_stone0.003",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_marble1",
+          "rgba": [
+            0.8796223998069763,
+            0.8307698965072632,
+            0.715693473815918,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra2.001",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_gold3",
+          "rgba": [
+            0.8227857351303101,
+            0.48514994978904724,
+            0.045186202973127365,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_BARRACKS",
+      "asset_id": "building_barracks",
+      "variant": "building_barracks",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_barracks.blend",
+      "fbx": "art/exports/buildings/building_barracks.fbx",
+      "triangles": 241,
+      "materials": [
+        {
+          "name": "Game_stone0.004",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra1.001",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.001",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.001",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.001",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_gold6",
+          "rgba": [
+            0.8227857351303101,
+            0.48514994978904724,
+            0.045186202973127365,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_red5",
+          "rgba": [
+            0.5271151065826416,
+            0.040915198624134064,
+            0.024157632142305374,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_BASILIKOI_PAIDES",
+      "asset_id": "building_basilikoi_paides",
+      "variant": "building_basilikoi_paides",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_basilikoi_paides.blend",
+      "fbx": "art/exports/buildings/building_basilikoi_paides.fbx",
+      "triangles": 273,
+      "materials": [
+        {
+          "name": "Game_stone0.005",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra1.002",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.002",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.002",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.002",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_gold6.001",
+          "rgba": [
+            0.8227857351303101,
+            0.48514994978904724,
+            0.045186202973127365,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_royal5",
+          "rgba": [
+            0.020288562402129173,
+            0.06847816705703735,
+            0.32314321398735046,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_BROADCAST_CENTER",
+      "asset_id": "building_broadcast_center",
+      "variant": "building_broadcast_center",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_broadcast_center.blend",
+      "fbx": "art/exports/buildings/building_broadcast_center.fbx",
+      "triangles": 194,
+      "materials": [
+        {
+          "name": "Game_concrete0",
+          "rgba": [
+            0.5088813304901123,
+            0.5088813304901123,
+            0.4793201684951782,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_slate1",
+          "rgba": [
+            0.09305896610021591,
+            0.11953842639923096,
+            0.18116424977779388,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.003",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.003",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.003",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_steel5",
+          "rgba": [
+            0.32314321398735046,
+            0.37123769521713257,
+            0.44520118832588196,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_white6",
+          "rgba": [
+            0.9215818643569946,
+            0.8962693810462952,
+            0.838798999786377,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_blue7",
+          "rgba": [
+            0.028426039963960648,
+            0.15896083414554596,
+            0.4793201684951782,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_CASTLE",
+      "asset_id": "building_castle",
+      "variant": "building_castle",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_castle.blend",
+      "fbx": "art/exports/buildings/building_castle.fbx",
+      "triangles": 2453,
+      "materials": [
+        {
+          "name": "Game_stone0.006",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra1.003",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.004",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.004",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.004",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_stone25",
+          "rgba": [
+            0.43415364623069763,
+            0.3613067865371704,
+            0.22696587443351746,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_gold7",
+          "rgba": [
+            0.8227857351303101,
+            0.48514994978904724,
+            0.045186202973127365,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_acc6",
+          "rgba": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_ELECTRONICS_FACTORY",
+      "asset_id": "building_electronics_factory",
+      "variant": "building_electronics_factory",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_electronics_factory.blend",
+      "fbx": "art/exports/buildings/building_electronics_factory.fbx",
+      "triangles": 336,
+      "materials": [
+        {
+          "name": "Game_brickD0",
+          "rgba": [
+            0.2746773064136505,
+            0.06847816705703735,
+            0.03310476616024971,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream2",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD1",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_slate3",
+          "rgba": [
+            0.09305896610021591,
+            0.11953842639923096,
+            0.18116424977779388,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glass4",
+          "rgba": [
+            0.27049779891967773,
+            0.577580451965332,
+            0.8069522380828857,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_brick5",
+          "rgba": [
+            0.4793201684951782,
+            0.11953842639923096,
+            0.04970656707882881,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_dark6",
+          "rgba": [
+            0.024157632142305374,
+            0.026241222396492958,
+            0.03310476616024971,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_white7",
+          "rgba": [
+            0.6239603757858276,
+            0.6038273572921753,
+            0.577580451965332,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD8",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_steel9",
+          "rgba": [
+            0.32314321398735046,
+            0.37123769521713257,
+            0.44520118832588196,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_royal10",
+          "rgba": [
+            0.020288562402129173,
+            0.06847816705703735,
+            0.32314321398735046,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_led#37d4ff11",
+          "rgba": [
+            0.0382043719291687,
+            0.6583748459815979,
+            1.0,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_FACTORY",
+      "asset_id": "building_factory",
+      "variant": "building_factory",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_factory.blend",
+      "fbx": "art/exports/buildings/building_factory.fbx",
+      "triangles": 204,
+      "materials": [
+        {
+          "name": "Game_brickD0.001",
+          "rgba": [
+            0.2746773064136505,
+            0.06847816705703735,
+            0.03310476616024971,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream2.001",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD1.001",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_slate3.001",
+          "rgba": [
+            0.09305896610021591,
+            0.11953842639923096,
+            0.18116424977779388,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glass4.001",
+          "rgba": [
+            0.27049779891967773,
+            0.577580451965332,
+            0.8069522380828857,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_brick5.001",
+          "rgba": [
+            0.4793201684951782,
+            0.11953842639923096,
+            0.04970656707882881,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_dark6.001",
+          "rgba": [
+            0.024157632142305374,
+            0.026241222396492958,
+            0.03310476616024971,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_white7.001",
+          "rgba": [
+            0.6239603757858276,
+            0.6038273572921753,
+            0.577580451965332,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD8.001",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_FILM_STUDIO",
+      "asset_id": "building_film_studio",
+      "variant": "building_film_studio",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_film_studio.blend",
+      "fbx": "art/exports/buildings/building_film_studio.fbx",
+      "triangles": 728,
+      "materials": [
+        {
+          "name": "Game_concrete0.001",
+          "rgba": [
+            0.5088813304901123,
+            0.5088813304901123,
+            0.4793201684951782,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_slate1.001",
+          "rgba": [
+            0.09305896610021591,
+            0.11953842639923096,
+            0.18116424977779388,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.005",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.005",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.005",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_steel5.001",
+          "rgba": [
+            0.32314321398735046,
+            0.37123769521713257,
+            0.44520118832588196,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_dark6.002",
+          "rgba": [
+            0.024157632142305374,
+            0.026241222396492958,
+            0.03310476616024971,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_white7.002",
+          "rgba": [
+            0.9215818643569946,
+            0.8962693810462952,
+            0.838798999786377,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_GPU_CLUSTER",
+      "asset_id": "building_gpu_cluster",
+      "variant": "building_gpu_cluster",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_gpu_cluster.blend",
+      "fbx": "art/exports/buildings/building_gpu_cluster.fbx",
+      "triangles": 832,
+      "materials": [
+        {
+          "name": "Game_concrete0.002",
+          "rgba": [
+            0.5088813304901123,
+            0.5088813304901123,
+            0.4793201684951782,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_slate1.002",
+          "rgba": [
+            0.09305896610021591,
+            0.11953842639923096,
+            0.18116424977779388,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.006",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.006",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.006",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_dark5",
+          "rgba": [
+            0.024157632142305374,
+            0.026241222396492958,
+            0.03310476616024971,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_led#37d4ff6",
+          "rgba": [
+            0.0382043719291687,
+            0.6583748459815979,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_concreteD7",
+          "rgba": [
+            0.2746773064136505,
+            0.2746773064136505,
+            0.2581828534603119,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_steel8",
+          "rgba": [
+            0.32314321398735046,
+            0.37123769521713257,
+            0.44520118832588196,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_GRANARY",
+      "asset_id": "building_granary",
+      "variant": "building_granary",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_granary.blend",
+      "fbx": "art/exports/buildings/building_granary.fbx",
+      "triangles": 424,
+      "materials": [
+        {
+          "name": "Game_adobe0",
+          "rgba": [
+            0.7083757519721985,
+            0.3967552185058594,
+            0.15292614698410034,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_thatch1",
+          "rgba": [
+            0.6239603757858276,
+            0.423267662525177,
+            0.10224173218011856,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.007",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.007",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.007",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_sand5",
+          "rgba": [
+            0.7912979125976562,
+            0.6239603757858276,
+            0.3049873113632202,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_wood6",
+          "rgba": [
+            0.20863686501979828,
+            0.09084171056747437,
+            0.03189603239297867,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_HANGAR",
+      "asset_id": "building_hangar",
+      "variant": "building_hangar",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_hangar.blend",
+      "fbx": "art/exports/buildings/building_hangar.fbx",
+      "triangles": 106,
+      "materials": [
+        {
+          "name": "Game_steel0.001",
+          "rgba": [
+            0.32314321398735046,
+            0.37123769521713257,
+            0.44520118832588196,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_dark1.001",
+          "rgba": [
+            0.024157632142305374,
+            0.026241222396492958,
+            0.03310476616024971,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_white2.001",
+          "rgba": [
+            0.9215818643569946,
+            0.8962693810462952,
+            0.838798999786377,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_red3.001",
+          "rgba": [
+            0.5271151065826416,
+            0.040915198624134064,
+            0.024157632142305374,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_LIBRARY",
+      "asset_id": "building_library",
+      "variant": "building_library",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_library.blend",
+      "fbx": "art/exports/buildings/building_library.fbx",
+      "triangles": 1932,
+      "materials": [
+        {
+          "name": "Game_stone0.007",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_marble1.001",
+          "rgba": [
+            0.8796223998069763,
+            0.8307698965072632,
+            0.715693473815918,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra2.002",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodL3",
+          "rgba": [
+            0.41788506507873535,
+            0.21223075687885284,
+            0.0802198201417923,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_LIGHTHOUSE",
+      "asset_id": "building_lighthouse",
+      "variant": "building_lighthouse",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_lighthouse.blend",
+      "fbx": "art/exports/buildings/building_lighthouse.fbx",
+      "triangles": 244,
+      "materials": [
+        {
+          "name": "Game_white0",
+          "rgba": [
+            0.9215818643569946,
+            0.8962693810462952,
+            0.838798999786377,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glass1",
+          "rgba": [
+            0.27049779891967773,
+            0.577580451965332,
+            0.8069522380828857,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_red2",
+          "rgba": [
+            0.5271151065826416,
+            0.040915198624134064,
+            0.024157632142305374,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_stone3",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra4",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream6",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD5.001",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD7",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_MADRASA",
+      "asset_id": "building_madrasa",
+      "variant": "building_madrasa",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_madrasa.blend",
+      "fbx": "art/exports/buildings/building_madrasa.fbx",
+      "triangles": 598,
+      "materials": [
+        {
+          "name": "Game_sand0",
+          "rgba": [
+            0.7912979125976562,
+            0.6239603757858276,
+            0.3049873113632202,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_turq1",
+          "rgba": [
+            0.0423114113509655,
+            0.38132601976394653,
+            0.43415364623069763,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.008",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.008",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.008",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_marble5",
+          "rgba": [
+            0.8796223998069763,
+            0.8307698965072632,
+            0.715693473815918,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_water6",
+          "rgba": [
+            0.04970656707882881,
+            0.2788942754268646,
+            0.5647115111351013,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_MARKET",
+      "asset_id": "building_market",
+      "variant": "building_market",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_market.blend",
+      "fbx": "art/exports/buildings/building_market.fbx",
+      "triangles": 412,
+      "materials": [
+        {
+          "name": "Game_woodL0",
+          "rgba": [
+            0.41788506507873535,
+            0.21223075687885284,
+            0.0802198201417923,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_orange1",
+          "rgba": [
+            0.7454041838645935,
+            0.1946178376674652,
+            0.021219009533524513,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD2",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_red3.002",
+          "rgba": [
+            0.5271151065826416,
+            0.040915198624134064,
+            0.024157632142305374,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream4",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_wood5",
+          "rgba": [
+            0.20863686501979828,
+            0.09084171056747437,
+            0.03189603239297867,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_MILITARY_ACADEMY",
+      "asset_id": "building_military_academy",
+      "variant": "building_military_academy",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_military_academy.blend",
+      "fbx": "art/exports/buildings/building_military_academy.fbx",
+      "triangles": 473,
+      "materials": [
+        {
+          "name": "Game_stone0.008",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra1.004",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.009",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.009",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.009",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_gold6.002",
+          "rgba": [
+            0.8227857351303101,
+            0.48514994978904724,
+            0.045186202973127365,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_red5.001",
+          "rgba": [
+            0.5271151065826416,
+            0.040915198624134064,
+            0.024157632142305374,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_MONUMENT",
+      "asset_id": "building_monument",
+      "variant": "building_monument",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_monument.blend",
+      "fbx": "art/exports/buildings/building_monument.fbx",
+      "triangles": 54,
+      "materials": [
+        {
+          "name": "Game_stone0.009",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_marble1.002",
+          "rgba": [
+            0.8796223998069763,
+            0.8307698965072632,
+            0.715693473815918,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_MUSEUM_ART",
+      "asset_id": "building_museum_art",
+      "variant": "building_museum_art",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_museum_art.blend",
+      "fbx": "art/exports/buildings/building_museum_art.fbx",
+      "triangles": 3072,
+      "materials": [
+        {
+          "name": "Game_stone0.010",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_marble1.003",
+          "rgba": [
+            0.8796223998069763,
+            0.8307698965072632,
+            0.715693473815918,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra2.003",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_royal3",
+          "rgba": [
+            0.020288562402129173,
+            0.06847816705703735,
+            0.32314321398735046,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_red4",
+          "rgba": [
+            0.5271151065826416,
+            0.040915198624134064,
+            0.024157632142305374,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_MUSEUM_ARTIFACT",
+      "asset_id": "building_museum_artifact",
+      "variant": "building_museum_artifact",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_museum_artifact.blend",
+      "fbx": "art/exports/buildings/building_museum_artifact.fbx",
+      "triangles": 3504,
+      "materials": [
+        {
+          "name": "Game_stone0.011",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_marble1.004",
+          "rgba": [
+            0.8796223998069763,
+            0.8307698965072632,
+            0.715693473815918,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra2.004",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_NAVIGATION_SCHOOL",
+      "asset_id": "building_navigation_school",
+      "variant": "building_navigation_school",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_navigation_school.blend",
+      "fbx": "art/exports/buildings/building_navigation_school.fbx",
+      "triangles": 376,
+      "materials": [
+        {
+          "name": "Game_brick0",
+          "rgba": [
+            0.4793201684951782,
+            0.11953842639923096,
+            0.04970656707882881,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_slate1.003",
+          "rgba": [
+            0.09305896610021591,
+            0.11953842639923096,
+            0.18116424977779388,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.010",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.010",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.010",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_stone5",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_steel6.002",
+          "rgba": [
+            0.32314321398735046,
+            0.37123769521713257,
+            0.44520118832588196,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_white7.003",
+          "rgba": [
+            0.9215818643569946,
+            0.8962693810462952,
+            0.838798999786377,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_water8",
+          "rgba": [
+            0.04970656707882881,
+            0.2788942754268646,
+            0.5647115111351013,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodL9",
+          "rgba": [
+            0.41788506507873535,
+            0.21223075687885284,
+            0.0802198201417923,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_PALACE",
+      "asset_id": "building_palace",
+      "variant": "building_palace",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_palace.blend",
+      "fbx": "art/exports/buildings/building_palace.fbx",
+      "triangles": 3906,
+      "materials": [
+        {
+          "name": "Game_stone0.012",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_marble1.005",
+          "rgba": [
+            0.8796223998069763,
+            0.8307698965072632,
+            0.715693473815918,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra2.005",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_gold3.001",
+          "rgba": [
+            0.8227857351303101,
+            0.48514994978904724,
+            0.045186202973127365,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_slate4",
+          "rgba": [
+            0.09305896610021591,
+            0.11953842639923096,
+            0.18116424977779388,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_PALGUM",
+      "asset_id": "building_palgum",
+      "variant": "building_palgum",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_palgum.blend",
+      "fbx": "art/exports/buildings/building_palgum.fbx",
+      "triangles": 932,
+      "materials": [
+        {
+          "name": "Game_brick0.001",
+          "rgba": [
+            0.4793201684951782,
+            0.11953842639923096,
+            0.04970656707882881,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra1.005",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.011",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.011",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.011",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_wood5.001",
+          "rgba": [
+            0.20863686501979828,
+            0.09084171056747437,
+            0.03189603239297867,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodL6",
+          "rgba": [
+            0.41788506507873535,
+            0.21223075687885284,
+            0.0802198201417923,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_water7",
+          "rgba": [
+            0.04970656707882881,
+            0.2788942754268646,
+            0.5647115111351013,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_adobe8",
+          "rgba": [
+            0.7083757519721985,
+            0.3967552185058594,
+            0.15292614698410034,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_POWER_PLANT",
+      "asset_id": "building_power_plant",
+      "variant": "building_power_plant",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_power_plant.blend",
+      "fbx": "art/exports/buildings/building_power_plant.fbx",
+      "triangles": 436,
+      "materials": [
+        {
+          "name": "Game_brickD0.002",
+          "rgba": [
+            0.2746773064136505,
+            0.06847816705703735,
+            0.03310476616024971,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream2.002",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD1.002",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_slate3.002",
+          "rgba": [
+            0.09305896610021591,
+            0.11953842639923096,
+            0.18116424977779388,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glass4.002",
+          "rgba": [
+            0.27049779891967773,
+            0.577580451965332,
+            0.8069522380828857,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_brick5.002",
+          "rgba": [
+            0.4793201684951782,
+            0.11953842639923096,
+            0.04970656707882881,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_dark6.003",
+          "rgba": [
+            0.024157632142305374,
+            0.026241222396492958,
+            0.03310476616024971,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_white7.004",
+          "rgba": [
+            0.6239603757858276,
+            0.6038273572921753,
+            0.577580451965332,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD8.002",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_concrete9",
+          "rgba": [
+            0.5088813304901123,
+            0.5088813304901123,
+            0.4793201684951782,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_PRASAT",
+      "asset_id": "building_prasat",
+      "variant": "building_prasat",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_prasat.blend",
+      "fbx": "art/exports/buildings/building_prasat.fbx",
+      "triangles": 146,
+      "materials": [
+        {
+          "name": "Game_stoneD0",
+          "rgba": [
+            0.22696587443351746,
+            0.18447498977184296,
+            0.12213877588510513,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_sand1.002",
+          "rgba": [
+            0.7912979125976562,
+            0.6239603757858276,
+            0.3049873113632202,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_gold2",
+          "rgba": [
+            0.8227857351303101,
+            0.48514994978904724,
+            0.045186202973127365,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_RESEARCH_LAB",
+      "asset_id": "building_research_lab",
+      "variant": "building_research_lab",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_research_lab.blend",
+      "fbx": "art/exports/buildings/building_research_lab.fbx",
+      "triangles": 1000,
+      "materials": [
+        {
+          "name": "Game_concrete0.003",
+          "rgba": [
+            0.5088813304901123,
+            0.5088813304901123,
+            0.4793201684951782,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_slate1.004",
+          "rgba": [
+            0.09305896610021591,
+            0.11953842639923096,
+            0.18116424977779388,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.012",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.012",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.012",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_white5",
+          "rgba": [
+            0.9215818643569946,
+            0.8962693810462952,
+            0.838798999786377,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_steel6.003",
+          "rgba": [
+            0.32314321398735046,
+            0.37123769521713257,
+            0.44520118832588196,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_SEAPORT",
+      "asset_id": "building_seaport",
+      "variant": "building_seaport",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_seaport.blend",
+      "fbx": "art/exports/buildings/building_seaport.fbx",
+      "triangles": 152,
+      "materials": [
+        {
+          "name": "Game_water0",
+          "rgba": [
+            0.04970656707882881,
+            0.2788942754268646,
+            0.5647115111351013,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_stone1",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_wood2",
+          "rgba": [
+            0.20863686501979828,
+            0.09084171056747437,
+            0.03189603239297867,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD3",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodL4",
+          "rgba": [
+            0.41788506507873535,
+            0.21223075687885284,
+            0.0802198201417923,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_white5.001",
+          "rgba": [
+            0.9215818643569946,
+            0.8962693810462952,
+            0.838798999786377,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_SEWER",
+      "asset_id": "building_sewer",
+      "variant": "building_sewer",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_sewer.blend",
+      "fbx": "art/exports/buildings/building_sewer.fbx",
+      "triangles": 136,
+      "materials": [
+        {
+          "name": "Game_brickD0.003",
+          "rgba": [
+            0.2746773064136505,
+            0.06847816705703735,
+            0.03310476616024971,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_waterD1",
+          "rgba": [
+            0.023153366521000862,
+            0.1441284716129303,
+            0.32314321398735046,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_iron2",
+          "rgba": [
+            0.09084171056747437,
+            0.10224173218011856,
+            0.12213877588510513,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_SHIPYARD",
+      "asset_id": "building_shipyard",
+      "variant": "building_shipyard",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_shipyard.blend",
+      "fbx": "art/exports/buildings/building_shipyard.fbx",
+      "triangles": 148,
+      "materials": [
+        {
+          "name": "Game_water0.001",
+          "rgba": [
+            0.04970656707882881,
+            0.2788942754268646,
+            0.5647115111351013,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_stone1.001",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_wood2.001",
+          "rgba": [
+            0.20863686501979828,
+            0.09084171056747437,
+            0.03189603239297867,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD3.001",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodL4.001",
+          "rgba": [
+            0.41788506507873535,
+            0.21223075687885284,
+            0.0802198201417923,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_steel5.002",
+          "rgba": [
+            0.32314321398735046,
+            0.37123769521713257,
+            0.44520118832588196,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_SHRINE",
+      "asset_id": "building_shrine",
+      "variant": "building_shrine",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_shrine.blend",
+      "fbx": "art/exports/buildings/building_shrine.fbx",
+      "triangles": 1160,
+      "materials": [
+        {
+          "name": "Game_stone0.013",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_marble1.006",
+          "rgba": [
+            0.8796223998069763,
+            0.8307698965072632,
+            0.715693473815918,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra2.006",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_SOLAR_FARM",
+      "asset_id": "building_solar_farm",
+      "variant": "building_solar_farm",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_solar_farm.blend",
+      "fbx": "art/exports/buildings/building_solar_farm.fbx",
+      "triangles": 132,
+      "materials": [
+        {
+          "name": "Game_steel0.002",
+          "rgba": [
+            0.32314321398735046,
+            0.37123769521713257,
+            0.44520118832588196,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_royal1",
+          "rgba": [
+            0.020288562402129173,
+            0.06847816705703735,
+            0.32314321398735046,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_concrete2",
+          "rgba": [
+            0.5088813304901123,
+            0.5088813304901123,
+            0.4793201684951782,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_STABLE",
+      "asset_id": "building_stable",
+      "variant": "building_stable",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_stable.blend",
+      "fbx": "art/exports/buildings/building_stable.fbx",
+      "triangles": 512,
+      "materials": [
+        {
+          "name": "Game_wood0",
+          "rgba": [
+            0.20863686501979828,
+            0.09084171056747437,
+            0.03189603239297867,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_thatch1.001",
+          "rgba": [
+            0.6239603757858276,
+            0.423267662525177,
+            0.10224173218011856,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.013",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.013",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.013",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodL5",
+          "rgba": [
+            0.41788506507873535,
+            0.21223075687885284,
+            0.0802198201417923,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_STADIUM",
+      "asset_id": "building_stadium",
+      "variant": "building_stadium",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_stadium.blend",
+      "fbx": "art/exports/buildings/building_stadium.fbx",
+      "triangles": 900,
+      "materials": [
+        {
+          "name": "Game_concrete0.004",
+          "rgba": [
+            0.5088813304901123,
+            0.5088813304901123,
+            0.4793201684951782,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_grass1",
+          "rgba": [
+            0.17464740574359894,
+            0.3915724754333496,
+            0.05448027700185776,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_white2.002",
+          "rgba": [
+            0.9215818643569946,
+            0.8962693810462952,
+            0.838798999786377,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_steel3",
+          "rgba": [
+            0.32314321398735046,
+            0.37123769521713257,
+            0.44520118832588196,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_STAR_FORT",
+      "asset_id": "building_star_fort",
+      "variant": "building_star_fort",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_star_fort.blend",
+      "fbx": "art/exports/buildings/building_star_fort.fbx",
+      "triangles": 456,
+      "materials": [
+        {
+          "name": "Game_concrete0.005",
+          "rgba": [
+            0.5088813304901123,
+            0.5088813304901123,
+            0.4793201684951782,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_concreteD1",
+          "rgba": [
+            0.2746773064136505,
+            0.2746773064136505,
+            0.2581828534603119,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_steel2",
+          "rgba": [
+            0.32314321398735046,
+            0.37123769521713257,
+            0.44520118832588196,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_red3.003",
+          "rgba": [
+            0.5271151065826416,
+            0.040915198624134064,
+            0.024157632142305374,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_STAVE_CHURCH",
+      "asset_id": "building_stave_church",
+      "variant": "building_stave_church",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_stave_church.blend",
+      "fbx": "art/exports/buildings/building_stave_church.fbx",
+      "triangles": 186,
+      "materials": [
+        {
+          "name": "Game_woodD0",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream2.003",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD1.003",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_STOCK_EXCHANGE",
+      "asset_id": "building_stock_exchange",
+      "variant": "building_stock_exchange",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_stock_exchange.blend",
+      "fbx": "art/exports/buildings/building_stock_exchange.fbx",
+      "triangles": 3108,
+      "materials": [
+        {
+          "name": "Game_stone0.014",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_marble1.007",
+          "rgba": [
+            0.8796223998069763,
+            0.8307698965072632,
+            0.715693473815918,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra2.007",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD3",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream5",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD4",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_SUKIENNICE",
+      "asset_id": "building_sukiennice",
+      "variant": "building_sukiennice",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_sukiennice.blend",
+      "fbx": "art/exports/buildings/building_sukiennice.fbx",
+      "triangles": 440,
+      "materials": [
+        {
+          "name": "Game_brick0.002",
+          "rgba": [
+            0.4793201684951782,
+            0.11953842639923096,
+            0.04970656707882881,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra1.006",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.014",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.014",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.014",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_stone5.001",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_TEMPLE",
+      "asset_id": "building_temple",
+      "variant": "building_temple",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_temple.blend",
+      "fbx": "art/exports/buildings/building_temple.fbx",
+      "triangles": 3000,
+      "materials": [
+        {
+          "name": "Game_stone0.015",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_marble1.008",
+          "rgba": [
+            0.8796223998069763,
+            0.8307698965072632,
+            0.715693473815918,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra2.008",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_TLACHTLI",
+      "asset_id": "building_tlachtli",
+      "variant": "building_tlachtli",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_tlachtli.blend",
+      "fbx": "art/exports/buildings/building_tlachtli.fbx",
+      "triangles": 572,
+      "materials": [
+        {
+          "name": "Game_stone0.016",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_sand1.003",
+          "rgba": [
+            0.7912979125976562,
+            0.6239603757858276,
+            0.3049873113632202,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_white2.003",
+          "rgba": [
+            0.9215818643569946,
+            0.8962693810462952,
+            0.838798999786377,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_UNIVERSITY",
+      "asset_id": "building_university",
+      "variant": "building_university",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_university.blend",
+      "fbx": "art/exports/buildings/building_university.fbx",
+      "triangles": 186,
+      "materials": [
+        {
+          "name": "Game_brick0.003",
+          "rgba": [
+            0.4793201684951782,
+            0.11953842639923096,
+            0.04970656707882881,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_slate1.005",
+          "rgba": [
+            0.09305896610021591,
+            0.11953842639923096,
+            0.18116424977779388,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.015",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.015",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.015",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_stone5.002",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_WALLS",
+      "asset_id": "building_walls",
+      "variant": "building_walls",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_walls.blend",
+      "fbx": "art/exports/buildings/building_walls.fbx",
+      "triangles": 1368,
+      "materials": [
+        {
+          "name": "Game_stone0.017",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra1.007",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_WATER_MILL",
+      "asset_id": "building_water_mill",
+      "variant": "building_water_mill",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_water_mill.blend",
+      "fbx": "art/exports/buildings/building_water_mill.fbx",
+      "triangles": 908,
+      "materials": [
+        {
+          "name": "Game_stone0.018",
+          "rgba": [
+            0.6444796919822693,
+            0.5394794940948486,
+            0.35153260827064514,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_terra1.008",
+          "rgba": [
+            0.577580451965332,
+            0.0802198201417923,
+            0.027320891618728638,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream3.016",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD2.016",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD4.016",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_wood5.002",
+          "rgba": [
+            0.20863686501979828,
+            0.09084171056747437,
+            0.03189603239297867,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodL6.001",
+          "rgba": [
+            0.41788506507873535,
+            0.21223075687885284,
+            0.0802198201417923,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_water7.001",
+          "rgba": [
+            0.04970656707882881,
+            0.2788942754268646,
+            0.5647115111351013,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_WORKSHOP",
+      "asset_id": "building_workshop",
+      "variant": "building_workshop",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_workshop.blend",
+      "fbx": "art/exports/buildings/building_workshop.fbx",
+      "triangles": 236,
+      "materials": [
+        {
+          "name": "Game_brickD0.004",
+          "rgba": [
+            0.2746773064136505,
+            0.06847816705703735,
+            0.03310476616024971,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_cream2.004",
+          "rgba": [
+            0.8713670969009399,
+            0.7758222222328186,
+            0.5394794940948486,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glassD1.004",
+          "rgba": [
+            0.03433980792760849,
+            0.12213877588510513,
+            0.21223075687885284,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_slate3.003",
+          "rgba": [
+            0.09305896610021591,
+            0.11953842639923096,
+            0.18116424977779388,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_glass4.003",
+          "rgba": [
+            0.27049779891967773,
+            0.577580451965332,
+            0.8069522380828857,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_brick5.003",
+          "rgba": [
+            0.4793201684951782,
+            0.11953842639923096,
+            0.04970656707882881,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_dark6.004",
+          "rgba": [
+            0.024157632142305374,
+            0.026241222396492958,
+            0.03310476616024971,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_white7.005",
+          "rgba": [
+            0.6239603757858276,
+            0.6038273572921753,
+            0.577580451965332,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD8.003",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodL9.001",
+          "rgba": [
+            0.41788506507873535,
+            0.21223075687885284,
+            0.0802198201417923,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BUILDING_ZOO",
+      "asset_id": "building_zoo",
+      "variant": "building_zoo",
+      "category": "buildings",
+      "source_builder": "tools/buildings/../rebuild/building_models.py",
+      "blend": "art/blender/buildings/building_zoo.blend",
+      "fbx": "art/exports/buildings/building_zoo.fbx",
+      "triangles": 2320,
+      "materials": [
+        {
+          "name": "Game_woodL0.001",
+          "rgba": [
+            0.41788506507873535,
+            0.21223075687885284,
+            0.0802198201417923,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_rock1",
+          "rgba": [
+            0.2622506618499756,
+            0.23839756846427917,
+            0.19120168685913086,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_water2",
+          "rgba": [
+            0.04970656707882881,
+            0.2788942754268646,
+            0.5647115111351013,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_woodD3.002",
+          "rgba": [
+            0.07818742096424103,
+            0.03688944876194,
+            0.01599629409611225,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_leafD4",
+          "rgba": [
+            0.028426039963960648,
+            0.15592646598815918,
+            0.016807375475764275,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_leaf5",
+          "rgba": [
+            0.05951123684644699,
+            0.28314873576164246,
+            0.028426039963960648,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_leafL6",
+          "rgba": [
+            0.22322796285152435,
+            0.48514994978904724,
+            0.06301001459360123,
+            1.0
+          ]
+        },
+        {
+          "name": "Game_sandD7",
+          "rgba": [
+            0.5840784311294556,
+            0.4019777774810791,
+            0.15592646598815918,
+            1.0
+          ]
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "buildings": 47
+  },
+  "review_pages": [
+    "buildings_00",
+    "buildings_01",
+    "buildings_02"
+  ]
+}

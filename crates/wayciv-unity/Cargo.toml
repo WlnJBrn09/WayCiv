@@ -1,0 +1,13 @@
+[package]
+name = "wayciv-unity"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wayciv-core = { path = "../wayciv-core" }
+serde_json = "1"

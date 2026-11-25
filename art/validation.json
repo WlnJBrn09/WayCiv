@@ -1,0 +1,685 @@
+{
+  "checked": 133,
+  "catalog_coverage": {
+    "terrain": 18,
+    "feature": 11,
+    "natural_wonder": 20,
+    "connection": 26
+  },
+  "checks": [
+    "saved file existence",
+    "catalog ID coverage",
+    "origin placement",
+    "finite vertices",
+    "nonzero face area",
+    "material assignment",
+    "terrain boundary elevation"
+  ],
+  "assets": [
+    {
+      "id": "TERRAIN_GRASS",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_GRASS",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_GRASS",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_GRASS_HILLS",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_GRASS_HILLS",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_GRASS_HILLS",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_GRASS_MOUNTAIN",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_GRASS_MOUNTAIN",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_GRASS_MOUNTAIN",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_PLAINS",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_PLAINS",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_PLAINS",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_PLAINS_HILLS",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_PLAINS_HILLS",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_PLAINS_HILLS",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_PLAINS_MOUNTAIN",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_PLAINS_MOUNTAIN",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_PLAINS_MOUNTAIN",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_DESERT",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_DESERT",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_DESERT",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_DESERT_HILLS",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_DESERT_HILLS",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_DESERT_HILLS",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_DESERT_MOUNTAIN",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_DESERT_MOUNTAIN",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_DESERT_MOUNTAIN",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_TUNDRA",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_TUNDRA",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_TUNDRA",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_TUNDRA_HILLS",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_TUNDRA_HILLS",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_TUNDRA_HILLS",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_TUNDRA_MOUNTAIN",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_TUNDRA_MOUNTAIN",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_TUNDRA_MOUNTAIN",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_SNOW",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_SNOW",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_SNOW",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_SNOW_HILLS",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_SNOW_HILLS",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_SNOW_HILLS",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_SNOW_MOUNTAIN",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_SNOW_MOUNTAIN",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_SNOW_MOUNTAIN",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_COAST",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_COAST",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_COAST",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_OCEAN",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_OCEAN",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_OCEAN",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_DEEP_OCEAN",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_DEEP_OCEAN",
+      "variant": 1,
+      "meshes": 1
+    },
+    {
+      "id": "TERRAIN_DEEP_OCEAN",
+      "variant": 2,
+      "meshes": 1
+    },
+    {
+      "id": "FEATURE_FOREST",
+      "variant": 0,
+      "meshes": 81
+    },
+    {
+      "id": "FEATURE_FOREST",
+      "variant": 1,
+      "meshes": 81
+    },
+    {
+      "id": "FEATURE_FOREST",
+      "variant": 2,
+      "meshes": 81
+    },
+    {
+      "id": "FEATURE_TAIGA",
+      "variant": 0,
+      "meshes": 48
+    },
+    {
+      "id": "FEATURE_TAIGA",
+      "variant": 1,
+      "meshes": 48
+    },
+    {
+      "id": "FEATURE_TAIGA",
+      "variant": 2,
+      "meshes": 48
+    },
+    {
+      "id": "FEATURE_JUNGLE",
+      "variant": 0,
+      "meshes": 117
+    },
+    {
+      "id": "FEATURE_JUNGLE",
+      "variant": 1,
+      "meshes": 117
+    },
+    {
+      "id": "FEATURE_JUNGLE",
+      "variant": 2,
+      "meshes": 117
+    },
+    {
+      "id": "FEATURE_MARSH",
+      "variant": 0,
+      "meshes": 102
+    },
+    {
+      "id": "FEATURE_MARSH",
+      "variant": 1,
+      "meshes": 102
+    },
+    {
+      "id": "FEATURE_MARSH",
+      "variant": 2,
+      "meshes": 102
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS",
+      "variant": 0,
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS",
+      "variant": 1,
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS",
+      "variant": 2,
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS_GRASSLAND",
+      "variant": 0,
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS_GRASSLAND",
+      "variant": 1,
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS_GRASSLAND",
+      "variant": 2,
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS_PLAINS",
+      "variant": 0,
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS_PLAINS",
+      "variant": 1,
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_FLOODPLAINS_PLAINS",
+      "variant": 2,
+      "meshes": 22
+    },
+    {
+      "id": "FEATURE_OASIS",
+      "variant": 0,
+      "meshes": 26
+    },
+    {
+      "id": "FEATURE_OASIS",
+      "variant": 1,
+      "meshes": 26
+    },
+    {
+      "id": "FEATURE_OASIS",
+      "variant": 2,
+      "meshes": 26
+    },
+    {
+      "id": "FEATURE_DUNES",
+      "variant": 0,
+      "meshes": 3
+    },
+    {
+      "id": "FEATURE_DUNES",
+      "variant": 1,
+      "meshes": 3
+    },
+    {
+      "id": "FEATURE_DUNES",
+      "variant": 2,
+      "meshes": 3
+    },
+    {
+      "id": "FEATURE_ICE",
+      "variant": 0,
+      "meshes": 20
+    },
+    {
+      "id": "FEATURE_ICE",
+      "variant": 1,
+      "meshes": 20
+    },
+    {
+      "id": "FEATURE_ICE",
+      "variant": 2,
+      "meshes": 20
+    },
+    {
+      "id": "FEATURE_GLACIER",
+      "variant": 0,
+      "meshes": 36
+    },
+    {
+      "id": "FEATURE_GLACIER",
+      "variant": 1,
+      "meshes": 36
+    },
+    {
+      "id": "FEATURE_GLACIER",
+      "variant": 2,
+      "meshes": 36
+    },
+    {
+      "id": "FEATURE_BARRIER_REEF",
+      "variant": 0,
+      "meshes": 137
+    },
+    {
+      "id": "FEATURE_CLIFFS_DOVER",
+      "variant": 0,
+      "meshes": 25
+    },
+    {
+      "id": "FEATURE_CRATER_LAKE",
+      "variant": 0,
+      "meshes": 3
+    },
+    {
+      "id": "FEATURE_DEAD_SEA",
+      "variant": 0,
+      "meshes": 19
+    },
+    {
+      "id": "FEATURE_EVEREST",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "FEATURE_GALAPAGOS",
+      "variant": 0,
+      "meshes": 14
+    },
+    {
+      "id": "FEATURE_KILIMANJARO",
+      "variant": 0,
+      "meshes": 73
+    },
+    {
+      "id": "FEATURE_PANTANAL",
+      "variant": 0,
+      "meshes": 121
+    },
+    {
+      "id": "FEATURE_PIOPIOTAHI",
+      "variant": 0,
+      "meshes": 4
+    },
+    {
+      "id": "FEATURE_TORRES_DEL_PAINE",
+      "variant": 0,
+      "meshes": 5
+    },
+    {
+      "id": "FEATURE_TSINGY",
+      "variant": 0,
+      "meshes": 109
+    },
+    {
+      "id": "FEATURE_YOSEMITE",
+      "variant": 0,
+      "meshes": 67
+    },
+    {
+      "id": "FEATURE_ULURU",
+      "variant": 0,
+      "meshes": 1
+    },
+    {
+      "id": "FEATURE_HA_LONG_BAY",
+      "variant": 0,
+      "meshes": 23
+    },
+    {
+      "id": "FEATURE_EYJAFJALLAJOKULL",
+      "variant": 0,
+      "meshes": 7
+    },
+    {
+      "id": "FEATURE_LYSEFJORDEN",
+      "variant": 0,
+      "meshes": 3
+    },
+    {
+      "id": "FEATURE_GIANTS_CAUSEWAY",
+      "variant": 0,
+      "meshes": 120
+    },
+    {
+      "id": "FEATURE_BERMUDA_TRIANGLE",
+      "variant": 0,
+      "meshes": 8
+    },
+    {
+      "id": "FEATURE_FOUNTAIN_OF_YOUTH",
+      "variant": 0,
+      "meshes": 128
+    },
+    {
+      "id": "FEATURE_PAITITI",
+      "variant": 0,
+      "meshes": 146
+    },
+    {
+      "id": "RIVER_01",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "RIVER_03",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "RIVER_05",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "RIVER_07",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "RIVER_09",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "RIVER_11",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "RIVER_13",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "RIVER_15",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "RIVER_21",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "RIVER_23",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "RIVER_27",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "RIVER_31",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "RIVER_63",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "SHORE_01",
+      "variant": 0,
+      "meshes": 2
+    },
+    {
+      "id": "SHORE_03",
+      "variant": 0,
+      "meshes": 4
+    },
+    {
+      "id": "SHORE_05",
+      "variant": 0,
+      "meshes": 4
+    },
+    {
+      "id": "SHORE_07",
+      "variant": 0,
+      "meshes": 6
+    },
+    {
+      "id": "SHORE_09",
+      "variant": 0,
+      "meshes": 4
+    },
+    {
+      "id": "SHORE_11",
+      "variant": 0,
+      "meshes": 6
+    },
+    {
+      "id": "SHORE_13",
+      "variant": 0,
+      "meshes": 6
+    },
+    {
+      "id": "SHORE_15",
+      "variant": 0,
+      "meshes": 8
+    },
+    {
+      "id": "SHORE_21",
+      "variant": 0,
+      "meshes": 6
+    },
+    {
+      "id": "SHORE_23",
+      "variant": 0,
+      "meshes": 8
+    },
+    {
+      "id": "SHORE_27",
+      "variant": 0,
+      "meshes": 8
+    },
+    {
+      "id": "SHORE_31",
+      "variant": 0,
+      "meshes": 10
+    },
+    {
+      "id": "SHORE_63",
+      "variant": 0,
+      "meshes": 12
+    }
+  ]
+}

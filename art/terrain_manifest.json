@@ -1,0 +1,438 @@
+{
+  "source": "crates/wayciv-data/data/terrain.toml",
+  "hex_radius_m": 1,
+  "assets": [
+    {
+      "id": "TERRAIN_GRASS",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_GRASS_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_GRASS_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_GRASS",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_GRASS_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_GRASS_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_GRASS",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_GRASS_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_GRASS_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_GRASS_HILLS",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_GRASS_HILLS_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_GRASS_HILLS_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_GRASS_HILLS",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_GRASS_HILLS_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_GRASS_HILLS_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_GRASS_HILLS",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_GRASS_HILLS_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_GRASS_HILLS_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_GRASS_MOUNTAIN",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_GRASS_MOUNTAIN_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_GRASS_MOUNTAIN_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_GRASS_MOUNTAIN",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_GRASS_MOUNTAIN_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_GRASS_MOUNTAIN_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_GRASS_MOUNTAIN",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_GRASS_MOUNTAIN_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_GRASS_MOUNTAIN_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_PLAINS",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_PLAINS_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_PLAINS_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_PLAINS",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_PLAINS_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_PLAINS_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_PLAINS",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_PLAINS_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_PLAINS_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_PLAINS_HILLS",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_PLAINS_HILLS_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_PLAINS_HILLS_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_PLAINS_HILLS",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_PLAINS_HILLS_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_PLAINS_HILLS_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_PLAINS_HILLS",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_PLAINS_HILLS_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_PLAINS_HILLS_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_PLAINS_MOUNTAIN",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_PLAINS_MOUNTAIN_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_PLAINS_MOUNTAIN_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_PLAINS_MOUNTAIN",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_PLAINS_MOUNTAIN_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_PLAINS_MOUNTAIN_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_PLAINS_MOUNTAIN",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_PLAINS_MOUNTAIN_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_PLAINS_MOUNTAIN_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_DESERT",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_DESERT_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_DESERT_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_DESERT",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_DESERT_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_DESERT_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_DESERT",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_DESERT_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_DESERT_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_DESERT_HILLS",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_DESERT_HILLS_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_DESERT_HILLS_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_DESERT_HILLS",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_DESERT_HILLS_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_DESERT_HILLS_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_DESERT_HILLS",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_DESERT_HILLS_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_DESERT_HILLS_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_DESERT_MOUNTAIN",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_DESERT_MOUNTAIN_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_DESERT_MOUNTAIN_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_DESERT_MOUNTAIN",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_DESERT_MOUNTAIN_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_DESERT_MOUNTAIN_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_DESERT_MOUNTAIN",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_DESERT_MOUNTAIN_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_DESERT_MOUNTAIN_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_TUNDRA",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_TUNDRA_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_TUNDRA_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_TUNDRA",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_TUNDRA_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_TUNDRA_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_TUNDRA",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_TUNDRA_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_TUNDRA_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_TUNDRA_HILLS",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_TUNDRA_HILLS_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_TUNDRA_HILLS_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_TUNDRA_HILLS",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_TUNDRA_HILLS_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_TUNDRA_HILLS_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_TUNDRA_HILLS",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_TUNDRA_HILLS_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_TUNDRA_HILLS_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_TUNDRA_MOUNTAIN",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_TUNDRA_MOUNTAIN_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_TUNDRA_MOUNTAIN_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_TUNDRA_MOUNTAIN",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_TUNDRA_MOUNTAIN_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_TUNDRA_MOUNTAIN_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_TUNDRA_MOUNTAIN",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_TUNDRA_MOUNTAIN_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_TUNDRA_MOUNTAIN_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_SNOW",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_SNOW_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_SNOW_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_SNOW",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_SNOW_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_SNOW_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_SNOW",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_SNOW_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_SNOW_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_SNOW_HILLS",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_SNOW_HILLS_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_SNOW_HILLS_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_SNOW_HILLS",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_SNOW_HILLS_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_SNOW_HILLS_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_SNOW_HILLS",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_SNOW_HILLS_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_SNOW_HILLS_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_SNOW_MOUNTAIN",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_SNOW_MOUNTAIN_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_SNOW_MOUNTAIN_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_SNOW_MOUNTAIN",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_SNOW_MOUNTAIN_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_SNOW_MOUNTAIN_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_SNOW_MOUNTAIN",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_SNOW_MOUNTAIN_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_SNOW_MOUNTAIN_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_COAST",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_COAST_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_COAST_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_COAST",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_COAST_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_COAST_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_COAST",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_COAST_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_COAST_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_OCEAN",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_OCEAN_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_OCEAN_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_OCEAN",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_OCEAN_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_OCEAN_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_OCEAN",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_OCEAN_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_OCEAN_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_DEEP_OCEAN",
+      "variant": 0,
+      "blend": "art/blender/terrain/TERRAIN_DEEP_OCEAN_v00.blend",
+      "fbx": "art/exports/terrain/TERRAIN_DEEP_OCEAN_v00.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_DEEP_OCEAN",
+      "variant": 1,
+      "blend": "art/blender/terrain/TERRAIN_DEEP_OCEAN_v01.blend",
+      "fbx": "art/exports/terrain/TERRAIN_DEEP_OCEAN_v01.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    },
+    {
+      "id": "TERRAIN_DEEP_OCEAN",
+      "variant": 2,
+      "blend": "art/blender/terrain/TERRAIN_DEEP_OCEAN_v02.blend",
+      "fbx": "art/exports/terrain/TERRAIN_DEEP_OCEAN_v02.fbx",
+      "vertices": 1225,
+      "triangles": 2446
+    }
+  ]
+}

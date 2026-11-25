@@ -1,0 +1,867 @@
+{
+  "assets": [
+    {
+      "id": "RIVER_01",
+      "variant": 0,
+      "mask": 1,
+      "kind": "RIVER",
+      "ports": [
+        {
+          "edge": 0,
+          "center": [
+            0.8660254037844386,
+            0.0,
+            0.004
+          ]
+        }
+      ],
+      "blend": "art/blender/connections/RIVER_01.blend",
+      "fbx": "art/exports/connections/RIVER_01.fbx"
+    },
+    {
+      "id": "RIVER_03",
+      "variant": 0,
+      "mask": 3,
+      "kind": "RIVER",
+      "ports": [
+        {
+          "edge": 0,
+          "center": [
+            0.8660254037844386,
+            0.0,
+            0.004
+          ]
+        },
+        {
+          "edge": 1,
+          "center": [
+            0.4330127018922194,
+            0.7499999999999999,
+            0.004
+          ]
+        }
+      ],
+      "blend": "art/blender/connections/RIVER_03.blend",
+      "fbx": "art/exports/connections/RIVER_03.fbx"
+    },
+    {
+      "id": "RIVER_05",
+      "variant": 0,
+      "mask": 5,
+      "kind": "RIVER",
+      "ports": [
+        {
+          "edge": 0,
+          "center": [
+            0.8660254037844386,
+            0.0,
+            0.004
+          ]
+        },
+        {
+          "edge": 2,
+          "center": [
+            -0.43301270189221913,
+            0.75,
+            0.004
+          ]
+        }
+      ],
+      "blend": "art/blender/connections/RIVER_05.blend",
+      "fbx": "art/exports/connections/RIVER_05.fbx"
+    },
+    {
+      "id": "RIVER_07",
+      "variant": 0,
+      "mask": 7,
+      "kind": "RIVER",
+      "ports": [
+        {
+          "edge": 0,
+          "center": [
+            0.8660254037844386,
+            0.0,
+            0.004
+          ]
+        },
+        {
+          "edge": 1,
+          "center": [
+            0.4330127018922194,
+            0.7499999999999999,
+            0.004
+          ]
+        },
+        {
+          "edge": 2,
+          "center": [
+            -0.43301270189221913,
+            0.75,
+            0.004
+          ]
+        }
+      ],
+      "blend": "art/blender/connections/RIVER_07.blend",
+      "fbx": "art/exports/connections/RIVER_07.fbx"
+    },
+    {
+      "id": "RIVER_09",
+      "variant": 0,
+      "mask": 9,
+      "kind": "RIVER",
+      "ports": [
+        {
+          "edge": 0,
+          "center": [
+            0.8660254037844386,
+            0.0,
+            0.004
+          ]
+        },
+        {
+          "edge": 3,
+          "center": [
+            -0.8660254037844386,
+            1.0605752387249068e-16,
+            0.004
+          ]
+        }
+      ],
+      "blend": "art/blender/connections/RIVER_09.blend",
+      "fbx": "art/exports/connections/RIVER_09.fbx"
+    },
+    {
+      "id": "RIVER_11",
+      "variant": 0,
+      "mask": 11,
+      "kind": "RIVER",
+      "ports": [
+        {
+          "edge": 0,
+          "center": [
+            0.8660254037844386,
+            0.0,
+            0.004
+          ]
+        },
+        {
+          "edge": 1,
+          "center": [
+            0.4330127018922194,
+            0.7499999999999999,
+            0.004
+          ]
+        },
+        {
+          "edge": 3,
+          "center": [
+            -0.8660254037844386,
+            1.0605752387249068e-16,
+            0.004
+          ]
+        }
+      ],
+      "blend": "art/blender/connections/RIVER_11.blend",
+      "fbx": "art/exports/connections/RIVER_11.fbx"
+    },
+    {
+      "id": "RIVER_13",
+      "variant": 0,
+      "mask": 13,
+      "kind": "RIVER",
+      "ports": [
+        {
+          "edge": 0,
+          "center": [
+            0.8660254037844386,
+            0.0,
+            0.004
+          ]
+        },
+        {
+          "edge": 2,
+          "center": [
+            -0.43301270189221913,
+            0.75,
+            0.004
+          ]
+        },
+        {
+          "edge": 3,
+          "center": [
+            -0.8660254037844386,
+            1.0605752387249068e-16,
+            0.004
+          ]
+        }
+      ],
+      "blend": "art/blender/connections/RIVER_13.blend",
+      "fbx": "art/exports/connections/RIVER_13.fbx"
+    },
+    {
+      "id": "RIVER_15",
+      "variant": 0,
+      "mask": 15,
+      "kind": "RIVER",
+      "ports": [
+        {
+          "edge": 0,
+          "center": [
+            0.8660254037844386,
+            0.0,
+            0.004
+          ]
+        },
+        {
+          "edge": 1,
+          "center": [
+            0.4330127018922194,
+            0.7499999999999999,
+            0.004
+          ]
+        },
+        {
+          "edge": 2,
+          "center": [
+            -0.43301270189221913,
+            0.75,
+            0.004
+          ]
+        },
+        {
+          "edge": 3,
+          "center": [
+            -0.8660254037844386,
+            1.0605752387249068e-16,
+            0.004
+          ]
+        }
+      ],
+      "blend": "art/blender/connections/RIVER_15.blend",
+      "fbx": "art/exports/connections/RIVER_15.fbx"
+    },
+    {
+      "id": "RIVER_21",
+      "variant": 0,
+      "mask": 21,
+      "kind": "RIVER",
+      "ports": [
+        {
+          "edge": 0,
+          "center": [
+            0.8660254037844386,
+            0.0,
+            0.004
+          ]
+        },
+        {
+          "edge": 2,
+          "center": [
+            -0.43301270189221913,
+            0.75,
+            0.004
+          ]
+        },
+        {
+          "edge": 4,
+          "center": [
+            -0.4330127018922197,
+            -0.7499999999999997,
+            0.004
+          ]
+        }
+      ],
+      "blend": "art/blender/connections/RIVER_21.blend",
+      "fbx": "art/exports/connections/RIVER_21.fbx"
+    },
+    {
+      "id": "RIVER_23",
+      "variant": 0,
+      "mask": 23,
+      "kind": "RIVER",
+      "ports": [
+        {
+          "edge": 0,
+          "center": [
+            0.8660254037844386,
+            0.0,
+            0.004
+          ]
+        },
+        {
+          "edge": 1,
+          "center": [
+            0.4330127018922194,
+            0.7499999999999999,
+            0.004
+          ]
+        },
+        {
+          "edge": 2,
+          "center": [
+            -0.43301270189221913,
+            0.75,
+            0.004
+          ]
+        },
+        {
+          "edge": 4,
+          "center": [
+            -0.4330127018922197,
+            -0.7499999999999997,
+            0.004
+          ]
+        }
+      ],
+      "blend": "art/blender/connections/RIVER_23.blend",
+      "fbx": "art/exports/connections/RIVER_23.fbx"
+    },
+    {
+      "id": "RIVER_27",
+      "variant": 0,
+      "mask": 27,
+      "kind": "RIVER",
+      "ports": [
+        {
+          "edge": 0,
+          "center": [
+            0.8660254037844386,
+            0.0,
+            0.004
+          ]
+        },
+        {
+          "edge": 1,
+          "center": [
+            0.4330127018922194,
+            0.7499999999999999,
+            0.004
+          ]
+        },
+        {
+          "edge": 3,
+          "center": [
+            -0.8660254037844386,
+            1.0605752387249068e-16,
+            0.004
+          ]
+        },
+        {
+          "edge": 4,
+          "center": [
+            -0.4330127018922197,
+            -0.7499999999999997,
+            0.004
+          ]
+        }
+      ],
+      "blend": "art/blender/connections/RIVER_27.blend",
+      "fbx": "art/exports/connections/RIVER_27.fbx"
+    },
+    {
+      "id": "RIVER_31",
+      "variant": 0,
+      "mask": 31,
+      "kind": "RIVER",
+      "ports": [
+        {
+          "edge": 0,
+          "center": [
+            0.8660254037844386,
+            0.0,
+            0.004
+          ]
+        },
+        {
+          "edge": 1,
+          "center": [
+            0.4330127018922194,
+            0.7499999999999999,
+            0.004
+          ]
+        },
+        {
+          "edge": 2,
+          "center": [
+            -0.43301270189221913,
+            0.75,
+            0.004
+          ]
+        },
+        {
+          "edge": 3,
+          "center": [
+            -0.8660254037844386,
+            1.0605752387249068e-16,
+            0.004
+          ]
+        },
+        {
+          "edge": 4,
+          "center": [
+            -0.4330127018922197,
+            -0.7499999999999997,
+            0.004
+          ]
+        }
+      ],
+      "blend": "art/blender/connections/RIVER_31.blend",
+      "fbx": "art/exports/connections/RIVER_31.fbx"
+    },
+    {
+      "id": "RIVER_63",
+      "variant": 0,
+      "mask": 63,
+      "kind": "RIVER",
+      "ports": [
+        {
+          "edge": 0,
+          "center": [
+            0.8660254037844386,
+            0.0,
+            0.004
+          ]
+        },
+        {
+          "edge": 1,
+          "center": [
+            0.4330127018922194,
+            0.7499999999999999,
+            0.004
+          ]
+        },
+        {
+          "edge": 2,
+          "center": [
+            -0.43301270189221913,
+            0.75,
+            0.004
+          ]
+        },
+        {
+          "edge": 3,
+          "center": [
+            -0.8660254037844386,
+            1.0605752387249068e-16,
+            0.004
+          ]
+        },
+        {
+          "edge": 4,
+          "center": [
+            -0.4330127018922197,
+            -0.7499999999999997,
+            0.004
+          ]
+        },
+        {
+          "edge": 5,
+          "center": [
+            0.4330127018922194,
+            -0.7499999999999999,
+            0.004
+          ]
+        }
+      ],
+      "blend": "art/blender/connections/RIVER_63.blend",
+      "fbx": "art/exports/connections/RIVER_63.fbx"
+    },
+    {
+      "id": "SHORE_01",
+      "variant": 0,
+      "mask": 1,
+      "kind": "SHORE",
+      "ports": [],
+      "blend": "art/blender/connections/SHORE_01.blend",
+      "fbx": "art/exports/connections/SHORE_01.fbx"
+    },
+    {
+      "id": "SHORE_03",
+      "variant": 0,
+      "mask": 3,
+      "kind": "SHORE",
+      "ports": [],
+      "blend": "art/blender/connections/SHORE_03.blend",
+      "fbx": "art/exports/connections/SHORE_03.fbx"
+    },
+    {
+      "id": "SHORE_05",
+      "variant": 0,
+      "mask": 5,
+      "kind": "SHORE",
+      "ports": [],
+      "blend": "art/blender/connections/SHORE_05.blend",
+      "fbx": "art/exports/connections/SHORE_05.fbx"
+    },
+    {
+      "id": "SHORE_07",
+      "variant": 0,
+      "mask": 7,
+      "kind": "SHORE",
+      "ports": [],
+      "blend": "art/blender/connections/SHORE_07.blend",
+      "fbx": "art/exports/connections/SHORE_07.fbx"
+    },
+    {
+      "id": "SHORE_09",
+      "variant": 0,
+      "mask": 9,
+      "kind": "SHORE",
+      "ports": [],
+      "blend": "art/blender/connections/SHORE_09.blend",
+      "fbx": "art/exports/connections/SHORE_09.fbx"
+    },
+    {
+      "id": "SHORE_11",
+      "variant": 0,
+      "mask": 11,
+      "kind": "SHORE",
+      "ports": [],
+      "blend": "art/blender/connections/SHORE_11.blend",
+      "fbx": "art/exports/connections/SHORE_11.fbx"
+    },
+    {
+      "id": "SHORE_13",
+      "variant": 0,
+      "mask": 13,
+      "kind": "SHORE",
+      "ports": [],
+      "blend": "art/blender/connections/SHORE_13.blend",
+      "fbx": "art/exports/connections/SHORE_13.fbx"
+    },
+    {
+      "id": "SHORE_15",
+      "variant": 0,
+      "mask": 15,
+      "kind": "SHORE",
+      "ports": [],
+      "blend": "art/blender/connections/SHORE_15.blend",
+      "fbx": "art/exports/connections/SHORE_15.fbx"
+    },
+    {
+      "id": "SHORE_21",
+      "variant": 0,
+      "mask": 21,
+      "kind": "SHORE",
+      "ports": [],
+      "blend": "art/blender/connections/SHORE_21.blend",
+      "fbx": "art/exports/connections/SHORE_21.fbx"
+    },
+    {
+      "id": "SHORE_23",
+      "variant": 0,
+      "mask": 23,
+      "kind": "SHORE",
+      "ports": [],
+      "blend": "art/blender/connections/SHORE_23.blend",
+      "fbx": "art/exports/connections/SHORE_23.fbx"
+    },
+    {
+      "id": "SHORE_27",
+      "variant": 0,
+      "mask": 27,
+      "kind": "SHORE",
+      "ports": [],
+      "blend": "art/blender/connections/SHORE_27.blend",
+      "fbx": "art/exports/connections/SHORE_27.fbx"
+    },
+    {
+      "id": "SHORE_31",
+      "variant": 0,
+      "mask": 31,
+      "kind": "SHORE",
+      "ports": [],
+      "blend": "art/blender/connections/SHORE_31.blend",
+      "fbx": "art/exports/connections/SHORE_31.fbx"
+    },
+    {
+      "id": "SHORE_63",
+      "variant": 0,
+      "mask": 63,
+      "kind": "SHORE",
+      "ports": [],
+      "blend": "art/blender/connections/SHORE_63.blend",
+      "fbx": "art/exports/connections/SHORE_63.fbx"
+    }
+  ],
+  "mask_lookup": {
+    "1": {
+      "canonical": 1,
+      "rotation_steps": 0
+    },
+    "2": {
+      "canonical": 1,
+      "rotation_steps": 1
+    },
+    "3": {
+      "canonical": 3,
+      "rotation_steps": 0
+    },
+    "4": {
+      "canonical": 1,
+      "rotation_steps": 2
+    },
+    "5": {
+      "canonical": 5,
+      "rotation_steps": 0
+    },
+    "6": {
+      "canonical": 3,
+      "rotation_steps": 1
+    },
+    "7": {
+      "canonical": 7,
+      "rotation_steps": 0
+    },
+    "8": {
+      "canonical": 1,
+      "rotation_steps": 3
+    },
+    "9": {
+      "canonical": 9,
+      "rotation_steps": 0
+    },
+    "10": {
+      "canonical": 5,
+      "rotation_steps": 1
+    },
+    "11": {
+      "canonical": 11,
+      "rotation_steps": 0
+    },
+    "12": {
+      "canonical": 3,
+      "rotation_steps": 2
+    },
+    "13": {
+      "canonical": 13,
+      "rotation_steps": 0
+    },
+    "14": {
+      "canonical": 7,
+      "rotation_steps": 1
+    },
+    "15": {
+      "canonical": 15,
+      "rotation_steps": 0
+    },
+    "16": {
+      "canonical": 1,
+      "rotation_steps": 4
+    },
+    "17": {
+      "canonical": 5,
+      "rotation_steps": 4
+    },
+    "18": {
+      "canonical": 9,
+      "rotation_steps": 1
+    },
+    "19": {
+      "canonical": 13,
+      "rotation_steps": 4
+    },
+    "20": {
+      "canonical": 5,
+      "rotation_steps": 2
+    },
+    "21": {
+      "canonical": 21,
+      "rotation_steps": 0
+    },
+    "22": {
+      "canonical": 11,
+      "rotation_steps": 1
+    },
+    "23": {
+      "canonical": 23,
+      "rotation_steps": 0
+    },
+    "24": {
+      "canonical": 3,
+      "rotation_steps": 3
+    },
+    "25": {
+      "canonical": 11,
+      "rotation_steps": 3
+    },
+    "26": {
+      "canonical": 13,
+      "rotation_steps": 1
+    },
+    "27": {
+      "canonical": 27,
+      "rotation_steps": 0
+    },
+    "28": {
+      "canonical": 7,
+      "rotation_steps": 2
+    },
+    "29": {
+      "canonical": 23,
+      "rotation_steps": 2
+    },
+    "30": {
+      "canonical": 15,
+      "rotation_steps": 1
+    },
+    "31": {
+      "canonical": 31,
+      "rotation_steps": 0
+    },
+    "32": {
+      "canonical": 1,
+      "rotation_steps": 5
+    },
+    "33": {
+      "canonical": 3,
+      "rotation_steps": 5
+    },
+    "34": {
+      "canonical": 5,
+      "rotation_steps": 5
+    },
+    "35": {
+      "canonical": 7,
+      "rotation_steps": 5
+    },
+    "36": {
+      "canonical": 9,
+      "rotation_steps": 2
+    },
+    "37": {
+      "canonical": 11,
+      "rotation_steps": 5
+    },
+    "38": {
+      "canonical": 13,
+      "rotation_steps": 5
+    },
+    "39": {
+      "canonical": 15,
+      "rotation_steps": 5
+    },
+    "40": {
+      "canonical": 5,
+      "rotation_steps": 3
+    },
+    "41": {
+      "canonical": 13,
+      "rotation_steps": 3
+    },
+    "42": {
+      "canonical": 21,
+      "rotation_steps": 1
+    },
+    "43": {
+      "canonical": 23,
+      "rotation_steps": 5
+    },
+    "44": {
+      "canonical": 11,
+      "rotation_steps": 2
+    },
+    "45": {
+      "canonical": 27,
+      "rotation_steps": 2
+    },
+    "46": {
+      "canonical": 23,
+      "rotation_steps": 1
+    },
+    "47": {
+      "canonical": 31,
+      "rotation_steps": 5
+    },
+    "48": {
+      "canonical": 3,
+      "rotation_steps": 4
+    },
+    "49": {
+      "canonical": 7,
+      "rotation_steps": 4
+    },
+    "50": {
+      "canonical": 11,
+      "rotation_steps": 4
+    },
+    "51": {
+      "canonical": 15,
+      "rotation_steps": 4
+    },
+    "52": {
+      "canonical": 13,
+      "rotation_steps": 2
+    },
+    "53": {
+      "canonical": 23,
+      "rotation_steps": 4
+    },
+    "54": {
+      "canonical": 27,
+      "rotation_steps": 1
+    },
+    "55": {
+      "canonical": 31,
+      "rotation_steps": 4
+    },
+    "56": {
+      "canonical": 7,
+      "rotation_steps": 3
+    },
+    "57": {
+      "canonical": 15,
+      "rotation_steps": 3
+    },
+    "58": {
+      "canonical": 23,
+      "rotation_steps": 3
+    },
+    "59": {
+      "canonical": 31,
+      "rotation_steps": 3
+    },
+    "60": {
+      "canonical": 15,
+      "rotation_steps": 2
+    },
+    "61": {
+      "canonical": 31,
+      "rotation_steps": 2
+    },
+    "62": {
+      "canonical": 31,
+      "rotation_steps": 1
+    },
+    "63": {
+      "canonical": 63,
+      "rotation_steps": 0
+    }
+  },
+  "edge_directions_axial": [
+    [
+      1,
+      0
+    ],
+    [
+      0,
+      1
+    ],
+    [
+      -1,
+      1
+    ],
+    [
+      -1,
+      0
+    ],
+    [
+      0,
+      -1
+    ],
+    [
+      1,
+      -1
+    ]
+  ]
+}

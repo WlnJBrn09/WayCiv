@@ -25,9 +25,13 @@ if [[ ${1:-} == "--uninstall" ]]; then
   exit 0
 fi
 
-cargo build --release -p wayciv
+cargo build --release -p wayciv -p wayciv-unity
 install -Dm755 target/release/wayciv "$bin"
-mkdir -p "$data/assets/leaders"
+mkdir -p "$data/assets/leaders" "$data/lib"
+install -Dm755 target/release/libwayciv_unity.so "$data/lib/libwayciv_unity.so"
+if [[ -f assets/models3d.pack ]]; then
+  install -Dm644 assets/models3d.pack "$data/assets/models3d.pack"
+fi
 rm -f "$data/assets/leaders/"*.png
 install -m644 assets/leaders/leader_*.png "$data/assets/leaders/"
 # Art (icons, terrain, units, buildings, resources): each folder is
